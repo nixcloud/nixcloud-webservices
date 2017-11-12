@@ -1,0 +1,42 @@
+{ config, pkgs, lib, ... }:
+
+let
+  inherit (lib) types mkOption;
+in {
+  options.nixcloud.tests = {
+    enabled = mkOption {
+      type = types.bool;
+      default = true;
+      example = false;
+      description = ''
+        Whether to run tests needed by the current system configuration.
+      '';
+    };
+
+    wanted = mkOption {
+      type = types.listOf (types.either types.str (types.listOf types.str));
+      default = [];
+      apply = val: let
+        unified = map (x: if lib.isList x then x else lib.singleton x) val;
+      in lib.unique unified;
+      example = [ "reverse-proxy" ["foo" "bar"] ];
+      description = ''
+        A list of tests needed for the current configuration.
+
+        The list elements can either be plain strings or a list of strings,
+        where the latter will form an attribute path.
+      '';
+    };
+  };
+
+  config = lib.mkIf config.nixcloud.tests.enabled {
+    system.extraDependencies = let
+      inherit (config.nixpkgs) system;
+      testRoot = import ../../tests { inherit pkgs system; };
+      mkErr = path: let
+        pathStr = lib.concatStringsSep "." path;
+      in abort "Unable to find test for path ${pathStr}.";
+      getTest = path: lib.attrByPath path (mkErr path) testRoot;
+    in map getTest config.nixcloud.tests.wanted;
+  };
+}
