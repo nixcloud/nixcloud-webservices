@@ -187,11 +187,6 @@ with lib;
         Order allow,deny
         Allow from all
     '';
-
-  in rec {
-    backend = "apache";
-
-    #nextcloudConfig = pkgs.writeText "config.php" ''
     nextcloudConfig = ''
             'logfile' => '${config.stateDir}/log/nextcloud.log',
             'loglevel' => 0,
@@ -201,25 +196,6 @@ with lib;
             ),
         );
         '';
-
-    extraConfig =
-        ''
-        ${"Alias ${config.proxyOptions.path} ${documentRoot}"}
-
-        <Directory ${documentRoot}>
-            Require all granted
-            Options FollowSymLinks 
-            ${builtins.readFile "${documentRoot}/.htaccess"}
-        </Directory>
-        ''; #"
-
-    # FIXME: broken path, needs fixing
-    #globalEnvVars = [
-    #  { name = "OC_CONFIG_PATH"; value = "/var/lib/nextcloud/config/"; }
-    #];
-
-    documentRoot = nextcloudRoot;
-
     nextcloudRoot = pkgs.stdenv.mkDerivation rec {
       name = "nextcloud";
       src = pkgs.fetchgit {
@@ -247,11 +223,31 @@ with lib;
         ln -s ${config.stateDir}/apps $out/apps
       '';
     };
+  in rec {
+    backend = "apache";
+
+    webserver.apache.extraConfig =
+        ''
+        ${"Alias ${config.proxyOptions.path} ${documentRoot}"}
+
+        <Directory ${documentRoot}>
+            Require all granted
+            Options FollowSymLinks 
+            ${builtins.readFile "${documentRoot}/.htaccess"}
+        </Directory>
+        ''; #"
+
+    # FIXME: broken path, needs fixing
+    #globalEnvVars = [
+    #  { name = "OC_CONFIG_PATH"; value = "/var/lib/nextcloud/config/"; }
+    #];
+
+    documentRoot = nextcloudRoot;
+
+
         
     webserver.enablePHP = true;
     
-    extraServiceDependencies = [ "mysql.service" ];
-
     startupScript = ''
       # FEATURE HACK: there should be a command which renews this stateDir
       # HACK: as for testing we force redeployment every time!

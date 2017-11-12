@@ -17,12 +17,6 @@ with lib;
       Order allow,deny
       Allow from all
     '';
-
-  in rec {
-    backend = "apache";
-
-    webserver.enablePHP = true;
-
     phpmyadminRoot = pkgs.stdenv.mkDerivation rec {
       buildInputs = [ pkgs.unzip ];
       name="phpmyadmin-${rev}";
@@ -41,7 +35,12 @@ with lib;
         cp -r * $out
       '';
     };
-    extraConfig = ''
+  in rec {
+    backend = "apache";
+
+    webserver.enablePHP = true;
+
+    webserver.apache.extraConfig = ''
       DocumentRoot ${phpmyadminRoot}
         
       Alias ${config.proxyOptions.path} ${phpmyadminRoot}

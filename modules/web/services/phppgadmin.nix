@@ -17,12 +17,6 @@ with lib;
       Order allow,deny
       Allow from all
     '';
-
-  in rec {
-    backend = "apache";
-
-    webserver.enablePHP = true;
-
     phppgadminRoot = pkgs.stdenv.mkDerivation rec {
       name="phppgadmin-${rev}";
       rev="5.1";
@@ -35,7 +29,12 @@ with lib;
         cp -r * $out
       '';
     };
-    extraConfig = ''
+  in rec {
+    backend = "apache";
+
+    webserver.enablePHP = true;
+    
+    webserver.apache.extraConfig = ''
       DocumentRoot ${phppgadminRoot}
         
       Alias ${config.proxyOptions.path} ${phppgadminRoot}

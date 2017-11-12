@@ -54,11 +54,45 @@ with lib;
       Order allow,deny
       Allow from all
     '';
-
-  in rec {
-    backend = "apache";
-
-    filesenderConfig = pkgs.writeText "config.php" ''
+    fileSenderRoot = pkgs.stdenv.mkDerivation rec {
+      name= "filesender-1.6.1";
+      src = pkgs.fetchurl {
+        url = "https://downloads.filesender.org/${name}.tar.gz";
+        sha256 = "1sjxhf31iwdh0nxrvpi5ygg3ynsbj0c89w9zdg6p2jgivxhgn042";
+      };
+      installPhase = ''
+        mkdir -p $out/config
+        cp -r * $out
+        
+        cp ${filesenderConfig} $out/config/config.php
+        #ln -s ${SimpleSAMLphp} $out/www/simplesaml
+        ln -s ${SimpleSAMLphp} $out/simplesaml
+      '';
+    };
+     
+    SimpleSAMLphp = pkgs.stdenv.mkDerivation rec {
+      name = "simplesamlphp-${version}";
+      version="1.14.11";
+      sha256 ="0y58lcy643a7c6ga1iy2lzvw19xk0pkfzl4dpygssrv9wvlcm6a8";
+#       version="1.12.0";
+#       sha256 ="1qk195xbr7sa5ncvdxsw5mzr0aby5k7azbg32wpvqs514lcipiac";
+      src = pkgs.fetchurl {
+        url = "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${version}/${name}.tar.gz";
+        inherit sha256;
+      };
+      installPhase = ''
+        mkdir -p $out
+        cp -r config-templates/*.php config/
+        cp -r metadata-templates/*.php metadata/
+        rm -Rf config-templates metadata-templates
+        
+        rm config/config.php
+        cp ${simplesamlConfig} config/config.php
+        
+        cp -r * $out
+      '';
+    };
+        filesenderConfig = pkgs.writeText "config.php" ''
       <?php
 
       /*
@@ -1347,8 +1381,12 @@ with lib;
       );
 
     ''; #'
+  in rec {
+    backend = "apache";
+
+
  
-    extraConfig =
+    webserver.apache.extraConfig =
       ''
       Alias ${config.proxyOptions.path}/simplesaml ${SimpleSAMLphp}/www
       ${"Alias ${config.proxyOptions.path} ${documentRoot}"}
@@ -1369,48 +1407,11 @@ with lib;
     ''; 
       
     documentRoot = fileSenderRoot + "/www"; 
-    fileSenderRoot = pkgs.stdenv.mkDerivation rec {
-      name= "filesender-1.6.1";
-      src = pkgs.fetchurl {
-        url = "https://downloads.filesender.org/${name}.tar.gz";
-        sha256 = "1sjxhf31iwdh0nxrvpi5ygg3ynsbj0c89w9zdg6p2jgivxhgn042";
-      };
-      installPhase = ''
-        mkdir -p $out/config
-        cp -r * $out
-        
-        cp ${filesenderConfig} $out/config/config.php
-        #ln -s ${SimpleSAMLphp} $out/www/simplesaml
-        ln -s ${SimpleSAMLphp} $out/simplesaml
-      '';
-    };
-     
-    SimpleSAMLphp = pkgs.stdenv.mkDerivation rec {
-      name = "simplesamlphp-${version}";
-      version="1.14.11";
-      sha256 ="0y58lcy643a7c6ga1iy2lzvw19xk0pkfzl4dpygssrv9wvlcm6a8";
-#       version="1.12.0";
-#       sha256 ="1qk195xbr7sa5ncvdxsw5mzr0aby5k7azbg32wpvqs514lcipiac";
-      src = pkgs.fetchurl {
-        url = "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${version}/${name}.tar.gz";
-        inherit sha256;
-      };
-      installPhase = ''
-        mkdir -p $out
-        cp -r config-templates/*.php config/
-        cp -r metadata-templates/*.php metadata/
-        rm -Rf config-templates metadata-templates
-        
-        rm config/config.php
-        cp ${simplesamlConfig} config/config.php
-        
-        cp -r * $out
-      '';
-    };
+
     webserver.enablePHP = true;
     
     # FIXME: factor this into a config.database set which will introduce this dependency upon usage
-    extraServiceDependencies = [ "postgresq.service" ];
+    #extraServiceDependencies = [ "postgresq.service" ];
    
     startupScript = (optionalString (config.dbType == "postgres" && config.dbServer == "") ''
       # FIXME: Reset the database during development
@@ -1425,7 +1426,7 @@ with lib;
       fi
     '');
   
-    phpOptions = ''
+    webserver.apache.phpOptions = ''
       max_input_time=3600
       upload_max_filesize=2047M
       post_max_size=2146446312

@@ -42,10 +42,6 @@ with lib;
       Order allow,deny
       Allow from all
     '';
-
-  in rec {
-    backend = "apache";
-
     caldavZAPRoot = pkgs.stdenv.mkDerivation rec {
       name = "CalDavZAP-0.13.1";
       src = pkgs.fetchurl {
@@ -74,8 +70,10 @@ with lib;
         cp -r * $out
       '';
     };
+  in rec {
+    backend = "apache";
 
-    extraConfig = ''
+    webserver.apache.extraConfig = ''
       Alias ${config.proxyOptions.path} ${caldavZAPRoot}/
       
       <Directory ${caldavZAPRoot}/>

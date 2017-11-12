@@ -5,26 +5,8 @@
 
 with lib; 
 
-{
-  options = { };
-
-  config = let
-    # FIXME: refactor this many lines (also found in other webservices) into something small and useful
-    httpd = config.webserver.apache.package.out;
-
-    version24 = !versionOlder httpd.version "2.4";
-
-    allGranted = if version24 then ''
-      Require all granted
-    '' else ''
-      Order allow,deny
-      Allow from all
-    '';
-
-  in rec {
-    backend = "apache";
-
-    installScript =  pkgs.writeText "install-cmd.php" ''
+let
+   installScript =  pkgs.writeText "install-cmd.php" ''
       <?php
       ob_start();
       include 'install.php';
@@ -90,22 +72,20 @@ with lib;
       ?>
 
     '';
+  dokuwiki-template-adoradark = pkgs.stdenv.mkDerivation rec {
+    name="dokuwiki-template-adoradark-${rev}";
+    rev="e903fa0c5d62c782104f051c313da6cb8f358c58";
     
-    dokuwiki-template-adoradark = pkgs.stdenv.mkDerivation rec {
-      name="dokuwiki-template-adoradark-${rev}";
-      rev="e903fa0c5d62c782104f051c313da6cb8f358c58";
-      
-      src = pkgs.fetchgit {
-        url = "https://github.com/notconscious/dokuwiki-template-adoradark";
-        sha256 = "1ih50r1przdkjas6h7b0hw70ygklhpw8blwx5i16l7qna4sqasvf";
-        inherit rev;
-      };
-      installPhase = ''
-        mkdir -p $out
-        cp -r * $out
-      '';
+    src = pkgs.fetchgit {
+      url = "https://github.com/notconscious/dokuwiki-template-adoradark";
+      sha256 = "1ih50r1przdkjas6h7b0hw70ygklhpw8blwx5i16l7qna4sqasvf";
+      inherit rev;
     };
-    
+    installPhase = ''
+      mkdir -p $out
+      cp -r * $out
+    '';
+  };
     dokuwikiConfig = pkgs.writeText "local.php" '' 
       <?php
       $conf['title'] = 'fluxi';
@@ -137,17 +117,37 @@ with lib;
         ln -s ${dokuwikiConfig} $out/conf/local.php
       '';
     };
+  in
+{
+  options = { };
+
+  config = let
+    # FIXME: refactor this many lines (also found in other webservices) into something small and useful
+    httpd = config.webserver.apache.package.out;
+
+    version24 = !versionOlder httpd.version "2.4";
+
+    allGranted = if version24 then ''
+      Require all granted
+    '' else ''
+      Order allow,deny
+      Allow from all
+    '';
+
+  in rec {
+    backend = "apache";
+
     #conf/local.php:$conf['template'] = 'notconscious-dokuwiki-template-adoradark-e903fa0';
 
     webserver.enablePHP = true;
     startupScript = ''
       mkdir ${config.stateDir}/www
       cp -R ${dokuwikiRoot}/* ${config.stateDir}/www
-      chmod 0777 ${config.stateDir} -R
-      chown ${config.user}:${config.group } ${config.stateDir} -R
     '';
+    #chmod 0777 ${config.stateDir} -R
+    #chown ${config.proxyOptions.user}:${config.proxyOptions.group} ${config.stateDir} -R
     
-    extraConfig = ''
+    webserver.apache.extraConfig = ''
       Alias ${config.proxyOptions.path} ${config.stateDir}/www
       
       <Directory ${config.stateDir}/www>
