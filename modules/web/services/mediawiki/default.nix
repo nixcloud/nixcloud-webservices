@@ -289,7 +289,7 @@ with lib;
         Disallow: ${config.proxyOptions.path}/Special:Random
       '';
 
-    tests.wanted = [ "mediawiki" ];
+    tests.wanted = [ ./test.nix ];
   };
 
   meta = {

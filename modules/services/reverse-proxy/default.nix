@@ -298,6 +298,6 @@ in
       };
     }) {} (attrNames ACMEsupportSet));
 
-    nixcloud.tests.wanted = [ "reverse-proxy" ];
+    nixcloud.tests.wanted = [ ./test.nix ];
   };
 }

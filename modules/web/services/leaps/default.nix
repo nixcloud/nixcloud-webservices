@@ -50,6 +50,6 @@ with lib;
       };
     };
 
-    tests.wanted = [ "leaps" ];
+    tests.wanted = [ ./test.nix ];
   };
 }

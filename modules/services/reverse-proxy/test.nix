@@ -117,7 +117,7 @@ in
       extendEtcHosts = true;
     };
     # including additional extraConfigs which are used for LXC based webservices
-    imports = [ ./reverse-proxy ];
+    imports = [ ./test ];
     
     services.httpd = {
       enable = true;
