@@ -2,16 +2,17 @@
 
 {
   imports = lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
-    caldavZAP   =  services/caldavZAP.nix;
-    dokuwiki    =  services/dokuwiki.nix;
-    filesender  =  services/filesender.nix;
-    leaps       =  services/leaps.nix;
-    mediawiki   =  services/mediawiki.nix;
-    nextcloud   =  services/nextcloud.nix;
-    phpmyadmin  =  services/phpmyadmin.nix;
-    phppgadmin  =  services/phppgadmin.nix;
-    wordpress   =  services/wordpress.nix;
+    caldavZAP   =  services/caldavzap;
+    dokuwiki    =  services/dokuwiki;
+    filesender  =  services/filesender;
+    leaps       =  services/leaps;
+    mediawiki   =  services/mediawiki;
+    nextcloud   =  services/nextcloud;
+    phpmyadmin  =  services/phpmyadmin;
+    phppgadmin  =  services/phppgadmin;
+    wordpress   =  services/wordpress;
   };             
+
   config = let
     mapWebServiceConfig = fun: webservices: let
       getConfig = lib.mapAttrsToList (lib.const fun);
