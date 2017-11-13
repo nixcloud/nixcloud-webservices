@@ -14,10 +14,13 @@ in {
     };
 
     wanted = mkOption {
-      type = types.listOf (types.either types.str (types.listOf types.str));
+      type = let
+        testName = types.either types.str (types.listOf types.str);
+        pathOrName = types.either types.path testName;
+      in types.listOf pathOrName;
       default = [];
       apply = val: let
-        unified = map (x: if lib.isList x then x else lib.singleton x) val;
+        unified = map (x: if lib.isString x then lib.singleton x else x) val;
       in lib.unique unified;
       example = [ "reverse-proxy" ["foo" "bar"] ];
       description = ''
@@ -36,7 +39,10 @@ in {
       mkErr = path: let
         pathStr = lib.concatStringsSep "." path;
       in abort "Unable to find test for path ${pathStr}.";
-      getTest = path: lib.attrByPath path (mkErr path) testRoot;
+      getTest = arg: let
+        fromAttrPath = lib.attrByPath arg (mkErr arg) testRoot;
+        fromPath = import ../../lib/call-test.nix { inherit pkgs system; } arg;
+      in if lib.isList arg then fromAttrPath else fromPath;
     in map getTest config.nixcloud.tests.wanted;
   };
 }
