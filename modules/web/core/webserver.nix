@@ -139,6 +139,11 @@ in {
         after = [ "network.target" "fs.target" "keys.target" ];
         instance.after = [ "database.target" ];
 
+        serviceConfig.Type = "oneshot";
+        serviceConfig.RemainAfterExit = true;
+      } // (if config.webserver.startupScript == "" then {
+        script = config.webserver.init;
+      } else {
         preStart = config.webserver.init;
         script = config.webserver.startupScript;
 
@@ -147,7 +152,7 @@ in {
         serviceConfig.Group = config.webserver.group;
         serviceConfig.PermissionsStartOnly = true;
         serviceConfig.RemainAfterExit = true;
-      };
+      });
     })
   ];
 }
