@@ -8,9 +8,9 @@ wsName: module:
       imports = [
         module
         ../modules/web/core/base.nix
-        ../modules/web/backends/apache.nix
-        ../modules/web/backends/lighttpd.nix
-        ../modules/web/backends/nginx.nix
+        ../modules/web/webserver/apache.nix
+        ../modules/web/webserver/lighttpd.nix
+        ../modules/web/webserver/nginx.nix
       ];
       _module.args = { inherit wsName pkgs toplevel; };
     });

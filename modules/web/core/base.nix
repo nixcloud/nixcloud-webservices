@@ -38,7 +38,7 @@ let
   in defs // { instance = removeAttrs instance [ "ignore-init" ]; };
 
 in {
-  imports = [ ./backend.nix ../database ];
+  imports = [ ./webserver.nix ../database ];
 
   options = {
     enable = lib.mkOption {
@@ -47,13 +47,10 @@ in {
       description = "Enable or disable the webservice.";
     };
 
-    backend = lib.mkOption {
+    webserver.variant = lib.mkOption {
       type = lib.types.nullOr (lib.types.enum [ "apache" "lighttpd" "nginx" ]);
       default = null;
-      description = ''
-        The backend module (which represents the webserver itself) to use for
-        this webservice.
-      '';
+      description = "The webserver module to use for this webservice.";
     };
 
     stateDir = lib.mkOption {

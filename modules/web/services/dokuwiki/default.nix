@@ -135,12 +135,12 @@ let
     '';
 
   in rec {
-    backend = "apache";
+    webserver.variant = "apache";
 
     #conf/local.php:$conf['template'] = 'notconscious-dokuwiki-template-adoradark-e903fa0';
 
     webserver.enablePHP = true;
-    startupScript = ''
+    webserver.startupScript = ''
       mkdir ${config.stateDir}/www
       cp -R ${dokuwikiRoot}/* ${config.stateDir}/www
     '';

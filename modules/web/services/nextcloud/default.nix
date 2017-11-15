@@ -224,7 +224,7 @@ with lib;
       '';
     };
   in rec {
-    backend = "apache";
+    webserver.variant = "apache";
 
     webserver.apache.extraConfig =
         ''
@@ -248,7 +248,7 @@ with lib;
         
     webserver.enablePHP = true;
     
-    startupScript = ''
+    webserver.startupScript = ''
       # FEATURE HACK: there should be a command which renews this stateDir
       # HACK: as for testing we force redeployment every time!
       #       and don't use config.stateDir as it could be empty and then this would delete everything in / ....

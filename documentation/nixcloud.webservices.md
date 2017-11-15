@@ -49,12 +49,12 @@ All `services` in the namespace `nixcloud.webservices` hold the `special propert
 
  * A common webservice interface: `apache`, `nginx` and `lighttpd`:
 
-    The [common interface](../modules/web/core/backend.nix) features backends as [apache](../modules/web/backends/apache.nix) and [nginx](../modules/web/backends/nginx.nix) which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. 
+    The [common interface](../modules/web/core/webserver.nix) features web servers as [apache](../modules/web/webserver/apache.nix) and [nginx](../modules/web/webserver/nginx.nix) which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. 
 
  * `nix evaluation time` configuration syntax checking: `apache`, `nginx` & `nixcloud-reverse-proxy`
 
-    * [nginx_check_config.nix](../modules/web/backends/lib/nginx_check_config.nix)
-    * [apache_check_config.nix](../modules/web/backends/lib/apache_check_config.nix)
+    * [nginx_check_config.nix](../modules/web/webserver/lib/nginx_check_config.nix)
+    * [apache_check_config.nix](../modules/web/webserver/lib/apache_check_config.nix)
 
  * There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
 
@@ -129,7 +129,7 @@ or
 
 ### mediawiki's systemd backend
 
-`mediawiki` is using the apache backend and can be controlled using:
+`mediawiki` is using the apache web server and can be controlled using:
 
       systemctl status mediawiki-test1
       journalctl -u mediawiki-test1

@@ -109,7 +109,7 @@ with lib;
       "mod_trigger_b4_dl"
       "mod_webdav"
     ];
-  in mkIf (config.backend == "lighttpd" && config.enable) {
+  in mkIf (config.webserver.variant == "lighttpd" && config.enable) {
 
     toplevel.assertions = singleton {
       assertion = all (flip elem allKnownModules) config.webserver.lighttpd.enableModules;
@@ -123,7 +123,7 @@ with lib;
       '';
     };
 
-    backendInit = ''
+    webserver.init = ''
       mkdir -m 0750 -p ${config.stateDir}/log
 
       # fix permissions
@@ -135,7 +135,7 @@ with lib;
       description = "lighttpd HTTPD";
       wantedBy    = [ "multi-user.target" ];
       after = [ "network.target" ] ++ config.webserver.lighttpd.extraServiceDependencies;
-      instance.after = [ "database.target" "backend-init.service" ];
+      instance.after = [ "database.target" "webserver-init.service" ];
       serviceConfig = let
         modulesIncludeString = concatStringsSep ",\n    "
           (filter (x: x != "") (map maybeModuleString allKnownModules));

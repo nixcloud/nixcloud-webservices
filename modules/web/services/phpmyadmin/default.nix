@@ -36,7 +36,7 @@ with lib;
       '';
     };
   in rec {
-    backend = "apache";
+    webserver.variant = "apache";
 
     webserver.enablePHP = true;
 

@@ -124,8 +124,8 @@ with lib;
   config = let
     httpd = config.webserver.apache.package.out;
     version24 = !versionOlder httpd.version "2.4";
-  in mkIf (config.backend == "apache" && config.enable) {
-    backendInit = ''
+  in mkIf (config.webserver.variant == "apache" && config.enable) {
+    webserver.init = ''
       #set -e
       #set +o pipefail
 
@@ -372,7 +372,7 @@ with lib;
       wantedBy = [ "multi-user.target" ];
       wants = [ "keys.target" ];
       after = [ "network.target" "fs.target" "keys.target" ];
-      instance.after = [ "database.target" "backend-init.service" ];
+      instance.after = [ "database.target" "webserver-init.service" ];
 
       path =
         [ config.webserver.apache.package.out pkgs.coreutils pkgs.gnugrep ]

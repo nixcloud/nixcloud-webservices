@@ -71,7 +71,7 @@ with lib;
       '';
     };
   in rec {
-    backend = "apache";
+    webserver.variant = "apache";
 
     webserver.apache.extraConfig = ''
       Alias ${config.proxyOptions.path} ${caldavZAPRoot}/

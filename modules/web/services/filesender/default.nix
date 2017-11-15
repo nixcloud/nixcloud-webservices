@@ -1382,10 +1382,8 @@ with lib;
 
     ''; #'
   in rec {
-    backend = "apache";
+    webserver.variant = "apache";
 
-
- 
     webserver.apache.extraConfig =
       ''
       Alias ${config.proxyOptions.path}/simplesaml ${SimpleSAMLphp}/www
@@ -1413,7 +1411,7 @@ with lib;
     # FIXME: factor this into a config.database set which will introduce this dependency upon usage
     #extraServiceDependencies = [ "postgresq.service" ];
    
-    startupScript = (optionalString (config.dbType == "postgres" && config.dbServer == "") ''
+    webserver.startupScript = (optionalString (config.dbType == "postgres" && config.dbServer == "") ''
       # FIXME: Reset the database during development
       #${pkgs.postgresql}/bin/dropdb ${config.dbName}
 

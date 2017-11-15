@@ -246,7 +246,7 @@ in
         ${createLocationRecords "https" domainOptions}
       }
     '';
-    checkAndFormatNginxConfigfile = (import ../../web/backends/lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile;
+    checkAndFormatNginxConfigfile = (import ../../web/webserver/lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile;
     configFile = generateNginxConfigFile allProxyOptions allDomains;
 
   in mkIf (cfg.enable) {

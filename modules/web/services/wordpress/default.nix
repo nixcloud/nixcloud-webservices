@@ -188,7 +188,7 @@ with lib;
     };
     in rec {
 
-    backend = "apache";
+    webserver.variant = "apache";
 
     webserver.apache.phpOptions = ''
       php_value upload_max_filesize 20M
@@ -214,7 +214,7 @@ with lib;
 
     webserver.enablePHP = true;
 
-    startupScript = ''
+    webserver.startupScript = ''
       mkdir -p ${config.wordpressUploads}
       chown ${config.user}:${config.group} ${config.wordpressUploads}
     '';

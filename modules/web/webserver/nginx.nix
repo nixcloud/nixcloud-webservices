@@ -52,8 +52,8 @@ with lib;
       # PHP only, required if PHP was built with --enable-force-cgi-redirect
       fastcgi_param   REDIRECT_STATUS         200;
     '';
-  in mkIf (config.backend == "nginx" && config.enable) {
-    backendInit = ''
+  in mkIf (config.webserver.variant == "nginx" && config.enable) {
+    webserver.init = ''
       mkdir -p ${config.stateDir}/nginx/logs
 
       # fix permissions
@@ -67,7 +67,7 @@ with lib;
       description = "Nginx HTTPD";
       wantedBy      = [ "multi-user.target" ];
       after = [ "network.target" "fs.target" "keys.target" ] ++ config.webserver.ngixn.extraServiceDependencies;
-      instance.after = [ "database.target" "backend-init.service" ];
+      instance.after = [ "database.target" "webserver-init.service" ];
       serviceConfig = let
         checkAndFormatNginxConfigfile = (import lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile {configFile = nginxConfigFile; inherit fileName;};
 

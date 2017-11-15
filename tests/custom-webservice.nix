@@ -1,7 +1,7 @@
 let
   customWebService = let
     submodule = { pkgs, ... }: {
-      backend = "lighttpd";
+      webserver.variant = "lighttpd";
       webserver.lighttpd.extraConfig = ''
         server.document-root = "${pkgs.runCommand "docroot" {} ''
           mkdir "$out"

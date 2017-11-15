@@ -1,10 +1,11 @@
 # This submodule contains all of the option declarations and definitions that
-# are common among all backend modules.
+# are common among all web server modules.
 #
 { toplevel, name, config, pkgs, lib, ... }:
 
 let
-  needsBackendInit = config.backendInit != "" || config.startupScript != "";
+  needsWebServerInit = config.webserver.init != ""
+                    || config.webserver.startupScript != "";
 in {
   options = {
     documentRoot = lib.mkOption {
@@ -33,24 +34,24 @@ in {
       };
     };
 
-    startupScript = lib.mkOption {
+    webserver.startupScript = lib.mkOption {
       type = lib.types.lines;
       default = "";
       description = ''
-        Commands that are run prior to starting the actual backend using the
+        Commands that are run prior to starting the actual web server using the
         privileges of the user defined in <option>webserver.user</option>.
 
         <note><para>These commands are run directly after
-        <option>backendInit</option> but before the actual
-        backend.</para></note>
+        <option>serverInit</option> but before the actual
+        web server.</para></note>
       '';
     };
 
-    backendInit = lib.mkOption {
+    webserver.init = lib.mkOption {
       type = lib.types.lines;
       default = "";
       description = ''
-        Commands that are run prior to starting the actual backend.
+        Commands that are run prior to starting the actual web server.
 
         <note><para>These commands are run as the <systemitem
         class="username">root</systemitem> user.</para></note>
@@ -131,15 +132,15 @@ in {
       groups.${config.webserver.group} =
         removeAttrs config.webserver.groupOptions [ "name" ];
     })
-    (lib.mkIf (config.enable && needsBackendInit) {
-      systemd.services.backend-init = {
-        description = "Backend Initialization";
+    (lib.mkIf (config.enable && needsWebServerInit) {
+      systemd.services.webserver-init = {
+        description = "Web Server Initialization";
         wantedBy = [ "multi-user.target" ];
         after = [ "network.target" "fs.target" "keys.target" ];
         instance.after = [ "database.target" ];
 
-        preStart = config.backendInit;
-        script = config.startupScript;
+        preStart = config.webserver.init;
+        script = config.webserver.startupScript;
 
         serviceConfig.Type = "oneshot";
         serviceConfig.User = config.webserver.user;

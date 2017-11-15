@@ -215,7 +215,7 @@ with lib;
       '';
 
   in rec {
-    backend = "apache";
+    webserver.variant = "apache";
 
     documentRoot = mediawikiRoot;
 
@@ -276,7 +276,7 @@ with lib;
     '' else throw "Unsupported database type `${type}' for MediaWiki.";
 
     # BUG postgresql users must have limited rights, check the rights each start and complain if they don't match!
-    startupScript = ''
+    webserver.startupScript = ''
       ${config.webserver.apache.phpPackage}/bin/php ${mediawikiRoot}/maintenance/update.php
     '';
 
