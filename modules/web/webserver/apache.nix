@@ -368,7 +368,7 @@ with lib;
         ];
       } contents;
     in {
-      description = "Apache HTTPD";
+      description = "${config.uniqueName} main service (Apache HTTPD)";
       wantedBy = [ "multi-user.target" ];
       wants = [ "keys.target" ];
       after = [ "network.target" "fs.target" "keys.target" ];

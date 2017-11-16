@@ -32,7 +32,8 @@ with lib;
     groups.leaps = {};
 
     systemd.services.leaps = {
-      description   = "leaps service";
+     description = "${config.uniqueName} main service (leaps)";
+
       wantedBy      = [ "multi-user.target" ];
       after         = [ "network.target" ];
 
