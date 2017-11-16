@@ -61,9 +61,14 @@ All `services` in the namespace `nixcloud.webservices` hold the `special propert
      In a nutshell you can run a test explicitly like this:
 
         cd nixcloud-webservices/tests
-        nix-build -A leaps
+        nix-build -A custom-webservice
 
-     But we made tests part of our evaluation so if you are using nixcloud.reverse-proxy it will always run the test before you can deploy a system which makes use of the reverse-proxy. 
+     But we made tests part of our evaluation: 
+     
+         * if you are using any webservice, like `nixcloud.webservices.leaps`, it will always run the respective test (leaps) to make sure it works in general
+         * if you are using `nixcloud.reverse-proxy` it will always run the reverse-proxy test before
+
+     WARNING: `nixcloud.webservices` should be used from a machine with native virtualization support (KVM) but if you are using it from a VM, then the OS virtualization will be very slow.
 
  * Each webservice gets a unique, stateful directory called `stateDir`. 
  
@@ -107,7 +112,6 @@ Add this code to your `/etc/nixos/configuration.nix` file:
 
     nixcloud.webservices.mediawiki.test1 = {
       enable = true;
-      siteName="nixcloud's demo wiki";
 
       proxyOptions = {
         port   = 40000;
@@ -134,10 +138,15 @@ or
 
 ### mediawiki's systemd backend
 
-`mediawiki` is using the apache web server and can be controlled using:
+`mediawiki` is using the apache web server and can be controlled using various services/targets:
 
-      systemctl status mediawiki-test1
-      journalctl -u mediawiki-test1
+
+      systemctl | grep mediawiki
+
+try:
+
+      systemctl status mediawiki-test1-apache
+      journalctl -u mediawiki-test1-apache
 
 ### Upload files / logging 
 
@@ -152,7 +161,7 @@ or
 
 * debugging
 
-        journalctl -u mediawiki-test1
+        journalctl -u mediawiki-test1-apache
 
 ## Option B: Building a (KVM) VM
 
@@ -160,25 +169,19 @@ If you don't want to clutter your local system you can use a VM:
 
     nix-build '<nixpkgs/nixos>' --arg configuration '{ imports = [ ./modules ./config.nix ]; services.mingetty.autologinUser = "root"; }' -A vm
 
-# Generating options
 
-    git clone nixpkgs
-    cd nixpkgs
+Note: You have to create `config.nix` manually, it contains basically the lines we put in `/etc/nixos/configuration.nix` in previous examples.
 
-    diff --git a/nixos/modules/module-list.nix b/nixos/modules/module-list.nix
-    index c89bbcc71a..4aae6d61a0 100644
-    --- a/nixos/modules/module-list.nix
-    +++ b/nixos/modules/module-list.nix
-    @@ -1,4 +1,5 @@
-    [
-    + /path/to/nixcloud-webservices/modules
-    ./config/debug-info.nix
-    ./config/fonts/corefonts.nix
-    ./config/fonts/fontconfig-ultimate.nix
+Note: This is for advanced users who know how VMs on NixOS work. 
 
-    nix-build --no-out-link nixos/release.nix -I nixpkgs=. -A options
+# Extending nixcloud-webservices with your service
 
-Afterwards you can put it into the options search but that is mainly for internal use at nixcloud.io ATM.
+You have basically two options:
+
+* Hack your implementation into your clone of `nixcloud.webservices`, use mediawiki as an example
+* Use `nixcloud.webservices` as a library which is illustrated in [../tests/custom-webservice.nix](../tests/custom-webservice.nix)
+
+Note: The library usage scenario is probably easier as you don't have to use `git` to rebase your changes when updating.
 
 # History
 
