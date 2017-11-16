@@ -125,7 +125,6 @@ in
     port = mkOption {
       type = types.int;
       example = 2345;
-      default = 80;
       description = ''
         'inet' socket port number (default 80) used when creating a nginx location.
       '';
