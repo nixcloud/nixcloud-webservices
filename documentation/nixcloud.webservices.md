@@ -47,6 +47,8 @@ All `services` in the namespace `nixcloud.webservices` hold the `special propert
     * [postgresql implementation](../modules/web/database/postgresql.nix)
     * [mysql implementation](../modules/web/database/mysql.nix)
 
+    Note: We spawn a custom database per webservice by default and `nixcloud.webservices.mediawiki` contains an test which is also an example how to use both mysql and postgresql in one webservice and how to make it a user choice which one to use.
+
  * A common webservice interface: `apache`, `nginx` and `lighttpd`:
 
     The [common interface](../modules/web/core/webserver.nix) features web servers as [apache](../modules/web/webserver/apache.nix) and [nginx](../modules/web/webserver/nginx.nix) which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. 
@@ -139,7 +141,6 @@ or
 ### mediawiki's systemd backend
 
 `mediawiki` is using the apache web server and can be controlled using various services/targets:
-
 
       systemctl | grep mediawiki
 
