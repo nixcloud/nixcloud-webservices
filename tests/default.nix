@@ -5,4 +5,9 @@ let
 in {
   custom-webservice = callTest ./custom-webservice.nix;
   user-allocation-uid-gid-test = callTest ./user-allocation-uid-gid-test.nix;
+
+  # XXX: These tests should be automatically gathered by the module system!
+  reverse-proxy = callTest ../modules/services/reverse-proxy/test.nix;
+  webservices.mediawiki = callTest ../modules/web/services/mediawiki/test.nix;
+  webservices.leaps = callTest ../modules/web/services/leaps/test.nix;
 }
