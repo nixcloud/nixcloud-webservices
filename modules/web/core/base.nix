@@ -139,6 +139,7 @@ in {
   config = lib.mkIf config.enable {
     _module.args.mkUnique = suffix:
       if suffix == config.uniqueName then suffix
+      else if suffix == wsName then config.uniqueName
       else "${config.uniqueName}-${suffix}";
 
     systemd.mounts = lib.singleton {
