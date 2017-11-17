@@ -27,12 +27,13 @@ For inquiries, please contact:
 
 Many thanks to:
 
-- [profpatsch](https://github.com/Profpatsch) (nixcloud-frontend / nixcloud-backend packaging, testing)
-- [aszlig](https://github.com/aszlig) (nix, nix option system)
-- [uwap](https://github.com/uwap) (email abstraction)
-- [clever](https://github.com/cleverca22) (helping with hydra.nixcloud.io)
-- [brauner](https://github.com/brauner) (help with LXC)
-- [leenaars](https://github.com/leenaars) (requirements, testing, review)
+- [https://www.internetsociety.org/](ISOC.nl) (Sponsor)
+- [profpatsch](https://github.com/Profpatsch) (Early prototyping)
+- [aszlig](https://github.com/aszlig) (Nix module system)
+- [uwap](https://github.com/uwap) (Email abstraction)
+- [clever](https://github.com/cleverca22) (Helping with hydra.nixcloud.io)
+- [brauner](https://github.com/brauner) (Help with LXC)
+- [leenaars](https://github.com/leenaars) (Requirements, testing, review)
 - [seitz](https://github.com/seitz)
 - [qknight](https://github.com/qknight)
 
