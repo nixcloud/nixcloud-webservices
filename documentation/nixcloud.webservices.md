@@ -88,6 +88,8 @@ All `services` in the namespace `nixcloud.webservices` hold the `special propert
 
 WARNING: The nixcloud.reverse-proxy's `proxyOptions` API and `nixcloud.webservices` related API is not stable yet. This means that futher updates break your services. This is caused by the fact that
 we spent 8 months in developing `nixcloud.webservices` and related technologies and coming with the release of `nixcloud.webservices` we want to pinpoint the usage scenarios and stabalize the API afterwards.
+
+WARNING: We are aware of https://github.com/NixOS/nixpkgs/issues/24288#issuecomment-289032210 and we will fix this here as well.
  
 # Example usage
 
