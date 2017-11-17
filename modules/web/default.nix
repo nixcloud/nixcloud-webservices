@@ -2,15 +2,9 @@
 
 {
   imports = lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
-    caldavZAP   =  services/caldavzap;
-    dokuwiki    =  services/dokuwiki;
     filesender  =  services/filesender;
     leaps       =  services/leaps;
     mediawiki   =  services/mediawiki;
-    nextcloud   =  services/nextcloud;
-    phpmyadmin  =  services/phpmyadmin;
-    phppgadmin  =  services/phppgadmin;
-    wordpress   =  services/wordpress;
   };             
 
   config = let
