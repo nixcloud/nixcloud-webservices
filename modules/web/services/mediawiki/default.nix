@@ -1,4 +1,4 @@
-{ config, lib, pkgs, wsName, mkUnique, ... }:
+{ config, lib, pkgs, wsName, mkUnique, apache, ... }:
 
 # BUG: if you get this error message when visiting the wiki:
 #    [320cfa14bce5375c4e8daf65] 2017-03-20 16:17:44: Fatal exception of type MWException
@@ -80,17 +80,6 @@ with lib;
   };
 
   config = let
-
-    httpd = config.webserver.apache.package.out;
-    version24 = !versionOlder httpd.version "2.4";
-
-    allGranted = if version24 then ''
-      Require all granted
-    '' else ''
-      Order allow,deny
-      Allow from all
-    '';
-
     mediawikiConfig = pkgs.writeText "LocalSettings.php"
       ''
         <?php
@@ -228,17 +217,17 @@ with lib;
     #
     #      for config.proxyOptions.path != "/" it works, why? 
     #    -> http://localhost:60000/dd/Main_Page
-    
+
     webserver.apache.extraConfig = ''
       ${optionalString config.enableUploads ''
         Alias ${config.proxyOptions.path}${config.urlPrefix}/images ${config.uploadDir}
 
         <Directory ${config.uploadDir}>
-            ${allGranted}
+            ${apache.allGranted}
             Options -Indexes
         </Directory>
       ''}
-      
+
       ${if config.proxyOptions.path == "/" then ''
         #RewriteEngine On
         #RewriteRule ^w(/.*)?$ $1 [L]
@@ -254,7 +243,7 @@ with lib;
       Alias ${config.proxyOptions.path} ${mediawikiRoot}/index.php
 
       <Directory ${mediawikiRoot}>
-        ${allGranted}
+        ${apache.allGranted}
         DirectoryIndex index.php
         AllowOverride none
       </Directory>

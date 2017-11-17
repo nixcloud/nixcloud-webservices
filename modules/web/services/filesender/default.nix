@@ -1,4 +1,4 @@
-{ config, options, lib, pkgs, wsName, ... }:
+{ config, options, lib, pkgs, wsName, apache, ... }:
 # https://app.assembla.com/spaces/file_sender/wiki/Installation_-_Linux_Source#client_and_server_requirements
 # https://simplesamlphp.org/docs/stable/simplesamlphp-install#section_3
 with lib; 
@@ -44,16 +44,6 @@ with lib;
   };
 
   config = let
-    httpd = config.webserver.apache.package.out;
-
-    version24 = !versionOlder httpd.version "2.4";
-
-    allGranted = if version24 then ''
-      Require all granted
-    '' else ''
-      Order allow,deny
-      Allow from all
-    '';
     fileSenderRoot = pkgs.stdenv.mkDerivation rec {
       name= "filesender-1.6.1";
       src = pkgs.fetchurl {
@@ -1390,7 +1380,7 @@ with lib;
       ${"Alias ${config.proxyOptions.path} ${documentRoot}"}
 
       <Directory ${documentRoot}>
-          ${allGranted}
+          ${apache.allGranted}
           Options FollowSymLinks 
           DirectoryIndex index.php
       </Directory>   
@@ -1398,7 +1388,7 @@ with lib;
       SetEnv SIMPLESAMLPHP_CONFIG_DIR ${SimpleSAMLphp}/config
 
       <Directory ${SimpleSAMLphp}/www>
-          ${allGranted}
+          ${apache.allGranted}
           Options FollowSymLinks 
           DirectoryIndex index.php
       </Directory>

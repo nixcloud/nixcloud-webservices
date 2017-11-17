@@ -1,4 +1,4 @@
-{ toplevel, config, pkgs, lib, options, wsName, mkUnique, ... }:
+{ toplevel, config, pkgs, lib, options, wsName, mkUnique, apache, ... }:
 
 with lib;
 
@@ -125,6 +125,22 @@ with lib;
     httpd = config.webserver.apache.package.out;
     version24 = !versionOlder httpd.version "2.4";
   in mkIf (config.webserver.variant == "apache" && config.enable) {
+    _module.args.apache = {
+      allDenied = if version24 then ''
+        Require all denied
+      '' else ''
+        Order deny,allow
+        Deny from all
+      '';
+
+      allGranted = if version24 then ''
+        Require all granted
+      '' else ''
+        Order allow,deny
+        Allow from all
+      '';
+    };
+
     webserver.init = ''
       #set -e
       #set +o pipefail
@@ -196,7 +212,7 @@ with lib;
         AddHandler type-map var
 
         <Files ~ "^\.ht">
-            ${allDenied}
+          ${apache.allDenied}
         </Files>
 
         ${mimeConf}
@@ -214,16 +230,16 @@ with lib;
 
         # Fascist default - deny access to everything.
         <Directory />
-            Options FollowSymLinks
-            AllowOverride None
-            ${allDenied}
+          Options FollowSymLinks
+          AllowOverride None
+          ${apache.allDenied}
         </Directory>
 
         # But do allow access to files in the store so that we don't have
         # to generate <Directory> clauses for every generated file that we
         # want to serve.
         <Directory /nix/store>
-            ${allGranted}
+          ${apache.allGranted}
         </Directory>
 
         ServerName "${config.uniqueName}"
@@ -288,21 +304,6 @@ with lib;
         ]
         ++ (if config.webserver.apache.multiProcessingModule == "prefork" then [ "cgi" ] else [ "cgid" ])
         ++ extraApacheModules;
-
-
-      allDenied = if version24 then ''
-        Require all denied
-      '' else ''
-        Order deny,allow
-        Deny from all
-      '';
-
-      allGranted = if version24 then ''
-        Require all granted
-      '' else ''
-        Order allow,deny
-        Allow from all
-      '';
 
       loggingConf = (if config.webserver.apache.logFormat != "none" then ''
         ErrorLog ${config.stateDir}/log/error_log
