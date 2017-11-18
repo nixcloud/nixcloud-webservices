@@ -10,6 +10,8 @@ with lib;
 #         $config['site_simplesamlurl'] =  $prot . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] . '${config.proxyOptions.path}' . '/simplesaml/';
 
 {
+  meta.license = lib.licenses.bsd3;
+
   options = {
     dbType = mkOption {
       default = "postgres";
