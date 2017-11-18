@@ -1,13 +1,14 @@
 let
   customWebService = let
     submodule = { pkgs, ... }: {
-      webserver.variant = "lighttpd";
-      webserver.lighttpd.extraConfig = ''
+      config.webserver.variant = "lighttpd";
+      config.webserver.lighttpd.extraConfig = ''
         server.document-root = "${pkgs.runCommand "docroot" {} ''
           mkdir "$out"
           echo hello world > "$out/index.html"
         ''}"
       '';
+      meta.license = null;
     };
   in import ../lib/make-webservice.nix "custom-foobar" submodule;
 
