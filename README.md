@@ -27,8 +27,8 @@ For inquiries, please contact:
 
 Many thanks to:
 
-- [https://www.internetsociety.org/](www.internetsociety.org/) (Sponsor)
-- [ISOC.nl](ISOC.nl) (Sponsor)
+- [https://www.internetsociety.org/](https://www.internetsociety.org/) (Sponsor)
+- [ISOC.nl](https://ISOC.nl) (Sponsor)
 - [profpatsch](https://github.com/Profpatsch) (Early prototyping)
 - [aszlig](https://github.com/aszlig) (NixOS module system)
 - [uwap](https://github.com/uwap) (Email abstraction)
