@@ -38,7 +38,7 @@ let
   in defs // { instance = removeAttrs instance [ "ignore-init" ]; };
 
 in {
-  imports = [ ./webserver.nix ../database ];
+  imports = [ ./webserver.nix ./meta.nix ../database ];
 
   options = {
     enable = lib.mkOption {
@@ -134,6 +134,7 @@ in {
     tests.wanted = toplevel.options.nixcloud.tests.wanted;
 
     meta = toplevel.options.meta;
+    assertions = toplevel.options.assertions;
   };
 
   config = lib.mkIf config.enable {
@@ -191,12 +192,12 @@ in {
         } // removeAttrs gcfg [ "name" ]);
       }) config.groups;
 
-      assertions = lib.mapAttrsToList (uname: ucfg: {
+      assertions = (lib.mapAttrsToList (uname: ucfg: {
         assertion = config.groups ? ${ucfg.group};
         message = let
           opt = "nixcloud.webservices.${wsName}.${name}.users.${uname}.group";
         in "Group `${ucfg.group}' defined in `${opt}' does not exist.";
-      }) config.users;
+      }) config.users) ++ config.assertions;
 
       systemd = let
         generator = name: lib.mapAttrs' (unitName: defs: {
