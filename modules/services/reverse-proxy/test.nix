@@ -115,6 +115,53 @@ in
     nixcloud.reverse-proxy = {
       enable = true;
       extendEtcHosts = true;
+      extraMappings = [
+        # BUG: fix the code that this record won't create any output, ATM it produces an empty server record 
+        {
+          domain = "stupid.io";
+          path = "/";
+          TLS = "none";
+          port = 8383;
+          http.mode = "off";
+          https.mode = "off";
+          websockets = {
+            ws = {
+              subpath = "/websocket";
+              http.mode = "off";
+              https.mode = "off";
+            };
+          };
+        }
+        {
+          domain = "exclusive.ws1";
+          path = "/tt";
+          port = 8383;
+          http.mode = "off";
+          https.mode = "off";
+          websockets = {
+            ws = {
+              subpath = "/websocket";
+              http.mode = "on";
+              https.mode = "on";
+            };
+          };
+        }
+        
+        {
+          domain = "exclusive.ws2";
+          #path = "/";
+          port = 8484;
+          http.mode = "off";
+          https.mode = "off";
+          websockets = {
+            ws = {
+              subpath = "/websocket";
+              http.mode = "on";
+              https.mode = "on";
+            };
+          };
+        }
+      ];
     };
     # including additional extraConfigs which are used for LXC based webservices
     imports = [ ./test ];

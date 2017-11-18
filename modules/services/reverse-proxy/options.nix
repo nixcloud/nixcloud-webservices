@@ -34,6 +34,14 @@ let
         '';
       };
       http = {
+        mode = mkOption {
+          type = types.enum [ "on" "off" ];
+          example = "on";
+          default = "off";
+          description = ''
+            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
+          '';
+        };      
         record = mkOption {
           description = ''
             The http.location can be used to override the default location record for http websocket (ws) usage when `http.mode = "on"` is set.
@@ -51,6 +59,14 @@ let
       };
 
       https = {
+        mode = mkOption {
+          type = types.enum [ "on" "off" ];
+          example = "off";
+          default = "on";
+          description = ''
+            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
+          '';
+        };
         record = mkOption {
           description = ''
             The https.location can be used to override the default location record for https websocket (wss) usage when `https.mode = "on"` is set.
@@ -84,10 +100,6 @@ in
         The domain for which you want the reverse proxy mapping. If you URL looks like this `https://example.com/wiki` then set domain to "example.com"
       '';
     };
-    
-
-
-
     path = mkOption {
       type = types.str;
       default = "/";

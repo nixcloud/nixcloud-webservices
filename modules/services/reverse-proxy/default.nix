@@ -159,13 +159,25 @@ in
               rewrite     ^   https://$server_name$request_uri? permanent;
             }
           ''
-        else abort "unknown location mode: `${m}`, this should never happen.... but just in case!") +
-        lib.concatMapStringsSep "\n" (websocket: createWsPaths m mode location location.websockets.${websocket}) (attrNames location.websockets);
+        else if (m == "off") then ""
+        else abort "unknown location mode: `${m}`, this should never happen.... but just in case!");
 
-    createWsPaths = m: mode: location: websocket:
+    createWsPaths = mode: filteredProxyOptions:
+      lib.concatMapStringsSep "\n" (location: (createWsPaths_ mode location)) filteredProxyOptions;
+    
+    createWsPaths_ = mode: location:
+      lib.concatMapStringsSep "\n" (w: createWsPath mode location location.websockets.${w}) (attrNames location.websockets);
+
+    checkWebsockets = websockets: mode:
+      #lib.traceValSeq websockets
+      fold (el: container: if (websockets.${el}).${mode}.mode != "off" then true else container) false (attrNames websockets);      
+      
+    createWsPath = mode: location: websocket:
+      #builtins.trace "${toString location.port}" "${toString location.port}";
       let
         b = websocket.${mode}.basicAuth;
         r = websocket.${mode}.record;
+        m = websocket.${mode}.mode;
         ppp = removeSuffix "/" (toString (builtins.toPath (location.path + websocket.subpath)));
       in
         if (m == "on") then
@@ -178,26 +190,10 @@ in
               proxy_pass http://${location.ip}:${toString location.port}${removeSuffix "/" (toString (builtins.toPath (location.path)))};
             '' else r
             }
-            
               ${if (b != {}) then mkBasicAuth b else ""}
             }
           ''
-        else if (m == "redirect_to_http") then
-          ''
-            location ${ppp} {
-              # FIXME: code below should either be created or also be a redirect but i don't know yet how to do a WS redirect in nginx (qknight)
-              # FIXME: this code is likely broken and absolutely untested!
-              rewrite     ^   https://$server_name$request_uri? permanent;
-            }
-          ''
-        else if (m == "redirect_to_https") then
-          ''
-            location ${ppp} {
-              # FIXME: code below should either be created or also be a redirect but i don't know yet how to do a WS redirect in nginx (qknight)
-              # FIXME: this code is likely broken and absolutely untested!
-              rewrite     ^   https://$server_name$request_uri? permanent;
-            }
-          ''
+        else if (m == "off") then ""       
         else abort "unknown location mode: `${m}`, this should never happen.... but just in case!";
 
     # 3. map over these and create server (http/https) records per domain
@@ -207,8 +203,9 @@ in
 
     createHttpServerRecord = allProxyOptions: domain:
     let
-      filteredProxyOptions = filter (e: e.domain == "${domain}" && e.http.mode != "off") allProxyOptions;
-    in ''
+      filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
+      needsHttp = fold (el: con: if ((el.http.mode != "off") || checkWebsockets el.websockets "http") then true else con) false filteredProxyOptions;
+    in optionalString (filteredProxyOptions != [] && needsHttp) ''
       server {
         listen ${toString cfg.httpPort};
         #listen [::]:${toString cfg.httpPort} ipv6only=on;
@@ -224,14 +221,17 @@ in
         ''
         }
         ${createLocationRecords "http" filteredProxyOptions}
+        ${createWsPaths "http" filteredProxyOptions}
       }
     '';
-
+        #${builtins.trace filteredProxyOptions.websockets ""}
+    
     createHttpsServerRecord = allProxyOptions: domain:
     let
-      domainOptions = fold (el: con: if (el.domain == domain && el.https.mode != "off") then con ++ [ el ] else con) [] allProxyOptions;
-      needsHttps = fold (el: con: if (el.https.mode != "off") then true else con) false domainOptions;
-    in optionalString (domainOptions != [] && needsHttps) ''
+      filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
+      # FIXME/BUG stupid.io example still creates a server record
+      needsHttps = fold (el: con: if ((el.https.mode != "off") || checkWebsockets el.websockets "https") then true else con) false filteredProxyOptions;
+    in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {
         ssl on;
         listen ${toString cfg.httpsPort} ssl;
@@ -243,7 +243,8 @@ in
         ssl_certificate /var/lib/acme/${domain}/fullchain.pem;
         ssl_certificate_key /var/lib/acme/${domain}/key.pem;
         ''}
-        ${createLocationRecords "https" domainOptions}
+        ${createLocationRecords "https" filteredProxyOptions}
+        ${createWsPaths "https" filteredProxyOptions}
       }
     '';
     checkAndFormatNginxConfigfile = (import ../../web/webserver/lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile;

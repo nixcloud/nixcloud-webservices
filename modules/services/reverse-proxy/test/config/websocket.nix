@@ -7,6 +7,7 @@
     ws = {
       subpath = "/leaps/ws";
       #https.basicAuth."nixclouduser" = "password_world_readable_in_nix_store";
+      http.mode = "on";
     };
   };
   ip = "127.0.0.1";
