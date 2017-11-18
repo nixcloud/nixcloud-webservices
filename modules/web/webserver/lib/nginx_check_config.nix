@@ -73,6 +73,7 @@ in rec {
         rm $out/${fileName}_
         rm $out/nginx_generated_testing_key.pem
         rm $out/nginx_generated_testing_fullchain.pem
+        rm $out/server.pass.key
       fi
     '';
   };
