@@ -44,7 +44,7 @@ let
               proxy_http_version 1.1;
               proxy_set_header Upgrade $http_upgrade;
               proxy_set_header Connection "upgrade";
-              proxy_pass http://${location.ip}:${toString location.port}${location.path};
+              proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
             '';
         };
         inherit basicAuth;
@@ -61,7 +61,7 @@ let
               proxy_http_version 1.1;
               proxy_set_header Upgrade $http_upgrade;
               proxy_set_header Connection "upgrade";
-              proxy_pass http://${location.ip}:${toString location.port}${location.path};
+              proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
             '';
         };      
         inherit basicAuth;
@@ -157,7 +157,7 @@ in
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-          proxy_pass http://${location.ip}:${toString location.port}${location.path};
+          proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
         '';
       };
       inherit basicAuth;

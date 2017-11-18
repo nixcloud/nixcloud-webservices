@@ -49,7 +49,7 @@ let
         The hostname argument suitable for PHP.
 
         <note><para>This maps to the socket file rather than a real host
-        name.</note></para>
+        name.</para></note>
       '';
     };
 
