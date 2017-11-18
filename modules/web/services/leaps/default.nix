@@ -15,9 +15,9 @@ with lib;
   meta = {
     description = "A pair programming tool and library written in Golang";
     homepage = "https://github.com/jeffail/leaps/";
-    license = "MIT";
-    maintainers = with stdenv.lib.maintainers; [ qknight ];
-    meta.platforms = stdenv.lib.platforms.linux;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ qknight ];
+    meta.platforms = lib.platforms.linux;
   };
   
   config = mkIf config.enable {

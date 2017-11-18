@@ -284,7 +284,7 @@ with lib;
   meta = {
     description = "A wiki package written in PHP, originally for use on Wikipedia";
     maintainers = with maintainers; [ qknight ];
-    license = licenses.gplv2;
+    license = licenses.gpl2;
     homepage = https://www.mediawiki.org/wiki/MediaWiki;
   };
 }
