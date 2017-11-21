@@ -8,7 +8,7 @@ See also [../README.md](../README.md).
 
 ## Using `nixcloud-webservices`
 
-When using `nixcloud.reverse.proxy.enable=true;` and then use a service from `nixcloud.webservices` you will automatically get a reverse-proxy mapping.
+When using `nixcloud.reverse-proxy.enable=true;` and then use a service from `nixcloud.webservices` you will automatically get a reverse-proxy mapping.
 
     nixcloud.webservices.mediawiki.test1 = {
       enable = true;
