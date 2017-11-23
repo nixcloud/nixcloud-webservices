@@ -253,10 +253,10 @@ in
   in mkIf (cfg.enable) {
     networking.extraHosts = if cfg.extendEtcHosts then lib.concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allDomains else "";
     
-    systemd.services.reverse-proxy = let
+    systemd.services."nixcloud.reverse-proxy" = let
       acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
     in {
-      description   = "reverse-proxy service";
+      description   = "nixcloud reverse-proxy service";
       wantedBy      = [ "multi-user.target" ];
       
       after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ];
@@ -271,7 +271,7 @@ in
         chown -R ${user}:${group} ${stateDir}
       '';
       serviceConfig = {
-        ExecStart = "${pkgs.nginx}/bin/nginx -c ${if (cfg.configFile == null) then (checkAndFormatNginxConfigfile {inherit configFile; fileName = "nginx-reverse-proxy.conf";}) else cfg.configFile}/nginx-reverse-proxy.conf -p ${stateDir}/nginx";
+        ExecStart = "${pkgs.nginx}/bin/nginx -c ${if (cfg.configFile == null) then (checkAndFormatNginxConfigfile {inherit configFile; fileName = "nixcloud.reverse-proxy.conf";}) else cfg.configFile}/nixcloud.reverse-proxy.conf -p ${stateDir}/nginx";
         ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
         Restart = "always";
         RestartSec = "10s";
@@ -294,7 +294,7 @@ in
         group = group;
         webroot = "/var/lib/acme/acme-challenge";
         postRun = ''
-          systemctl reload reverse-proxy
+          systemctl reload nixcloud.reverse-proxy
         '';
       };
     }) {} (attrNames ACMEsupportSet));
