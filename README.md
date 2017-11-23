@@ -29,6 +29,7 @@ Many thanks to:
 
 - [https://www.internetsociety.org/](https://www.internetsociety.org/) (Sponsor)
 - [ISOC.nl](https://ISOC.nl) (Sponsor)
+- [Internet hardening fund](https://nlnet.nl/internethardening/) (Sponsor)
 - [profpatsch](https://github.com/Profpatsch) (Early prototyping)
 - [aszlig](https://github.com/aszlig) (NixOS module system)
 - [uwap](https://github.com/uwap) (Email abstraction)
