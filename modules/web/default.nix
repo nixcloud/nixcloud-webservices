@@ -5,7 +5,9 @@
     filesender  =  services/filesender;
     leaps       =  services/leaps;
     mediawiki   =  services/mediawiki;
-  };             
+    darkhttpd   =  services/darkhttpd;
+    static      =  darkhttpd;
+  };
 
   config = let
     mapWebServiceConfig = fun: webservices: let
