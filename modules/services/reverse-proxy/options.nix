@@ -57,6 +57,7 @@ let
         };
         flags = mkOption {
           description = ''
+            Use `http.flags` with websockets to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
           '';
           default = ''
             # http websocket default flags
@@ -95,6 +96,7 @@ let
         };     
         flags = mkOption {
           description = ''
+            Use `https.flags` with websockets to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
           '';
           default = ''
             # https websocket default flags
@@ -200,6 +202,7 @@ in
       };
       flags = mkOption {
         description = ''
+          Use `http.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver. 
         '';
         default = ''
           # http default flags
@@ -237,6 +240,7 @@ in
       };      
       flags = mkOption {
         description = ''
+          Use `https.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
         '';
         default = ''
           # https default flags
