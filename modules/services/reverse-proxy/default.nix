@@ -226,7 +226,6 @@ in
     createHttpsServerRecord = allProxyOptions: domain:
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
-      # FIXME/BUG stupid.io example still creates a server record
       needsHttps = fold (el: con: if ((el.https.mode != "off") || checkWebsockets el.websockets "https") then true else con) false filteredProxyOptions;
     in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {

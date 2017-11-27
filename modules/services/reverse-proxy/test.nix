@@ -116,23 +116,21 @@ in
       enable = true;
       extendEtcHosts = true;
       extraMappings = [
-        # BUG: fix the reverse-proxy code as the record below will create a 443/TLS record without providing certificates, and most importantly, this doesn't even make sense.
-        #      it should just create no https entry in the nginx.conf when not required to
-        #{
-        #  domain = "stupid.io";
-        #  path = "/";
-        #  TLS = "none";
-        #  port = 8383;
-        #  http.mode = "off";
-        #  https.mode = "off";
-        #  websockets = {
-        #    ws = {
-        #      subpath = "/websocket";
-        #      http.mode = "off";
-        #      https.mode = "off";
-        #    };
-        #  };
-        #}
+        {
+         domain = "stupid.io";
+         path = "/";
+         TLS = "none";
+         port = 8383;
+         http.mode = "off";
+         https.mode = "off";
+         websockets = {
+           ws = {
+             subpath = "/websocket";
+             http.mode = "off";
+             https.mode = "off";
+           };
+         };
+        }
         {
           domain = "exclusive.ws1";
           path = "/tt";
