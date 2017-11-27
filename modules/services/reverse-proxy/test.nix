@@ -162,6 +162,35 @@ in
             };
           };
         }
+        {
+          domain = "flags.io";
+          path = "/";
+          TLS = "ACME";
+          port = 60000;
+          http.mode = "on";
+          http.flags = ''
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            add_header Strict-Transport-Security max-age=345678;
+          '';
+          https.mode = "on";
+          https.flags = ''
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            add_header Strict-Transport-Security max-age=345678;
+          '';         
+         websockets = {
+           ws = {
+             subpath = "/websocket";
+             http.mode = "off";
+             https.mode = "off";
+           };
+         };
+        }
       ];
     };
     # including additional extraConfigs which are used for LXC based webservices
@@ -206,6 +235,18 @@ in
     $machine->succeed('curl http://example.com/basicauth | grep "401 Auth" >&2');
     $machine->succeed('curl -k https://example.com/basicauth --user "foo:bar2" | grep "<span>Apache" >&2');
     $machine->succeed('curl -k https://example.com/basicauth | grep "401 Auth" >&2');
+    
+    # ipv4/ipv6 tests
+    $machine->succeed('cat /etc/hosts >&2');
+
+    $machine->succeed('curl -4 http://example.com/wiki | grep "<span>Apache" >&2');
+    $machine->succeed('curl -4 -k https://example.com/wiki | grep "<span>Apache" >&2');
+    $machine->succeed('curl -6 http://example.com/wiki | grep "<span>Apache" >&2');
+    $machine->succeed('curl -6 -k https://example.com/wiki | grep "<span>Apache" >&2');
+    
+    # test HSTS
+    $machine->succeed('curl -k -s -D- http://flags.io | grep Strict >&2');
+    $machine->succeed('curl -k -s -D- https://flags.io | grep Strict >&2');
     
     # test websockets
     $machine->succeed('curl http://example.ws/myapp/ws >&2');

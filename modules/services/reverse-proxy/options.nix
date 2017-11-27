@@ -41,7 +41,7 @@ let
           description = ''
             Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
           '';
-        };      
+        };
         record = mkOption {
           description = ''
             The http.location can be used to override the default location record for http websocket (ws) usage when `http.mode = "on"` is set.
@@ -54,6 +54,22 @@ let
               proxy_set_header Connection "upgrade";
               proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
             '';
+        };
+        flags = mkOption {
+          description = ''
+          '';
+          default = ''
+            # http websocket default flags
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+          '';
+          example = ''
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            add_header Strict-Transport-Security max-age=345678;
+          '';
         };
         inherit basicAuth;
       };
@@ -74,12 +90,25 @@ let
           default = "";
           example = 
             ''
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
               proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
             '';
-        };      
+        };     
+        flags = mkOption {
+          description = ''
+          '';
+          default = ''
+            # https websocket default flags
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+          '';
+          example = ''
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            add_header Strict-Transport-Security max-age=345678;
+          '';
+        };        
         inherit basicAuth;
       };
     };
@@ -161,25 +190,33 @@ in
       };
       record = mkOption {
         description = ''
-          The http.record will generate a default location record for http when `http.mode = "on"` is set.
+          The http.record will generate a default location record for http when `http.mode = "on"` is set. If record is explicitly set but flags also nix-evaluation
+          will abort since the flags mkOption is pointless but one might miss that fact easily.
         '';
         default = "";
+        example = ''
+          proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
+        '';
+      };
+      flags = mkOption {
+        description = ''
+        '';
+        default = ''
+          # http default flags
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        '';
         example = ''
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-          proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
+          add_header Strict-Transport-Security max-age=345678;
         '';
       };
       inherit basicAuth;
-
-#           flags = mkOption {
-#             proxy_set_header Host $host;
-#             proxy_set_header X-Real-IP $remote_addr;
-#             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-#             proxy_set_header X-Forwarded-Proto $scheme;
-#           };
     };
     https = {
       mode = mkOption {
@@ -198,15 +235,25 @@ in
         default = "";
         example = "";
       };      
-
+      flags = mkOption {
+        description = ''
+        '';
+        default = ''
+          # https default flags
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        '';
+        example = ''
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          add_header Strict-Transport-Security max-age=345678;
+        '';
+      };
       inherit basicAuth;
-
-#           flags = mkOption {
-#             proxy_set_header Host $host;
-#             proxy_set_header X-Real-IP $remote_addr;
-#             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-#             proxy_set_header X-Forwarded-Proto $scheme;
-#           };
     };
   };
 }

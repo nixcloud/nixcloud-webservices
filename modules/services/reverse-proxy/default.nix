@@ -132,15 +132,13 @@ in
         b = location.${mode}.basicAuth;
         r = location.${mode}.record;
         l = builtins.toPath (location.path);
+        f = location.${mode}.flags;
       in
         (if (m == "on") then
           ''
             location ${l} {
             ${if r == "" then ''
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
+              ${f}
               proxy_pass http://${location.ip}:${toString location.port}${removeSuffix "/" (toString (builtins.toPath (location.path)))};
             '' else r
             }
@@ -178,15 +176,14 @@ in
         b = websocket.${mode}.basicAuth;
         r = websocket.${mode}.record;
         m = websocket.${mode}.mode;
+        f = websocket.${mode}.flags;
         ppp = removeSuffix "/" (toString (builtins.toPath (location.path + websocket.subpath)));
       in
         if (m == "on") then
           ''
             location ${ppp} {
             ${if r == "" then ''
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
+              ${f}
               proxy_pass http://${location.ip}:${toString location.port}${removeSuffix "/" (toString (builtins.toPath (location.path)))};
             '' else r
             }
@@ -251,7 +248,7 @@ in
     configFile = generateNginxConfigFile allProxyOptions allDomains;
 
   in mkIf (cfg.enable) {
-    networking.extraHosts = if cfg.extendEtcHosts then (lib.concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allDomains + lib.concatMapStringsSep "\n" (x: "::1 ${x}") allDomains) else ""; 
+    networking.extraHosts = if cfg.extendEtcHosts then (lib.concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allDomains + "\n" + lib.concatMapStringsSep "\n" (x: "::1 ${x}") allDomains) else ""; 
     
     systemd.services."nixcloud.reverse-proxy" = let
       acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
