@@ -9,7 +9,7 @@ let
     postBuild = let
       quotaRule = q: if q == "" then "" else "userdb_quota_rule=*";
       bytes = q: if q == "" then "" else "bytes=${q}";
-      passwdLine = { name, domain, password, quota, ... }: { domain = "${domain}"; line = name + ":" + password + ":::::${quotaRule quota}:${bytes quota}"; }; 
+      passwdLine = { name, domain, password, quota, ... }: { domain = "${domain}"; line = name + ":" + password + "::::::${quotaRule quota}:${bytes quota}"; }; 
       lines = map passwdLine config.services.mailUsers.users;
       domains = catAttrs "domain" lines;
       values = domain: catAttrs "line" (filter (x: x.domain == domain) lines);
@@ -30,11 +30,19 @@ in {
       default = virtualMailEnv;
       description = "Passwords are stored in the nix store and this virtual environment is a directory with those";
     };
+    extraAliases = mkOption {
+      type = types.lines;
+      default = "";
+      example = "foo@bar.tld bar@foo.tld";
+      description = "Extra lines for the virtual aliases file.";
+    };
   };
 
-  config = mkIf (config.nixcloud.email.enable == true) {
+  config = {
+    # FIXME: Do extra aliases before catchall and not after catchall
     services.postfix.virtual = concatStringsSep "\n" (flatten (map (x: map (alias: alias + " " + x.name + "@" + x.domain) x.aliases) config.services.mailUsers.users
-                             ++ map (user: map (d: "@${d} ${user.name}@${user.domain}") user.catchallFor) config.services.mailUsers.users));
+                             ++ map (user: map (d: "@${d} ${user.name}@${user.domain}") user.catchallFor) config.services.mailUsers.users))
+                             + "\n\n# Extra Aliases\n" + config.services.mailUsers.extraAliases;
     users.groups.virtualMail = { members = [ "dovecot2" ];};
     users.users.virtualMail = {
       home = "/var/lib/virtualMail";

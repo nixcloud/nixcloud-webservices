@@ -3,6 +3,8 @@ with lib;
 
 let
   cfg = config.nixcloud.email;
+  checks_incomming = concatStringsSep "\n" (map (x: "${x.pattern} ${x.action}") (filter (x: x.direction != "outgoing") cfg.headerChecks));
+  checks_outgoing = concatStringsSep "\n" (map (x: "${x.pattern} ${x.action}") (filter (x: x.direction != "incomming") cfg.headerChecks));
 in
 {
   imports = [ ./virtual-mail-users.nix ];
@@ -89,6 +91,34 @@ in
             default = [];
             description = "A list of virtual mail users for which the password is managed via this abstraction";
           };
+          headerChecks = mkOption {
+            type = types.listOf (types.submodule ({ ... }:
+              {
+                options = {
+                  pattern = mkOption {
+                    type = types.str;
+                    default = "/^.*/";
+                    example = "/^X-Mailer:/";
+                    description = "A regexp pattern matching the header";
+                  };
+                  action = mkOption {
+                    type = types.str;
+                    default = "DUNNO";
+                    example = "BCC mail@example.com";
+                    description = "The action to be executed when the pattern is matched";
+                  };
+                  direction = mkOption {
+                    type = types.enum ["incomming" "outgoing" "both"];
+                    default = "both";
+                    example = "incoming";
+                    description = "Whether to filter on incomming smtp port (submission) or on outgoing smtp port (25) or both.";
+                  };
+                };
+              }));
+            default = [];
+            description = "Header Checks on incomming and outgoing smtp port";
+            example = [ { pattern = "/^X-Spam(.*)/"; action = "IGNORE"; direction = "incomming"; } ];
+          };
         };
       });
     };
@@ -145,10 +175,12 @@ in
           virtualHosts.mail= {
             default = true;
             enableACME = true;
-            #serverName = "mail.nix.lt";
             serverName = cfg.hostname;
-            # FIXME eventually we want to run these commands after a cert update
+            # TODO: - implement this additional hook 
+            #       - use reload instead of restart
             #acmePostRun =
+            #''
+# FIXME hier reicht ggf. reload
             #  systemctl restart httpd.service;
             #  systemctl restart postfix.service;
             #  systemctl restart dovecot2.service;
@@ -157,13 +189,15 @@ in
         };
       })
 
+      # FIXME: when using nixcloud DNS we want the pubkey during nix evaluation time to generate
+      #        a prober DNS entry for uploading BUT the keys generation is delayed and takes place
+      #        during service activation and therefore we can't generate the DNS entry just yet
       (mkIf cfg.enableDKIM {
         users.users.postfix.extraGroups = [ "opendkim" ];
         services.opendkim = {
           enable = true;
           selector = "mail";
           keyPath = "/var/lib/dkim/keys/";
-          #domains = "csl:nix.lt";
           domains = "csl:${lib.concatStringsSep "," cfg.domains}";
           configFile = pkgs.writeText "opendkim.conf" ''
             UMask 0002
@@ -171,20 +205,29 @@ in
         };
       })
 
+      # FIXME: add a mkOption to set domains or email addresses on a white list
+      # FIXME: 1. if no SPF found -> greylist
+      #        2. if no SPF found + valid DMARC signature -> greylist
+      #        3. if SPF + no valid DMARC signature -> greylist
+      #        4. if SPF + valid DMARC signature -> receive directly
       (mkIf cfg.enableGreylisting {
         services.postgrey = {
           enable = true;
         };
       })
 
-      # for sending emails (optional)
       { 
         services.postfix = {
           enable = true;
           enableHeaderChecks = true;
           masterConfig = {
             smtp_inet = {
-              args = [ "-o" "content_filter=spamassassin" "-o" "smtp_bind_address=${cfg.ipAddress}" "-o" "smtp_bind_address6=${cfg.ip6Address}"];
+              args = [ 
+               "-o" "content_filter=spamassassin"
+               "-o" "smtp_bind_address=${cfg.ipAddress}"
+               "-o" "smtp_bind_address6=${cfg.ip6Address}"
+               "-o" "smtp_header_checks=header_checks_incomming"
+              ];
             };
             spamassassin = {
               command = "pipe";
@@ -204,7 +247,11 @@ in
             "smtpd_client_restrictions" = "permit_sasl_authenticated,reject";
             "smtpd_sasl_type" = "dovecot";
             "smtpd_sasl_path" = "private/auth";
+            "smtp_header_checks" = "regexp:/etc/postfix/header_checks_outgoing";
           };
+
+          mapFiles."header_checks_outgoing" = pkgs.writeText "header_checks_outgoing" checks_outgoing;
+          mapFiles."header_checks_incomming" = pkgs.writeText "header_checks_incomming" checks_incomming;
 
           config = {
             smtpd_tls_auth_only = true;
@@ -217,6 +264,7 @@ in
             smtpd_sasl_security_options = "noanonymous";
             broken_sasl_auth_clients = true;
  
+            smtpd_tls_received_header = true;
             smtpd_relay_restrictions = [
               "reject_non_fqdn_recipient"
               "reject_unknown_recipient_domain"
@@ -232,13 +280,10 @@ in
             smtpd_helo_required = "yes";
             smtpd_helo_restrictions = [
               "permit_mynetworks"
-              # with this three lines i can't send emails from mac os x computers and ipads...
-              # Fehler beim Senden der Nachricht: Der Mail-Server antwortete:
-              # 4.7.1 <RoswithsMini572.fritz.box>: Helo command rejected: Host not found.
-              #  Bitte überprüfen Sie die E-Mail-Adresse des Empfängers "rs@dune2.de" und wiederholen Sie den Vorgang.
-              #"reject_invalid_helo_hostname"
-              #"reject_non_fqdn_helo_hostname"
-              #"reject_unknown_helo_hostname"
+              "permit_sasl_authenticated"
+              "reject_invalid_helo_hostname"
+              "reject_non_fqdn_helo_hostname"
+              "reject_unknown_helo_hostname"
             ];
 
             # Add some security
@@ -249,12 +294,12 @@ in
               "permit_sasl_authenticated"
               "permit_mynetworks"
               "reject_unauth_destination"
-              "check_policy_service inet:localhost:12340" # quota
+              "check_policy_service inet:localhost:12340" # quota, FIXME hardcoded port, FIXME: only if quota is enabled
               "check_policy_service unix:/var/run/postgrey.sock" # postgrey
-            ] ++ (if cfg.enableGreylisting then [ "check_policy_service unix:/var/run/postgrey.sock" ] else []); # postgrey
-            smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ]; # [ "inet:localhost:12301" ];
-            non_smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ]; # [ "inet:localhost:12301" ];
-            smtpd_tls_received_header = true;
+            ] ++ (optional cfg.enableGreylisting "check_policy_service unix:/var/run/postgrey.sock"); # postgrey
+          } // optionalAttrs cfg.enableDKIM {
+            smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
+            non_smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
           };
         } // optionalAttrs (cfg.enableACME) {
           sslCert = "/var/lib/acme/${cfg.hostname}/fullchain.pem";
@@ -273,8 +318,6 @@ in
           mailGroup = "virtualMail";
 
 
-          # refactor this into services.dovecot2 mkOption -> mailuser & mailgroup
-          # sieve shall be a mkOption in dovecot2
           modules = [ pkgs.dovecot_pigeonhole ];
 
           protocols = [ "sieve" ];
