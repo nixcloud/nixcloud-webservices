@@ -208,7 +208,7 @@ in
     in optionalString (filteredProxyOptions != [] && needsHttp) ''
       server {
         listen ${toString cfg.httpPort};
-        #listen [::]:${toString cfg.httpPort} ipv6only=on;
+        listen [::]:${toString cfg.httpPort};
 
         server_name ${domain};
 
@@ -235,7 +235,7 @@ in
       server {
         ssl on;
         listen ${toString cfg.httpsPort} ssl;
-        #listen [::]:${toString cfg.httpsPort} ssl ipv6only=on;
+        listen [::]:${toString cfg.httpsPort} ssl;
 
         server_name ${domain};  
 
@@ -251,7 +251,7 @@ in
     configFile = generateNginxConfigFile allProxyOptions allDomains;
 
   in mkIf (cfg.enable) {
-    networking.extraHosts = if cfg.extendEtcHosts then lib.concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allDomains else "";
+    networking.extraHosts = if cfg.extendEtcHosts then (lib.concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allDomains + lib.concatMapStringsSep "\n" (x: "::1 ${x}") allDomains) else ""; 
     
     systemd.services."nixcloud.reverse-proxy" = let
       acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
