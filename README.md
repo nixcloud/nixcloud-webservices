@@ -13,6 +13,28 @@ It features the development stack we use at [https://nixcloud.io](https://nixclo
 # Get the source
 
     git clone https://github.com/nixcloud/nixcloud-webservices
+
+# Importing
+
+## Option A: Importing modules in your local system
+
+You import modules into your local system by adding the path to your `configuration.nix` to the `imports` list. Like this:
+
+    imports =
+    [ # Include the results of the hardware scan.
+      ./hardware-configuration.nix
+      /path/to/nixcloud-webservices/modules
+    ];
+    
+## Option B: Building a (KVM) VM
+
+If you don't want to clutter your local system you can use a VM:
+
+    nix-build '<nixpkgs/nixos>' --arg configuration '{ imports = [ ./modules ./config.nix ]; services.mingetty.autologinUser = "root"; }' -A vm
+
+Note: You have to create `config.nix` manually, it contains basically the lines we put in `/etc/nixos/configuration.nix` in previous examples.
+
+Note: This is for advanced users who know how VMs on NixOS work.
     
 # License
 

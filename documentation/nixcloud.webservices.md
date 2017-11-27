@@ -95,17 +95,7 @@ WARNING: We are aware of https://github.com/NixOS/nixpkgs/issues/24288#issuecomm
 
 # Using nixcloud-webservices `nixcloud.webservices`
 
-## Option A: Importing modules in your local system
-
-You import modules into your local system by adding the path to your `configuration.nix` to the `imports` list. Like this:
-
-    imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      /path/to/nixcloud-webservices/modules
-    ];
-
-### nixcloud.webservices.mediawiki
+## nixcloud.webservices.mediawiki
 
 Add this code to your `/etc/nixos/configuration.nix` file:
 
@@ -126,7 +116,7 @@ Add this code to your `/etc/nixos/configuration.nix` file:
 
 Warning: Using `extendEtcHosts = true;` extends `/etc/hosts` and if you use 'nixos.org' as example domain you won't be able to visit the official 'nixos.org' webpage!
 
-### Rebuilding to use `nixcloud.webservices`
+## Rebuilding to use `nixcloud.webservices`
 
 If you've used the above example as is, you can simply do:
 
@@ -140,7 +130,7 @@ or
 
     http://localhost:40000/wiki
 
-### mediawiki's systemd backend
+## mediawiki's systemd backend
 
 `mediawiki` is using the apache web server and can be controlled using various services/targets:
 
@@ -151,7 +141,7 @@ try:
       systemctl status mediawiki-test1-apache
       journalctl -u mediawiki-test1-apache
 
-### Upload files / logging 
+## Upload files / logging 
 
 * static files:
 
@@ -165,17 +155,6 @@ try:
 * debugging
 
         journalctl -u mediawiki-test1-apache
-
-## Option B: Building a (KVM) VM
-
-If you don't want to clutter your local system you can use a VM:
-
-    nix-build '<nixpkgs/nixos>' --arg configuration '{ imports = [ ./modules ./config.nix ]; services.mingetty.autologinUser = "root"; }' -A vm
-
-
-Note: You have to create `config.nix` manually, it contains basically the lines we put in `/etc/nixos/configuration.nix` in previous examples.
-
-Note: This is for advanced users who know how VMs on NixOS work. 
 
 # Extending nixcloud-webservices with your service
 
