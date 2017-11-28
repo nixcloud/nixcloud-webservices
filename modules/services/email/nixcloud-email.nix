@@ -318,8 +318,8 @@ in
               "permit_sasl_authenticated"
               "permit_mynetworks"
               "reject_unauth_destination"
-              "check_policy_service inet:localhost:12340" # quota, FIXME hardcoded port, FIXME: only if quota is enabled
-            ] ++ (optional cfg.enableGreylisting "check_policy_service unix:/var/run/postgrey.sock"); # postgrey
+            ] ++ optional cfg.enableMailQuota "check_policy_service inet:localhost:${config.services.dovecot2.quotaPort}" # quota
+              ++ optional cfg.enableGreylisting "check_policy_service unix:/var/run/postgrey.sock"; # postgrey
           } // optionalAttrs cfg.enableDKIM {
             smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
             non_smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
