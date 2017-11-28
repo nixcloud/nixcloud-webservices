@@ -5,6 +5,7 @@ let
   cfg = config.nixcloud.email;
   checks_incomming = concatStringsSep "\n" (map (x: "${x.pattern} ${x.action}") (filter (x: x.direction != "outgoing") cfg.headerChecks));
   checks_outgoing = concatStringsSep "\n" (map (x: "${x.pattern} ${x.action}") (filter (x: x.direction != "incomming") cfg.headerChecks));
+  relay_passwd = concatStringsSep "\n" (mapAttrsToList (user: password: "${cfg.relay.host} ${user}:${password}") cfg.relay.passwords);
 in
 {
   imports = [ ./virtual-mail-users.nix ];
@@ -90,6 +91,29 @@ in
             example = [ { name = "js"; domain = "nixcloud.io"; password="qwertz"; } ];
             default = [];
             description = "A list of virtual mail users for which the password is managed via this abstraction";
+          };
+          relay = {
+            host = mkOption {
+              type = types.nullOr types.str;
+              example = "mail.mydomain.tld";
+              default = null;
+              description = "The mail host which should be configured as relay";
+            };
+            port = mkOption {
+              type = types.int;
+              example = 25;
+              default = 587;
+              description = "The port of the relay host";
+            };
+            passwords = mkOption {
+              type = types.attrsOf types.str;
+              example = {
+                "alice@foo.tld" = "supersafepassword123";
+                "bob@bar.tld" = "iAmB0b!";
+              };
+              default = {};
+              description = "An attribute set where the keys are the mail users and the values are the passwords of those users";
+            };
           };
           headerChecks = mkOption {
             type = types.listOf (types.submodule ({ ... }:
@@ -299,10 +323,18 @@ in
           } // optionalAttrs cfg.enableDKIM {
             smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
             non_smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
+          } // optionalAttrs (cfg.relay.host != null) {
+            smtp_sasl_auth_enable = true;
+            # smtp_sasl_security_options = ""; # FIXME: Do we need this?
+            smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
           };
         } // optionalAttrs (cfg.enableACME) {
           sslCert = "/var/lib/acme/${cfg.hostname}/fullchain.pem";
           sslKey = "/var/lib/acme/${cfg.hostname}/key.pem";
+        } // optionalAttrs (cfg.relay.host != null) {
+          relayHost = cfg.relay.host;
+          relayPort = cfg.relay.port;
+          mapFiles."relay_passwd" = pkgs.writeText "relay_passwd" relay_passwd;
         };
 
         services.dovecot2 = {
