@@ -6,7 +6,7 @@ The `nixcloud.reverse-proxy` acts as a gateway to have mutliple webservices in o
 
 See also [../README.md](../README.md).
 
-## Using `nixcloud-webservices`
+# Using
 
 When using `nixcloud.reverse-proxy.enable=true;` and then use a service from `nixcloud.webservices` you will automatically get a reverse-proxy mapping.
 
@@ -22,15 +22,19 @@ When using `nixcloud.reverse-proxy.enable=true;` and then use a service from `ni
       };
     };
 
-## Using `extraMappings` (for webservices not managed by nixcloud-webservices)
+## `nixcloud.reverse-proxy.extraMappings`
 
-Use `nixcloud.reverse-proxy.extraMappings` when you want to wrap your internal webserver. A few motivations would be:
+Motivations to use `nixcloud.reverse-proxy.extraMappings:
 
-* Integrate your webservice into `nixcloud.webservices` which makes mixing of legacy services and `nixcloud.webservices` easy
-* Use `TLS="ACME"` to automatically generate TLS certificats for your domain "example.org" while your internal webserver uses http to talk to the reverse-proxy
-* `nixcloud.reverse-proxy` defaults: compression, TLS configuration (permitted, prohibited protocol families and so on).
-* Only one services has to handle TLS details, internal webservers don't have to be configured.
-* Compose a complex webservice from several different webservices like: nixdoc.io/leaps, nixdoc.io/mediawiki and so on
+* Mix your webservice, which was not built using `nixcloud.webservices` with services from `nixcloud.webservices`.
+* Outsource TLS certificate management for your own webservice.
+* Use `nixcloud.reverse-proxy` defaults as:
+
+    * compression
+    * TLS configuration (permitted, prohibited protocol families and so on)
+
+* Compose 'a complex webservice' from several different webservices like: nixdoc.io/leaps, nixdoc.io/mediawiki
+* Manage URL redirects for domains/resources
 
 ### Example 1: Proxying a legacy webservice (not using `nixcloud.webservices`)
 
@@ -98,4 +102,4 @@ Most documentation should be generated from the source code of the reverse-proxy
 
 # Tests
 
-See also the unit tests at [../tests/reverse-proxy.nix](../tests/reverse-proxy.nix) which tests various scenarios and is a good example to get into the reverse proxy configuration.
+See also the unit tests at [../modules/services/reverse-proxy/test.nix](../modules/services/reverse-proxy/test.nix) which tests various scenarios and is a good example to get into the reverse proxy configuration.
