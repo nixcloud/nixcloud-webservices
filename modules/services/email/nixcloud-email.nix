@@ -423,6 +423,11 @@ in
               sieve = /var/lib/virtualMail/%d/users/%n/sieve.active
               sieve_dir = /var/lib/virtualMail/%d/users/%n/sieve
             }
+
+            service managesieve-login {
+            }
+            service managesieve {
+            }
           '';
         } // optionalAttrs (cfg.enableACME) { 
             sslServerCert = "/var/lib/acme/${cfg.hostname}/fullchain.pem";
