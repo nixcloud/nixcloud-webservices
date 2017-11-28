@@ -295,7 +295,6 @@ in
               "permit_mynetworks"
               "reject_unauth_destination"
               "check_policy_service inet:localhost:12340" # quota, FIXME hardcoded port, FIXME: only if quota is enabled
-              "check_policy_service unix:/var/run/postgrey.sock" # postgrey
             ] ++ (optional cfg.enableGreylisting "check_policy_service unix:/var/run/postgrey.sock"); # postgrey
           } // optionalAttrs cfg.enableDKIM {
             smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
