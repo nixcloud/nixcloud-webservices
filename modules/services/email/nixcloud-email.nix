@@ -325,7 +325,8 @@ in
             non_smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
           } // optionalAttrs (cfg.relay.host != null) {
             smtp_sasl_auth_enable = true;
-            # smtp_sasl_security_options = ""; # FIXME: Do we need this?
+            smtp_sasl_security_options = [ "noanonymous" "noplaintext" ];
+            smtp_sasl_tls_security_options = [ "noanonymous" ];
             smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
           };
         } // optionalAttrs (cfg.enableACME) {
