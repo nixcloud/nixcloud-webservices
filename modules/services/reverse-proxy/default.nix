@@ -202,7 +202,7 @@ in
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
       needsHttp = fold (el: con: if ((el.http.mode != "off") || checkWebsockets el.websockets "http") then true else con) false filteredProxyOptions;
-    in optionalString (filteredProxyOptions != [] && needsHttp) ''
+    in optionalString ((filteredProxyOptions != [] && needsHttp) || ACMEsupportSet.${domain} == "ACME") ''
       server {
         listen ${toString cfg.httpPort};
         listen [::]:${toString cfg.httpPort};
