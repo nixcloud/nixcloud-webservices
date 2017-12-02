@@ -4,6 +4,7 @@
     "services/mail/opendkim.nix"
   # Needed because services.postfix.relayPort is only available in 18.03
     "services/mail/postfix.nix"
+    "services/mail/pfix-srsd.nix"
   ];
 
   imports = [
