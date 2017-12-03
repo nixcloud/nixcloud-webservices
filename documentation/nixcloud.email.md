@@ -126,6 +126,35 @@ to disable ACME. To provide your own certificate you should set the following op
       sslServerKey = "/path/to/your/key.pem";
     };
 
+# Relay setup
+
+Nixcloud email provides simple options to configure your mailserver as a relay client.
+Usually you don't need to configure this.
+
+If the other mailserver is a mailserver with the default nixcloud email setup you
+only need to provide `nixcloud.email.relay.host` and `nixcloud.email.relay.passwords`.
+
+    nixcloud.email.relay = {
+      host = "mail.myrelayhost.tld";
+      port = 587;
+      passwords = {
+        "relayUser" = "this1sApla!ntextP4ssw0rd";
+      };
+    };
+
+The Port 587 is the default port and can therefor be omitted. We strongly suggest
+to use the submission port (587) to deliver your emails. The `nixcloud.email.relay.host`
+is the host of your relay server.
+
+If you use an open relay you can omit the `nixcloud.email.relay.passwords` option
+but we highly suggest you to not use open relays. If your counterpart is a
+`nixcloud.email` setup or any other sane mailserver setup that does not use
+open relays you need to provide a set of passwords.
+
+Usually one password will be sufficient but you can provide more than one.
+In the `nixcloud.email.relay.passwords.<name>` option the name is the user name
+and the provided value is the plaintext password.
+
 # Links
 
 * [https://github.com/NixOS/nixpkgs/pull/29366](https://github.com/NixOS/nixpkgs/pull/29366)
