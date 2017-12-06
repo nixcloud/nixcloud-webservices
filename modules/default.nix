@@ -21,6 +21,7 @@
     services/email/postfix.nix
     services/email/pfix-srsd.nix
     services/email/nixcloud-email.nix
+    virtualisation/container.nix
     ./web
   ];
 }
