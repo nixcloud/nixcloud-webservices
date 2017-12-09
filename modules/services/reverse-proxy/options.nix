@@ -23,6 +23,25 @@ let
     '';
   };
 
+  ssl_certificateSetModule = {
+    options = {
+      ssl_certificate = mkOption {
+        type = types.path;
+        description = ''
+          A location containg the full path and filename to `/path/to/fullchain.pem`.
+        '';
+        example = "/path/to/fullchain.pem";
+      };
+      ssl_certificate_key = mkOption {
+        type = types.path;
+        description = ''
+          A location containg the full path and filename to `/path/to/key.pem`.
+        '';
+        example = "/path/to/key.pem";
+      };
+    };
+  };
+  
   locationWebSocketModule = {
     options = {
       subpath = mkOption {
@@ -141,10 +160,9 @@ in
         A subpath must start with a leading "/" and may not have white spaces or a trailing "/" in it.
       '';
     };
-    websockets = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule locationWebSocketModule);
+    websockets = mkOption {
+      type = types.attrsOf (types.submodule locationWebSocketModule);
       default = { };
-      # FIXME: validate this example works
       example = ''
         websockets = {
           ws = {
@@ -173,11 +191,11 @@ in
       '';
     };
     TLS = mkOption {
-      type = types.str;
+      type = types.either (types.enum [ "ACME" "none" ]) (types.submodule ssl_certificateSetModule);
       default = "ACME";
       description = ''
-        TLS backend in use. Currently there is only ACME support but a draft for adding a `set` with
-        `ssl_certificate` and `ssl_certificate_key` which points to the filesystem is already in place.
+        TLS backend in use. Defaults to "ACME" (let's encrypt) but one can also set "none" or pass in cert/key using ssl_certificateSetModule. You can't mix TLS modes like "ACME" and ssl_certificateSetModule for two
+        proxyOption records related to the same domain as "example.com".
       '';
     };
     http = {

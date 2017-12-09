@@ -32,6 +32,7 @@ Motivations to use `nixcloud.reverse-proxy.extraMappings:
 
     * compression
     * TLS configuration (permitted, prohibited protocol families and so on)
+    * basicAuth
 
 * Compose 'a complex webservice' from several different webservices like: nixdoc.io/leaps, nixdoc.io/mediawiki
 * Manage URL redirects for domains/resources
@@ -42,29 +43,29 @@ The code below has a few properties:
 
 * redirect all http requests to https
 * the reverse-proxy only serves data after basicAuth has been used to authentificate the user
-* it will server documents from `http://127.0.0.1:8081/`.
+* it will serve documents from `http://127.0.0.1:8081/`.
 
-    nixcloud.reverse-proxy = {
-      enable = true;
-      extendEtcHosts = true;
-      extraMappings = [
-        {  
-          domain = "example.com";
-          path = "/";
-          https = {
-            mode = "on";
-            basicAuth."joachim" = "foo";
-            record = ''
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_pass http://127.0.0.1:8081/;
-            '';              
-          };
-        }
-      ];
-    };
+        nixcloud.reverse-proxy = {
+          enable = true;
+          extendEtcHosts = true;
+          extraMappings = [
+            {  
+              domain = "example.com";
+              path = "/";
+              https = {
+                mode = "on";
+                basicAuth."joachim" = "foo";
+                record = ''
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass http://127.0.0.1:8081/;
+                '';
+              };
+            }
+          ];
+        };
 
 ### Example 2: URL rewriting
 
@@ -88,7 +89,7 @@ The code below will create a mapping: when you visit http(s)://example.com it wi
             basicAuth."joachim" = "foo";
             record = ''
               rewrite ^(.*)$ https://example.org permanent;
-            '';              
+            '';
           };
         }
       ];
@@ -98,7 +99,7 @@ The code below will create a mapping: when you visit http(s)://example.com it wi
 
 Most documentation should be generated from the source code of the reverse-proxy module, see: 
 
-  * https://nixdoc.io/nixcloud-webservices 
+  * https://nixdoc.io/nixcloud-webservices
 
 # Tests
 
