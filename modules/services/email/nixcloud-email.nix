@@ -79,11 +79,18 @@ in
               A community effort to develop and maintain a C library for producing DKIM-aware applications and an open source milter for providing DKIM servicei (http://opendkim.org/). 
             '';
           };
-          enableACME= mkOption {
+          enableACME = mkOption {
             type = types.bool;
             default = true;
             description = ''
               Let’s Encrypt uses the ACME protocol to verify that you control a given domain name and to issue you a certificate.
+            '';
+          };
+          enableSPFPolicy = mkOption {
+            type = types.bool;
+            default = false;
+            description = ''
+              Whether to enforce the Sender Policy Framework.
             '';
           };
           users = mkOption {
@@ -258,13 +265,20 @@ in
               args = [ "user=spamd" "argv=${pkgs.spamassassin}/bin/spamc" "-f" "-e" "/run/wrappers/bin/sendmail" "-oi" "-f" ''''${sender}'' ''''${recipient}'' ];
               privileged = true;
             };
+          } // optionalAttrs cfg.enableSPFPolicy {
+            policydspf = {
+              command = "spawn";
+              args = [ "user=nobody" "argv=${pkgs.python36Packages.pypolicyd-spf}/bin/policyd-spf" ];
+              privileged = true;
+              maxproc = 0;
+            }; 
           };
           setSendmail = true;
           hostname = cfg.hostname;
           destination = [
             "localhost"
           ];
-          enableSubmission=true;
+          enableSubmission = true;
           submissionOptions = {
             "smtpd_tls_security_level" = "encrypt";
             "smtpd_sasl_auth_enable" = "yes";
@@ -319,7 +333,8 @@ in
               "permit_mynetworks"
               "reject_unauth_destination"
             ] ++ optional cfg.enableMailQuota "check_policy_service inet:localhost:${config.services.dovecot2.quotaPort}" # quota
-              ++ optional cfg.enableGreylisting "check_policy_service unix:/var/run/postgrey.sock"; # postgrey
+              ++ optional cfg.enableGreylisting "check_policy_service unix:/var/run/postgrey.sock" # postgrey
+              ++ optional cfg.enableSPFPolicy "check_policy_service unix:private/policydspf"; # policyd-spf
           } // optionalAttrs cfg.enableDKIM {
             smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
             non_smtpd_milters = [ "unix:/run/opendkim/opendkim.sock" ];
