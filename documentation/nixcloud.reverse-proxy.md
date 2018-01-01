@@ -2,7 +2,7 @@
 
 `nixcloud.reverse-proxy` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on the reverse proxy implementation.
 
-The `nixcloud.reverse-proxy` acts as a gateway to have mutliple webservices in one machine.
+The `nixcloud.reverse-proxy` acts as an intermediary to allow multiple webservices to run from the same IP address(es) using the same ports, and mapping these on the same or different domain names.
 
 See also [../README.md](../README.md).
 
