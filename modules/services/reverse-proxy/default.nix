@@ -24,16 +24,15 @@ in
   options = {
     nixcloud.reverse-proxy = {
       enable = mkEnableOption "reverse-proxy";
-
       httpPort = mkOption {
         type = types.int;
         default = 80;
-        description = ''port where the reverse proxy listens for incoming http requests'';
+        description = ''Port where the reverse proxy listens for incoming http requests'';
       };
       httpsPort = mkOption {
         type = types.int;
         default = 443;
-        description = ''port where the reverse proxy listens for incoming https requests'';
+        description = ''Port where the reverse proxy listens for incoming https requests'';
       };
       extendEtcHosts = mkOption {
         type = types.bool;
@@ -111,8 +110,12 @@ in
 
     allProxyOptions = filteredCollectedConfigsList ++ cfg.extraMappings;
 
-    # 1. create a unique list of all domains
+    # 1a. create a unique list of all domains from nixcloud.reverse-proxy and let's encrypt ACME certs
     allDomains = unique (map (el: el.domain) allProxyOptions);
+
+    # 1b. create a unique list of all domains which use ACME but are not covered in allDomains already 
+    # (domains coming from config.security.acme.certs and not from nixcloud.webservices's proxyOptions)
+    ACMEImpliedDomains = subtractLists allDomains (unique (attrNames config.security.acme.certs));
 
     # 2. ACME/TLS details
     #   example value: { "lastlog.de" = "ACME"; "nixcloud.io = "ACME"; }
@@ -202,8 +205,25 @@ in
 
     # 3. map over these and create server (http/https) records per domain
     createServerRecords = allProxyOptions: allDomains:
+                          concatMapStringsSep "\n" createHttpACMEServerRecord ACMEImpliedDomains + "\n" +
                           concatMapStringsSep "\n" (createHttpServerRecord  allProxyOptions) allDomains + "\n" +
                           concatMapStringsSep "\n" (createHttpsServerRecord allProxyOptions) allDomains;
+
+    createHttpACMEServerRecord = domain: ''
+      server {
+        # record generated from createHttpACMEOnlyServerRecord
+        listen ${toString cfg.httpPort};
+        listen [::]:${toString cfg.httpPort};
+
+        server_name ${domain};
+
+        # ACME requires this in the http record (won't work over https)
+        location /.well-known/acme-challenge {
+          root /var/lib/acme/acme-challenge;
+          auth_basic off;
+        }
+      }
+    '';
 
     createHttpServerRecord = allProxyOptions: domain:
     let
@@ -211,6 +231,7 @@ in
       needsHttp = fold (el: con: if ((el.http.mode != "off") || checkWebsockets el.websockets "http") then true else con) false filteredProxyOptions;
     in optionalString ((filteredProxyOptions != [] && needsHttp) || ACMEsupportSet.${domain} == "ACME") ''
       server {
+        # record generated from createHttpServerRecord
         listen ${toString cfg.httpPort};
         listen [::]:${toString cfg.httpPort};
 
@@ -298,6 +319,7 @@ in
         postRun = ''
           systemctl reload nixcloud.reverse-proxy
         '';
+        #reload = [ "nixcloud.reverse-proxy.service" ];
       };
     }) {} (attrNames ACMEsupportSet));
 
