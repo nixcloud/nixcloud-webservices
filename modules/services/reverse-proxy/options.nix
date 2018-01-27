@@ -1,4 +1,4 @@
-{ lib, options, config, name, ... }:
+{ lib, options, config, name, ... } @ toplevel:
 
 with lib;
 
@@ -42,7 +42,7 @@ let
     };
   };
   
-  locationWebSocketModule = {
+  locationWebSocketModule = { config, lib, options, toplevel }: {
     options = {
       subpath = mkOption {
         type = types.str;
@@ -56,7 +56,7 @@ let
         mode = mkOption {
           type = types.enum [ "on" "off" ];
           example = "on";
-          default = "off";
+          default = toplevel.config.http.mode;
           description = ''
             Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
           '';
@@ -98,7 +98,7 @@ let
         mode = mkOption {
           type = types.enum [ "on" "off" ];
           example = "off";
-          default = "on";
+          default = toplevel.config.https.mode;
           description = ''
             Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
           '';
@@ -161,7 +161,7 @@ in
       '';
     };
     websockets = mkOption {
-      type = types.attrsOf (types.submodule locationWebSocketModule);
+      type = types.attrsOf (types.submodule ({ ... } : locationWebSocketModule { inherit config lib options toplevel; } ));
       default = { };
       example = ''
         websockets = {
