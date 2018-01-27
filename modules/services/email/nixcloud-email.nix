@@ -34,7 +34,7 @@ in
             example = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
             description = ''
               The IPv6 address used for the email service. Note: You need to set the reverse PTR correctly or you can't send emails to gmail.com for instance.
-            '';
+            ''; #'
           };
           domains = mkOption {
             type = types.listOf (types.str);
