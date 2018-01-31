@@ -4,6 +4,10 @@
 
 The `nixcloud.reverse-proxy` acts as an intermediary to allow multiple webservices to run from the same IP address(es) using the same ports, and mapping these on the same or different domain names.
 
+`nixcloud.reverse-proxy` fully implements `security.acme` certificate handling and transparently handles TLS contexts for the inner webservices. 
+
+Note: Domains will have a 'ncws-' prefix which helps to isolate certifictes to certain domains.
+
 See also [../README.md](../README.md).
 
 # Using

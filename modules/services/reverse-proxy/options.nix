@@ -54,7 +54,7 @@ let
       };
       http = {
         mode = mkOption {
-          type = types.enum [ "on" "off" ];
+          type = types.enum [ "redirect_to_https" "on" "off" ];
           example = "on";
           default = toplevel.config.http.mode;
           description = ''
@@ -96,7 +96,7 @@ let
 
       https = {
         mode = mkOption {
-          type = types.enum [ "on" "off" ];
+          type = types.enum [ "redirect_to_http" "on" "off" ];
           example = "off";
           default = toplevel.config.https.mode;
           description = ''
