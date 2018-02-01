@@ -310,7 +310,7 @@ in
         # FIXME: inject nixcloud.reverse-proxy user into acme groups (or the othern way round)
         #user = "acme";
         #group = "acme";
-        domain = "ncws-${el}";
+        domain = "${el}";
         # FIXME: check if allowKeysForGroup is required
         # allowKeysForGroup = true;
         webroot = "/var/lib/acme/acme-challenges";
