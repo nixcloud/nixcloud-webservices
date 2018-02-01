@@ -201,21 +201,18 @@ in
           };
         };
 
-        services.nginx = {
-          enable = true;
-          virtualHosts.mail= {
-            default = true;
-            enableACME = true;
-            serverName = cfg.hostname;
-            # TODO: - implement this additional hook 
-            #       - use reload instead of restart
-            #acmePostRun =
-            #''
-# FIXME hier reicht ggf. reload
-            #  systemctl restart httpd.service;
-            #  systemctl restart postfix.service;
-            #  systemctl restart dovecot2.service;
-            #'';
+        nixcloud.reverse-proxy.enable = true;
+
+        security.acme.certs = {
+          "email-${cfg.hostname}" = {
+            webroot = "/var/lib/acme/acme-challenges";
+            domain = "${cfg.hostname}";
+            #extraDomains = builtins.listToAttrs (fold (el: c: c ++ [ { name = "${el}"; value = null; } ] ) [] cfg.domains);
+            email = null;
+            postRun = ''
+              systemctl restart postfix.service;
+              systemctl restart dovecot.service;
+            '';
           };
         };
       })
@@ -345,8 +342,8 @@ in
             smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
           };
         } // optionalAttrs (cfg.enableACME) {
-          sslCert = "/var/lib/acme/${cfg.hostname}/fullchain.pem";
-          sslKey = "/var/lib/acme/${cfg.hostname}/key.pem";
+          sslCert = "/var/lib/acme/email-${cfg.hostname}/fullchain.pem";
+          sslKey = "/var/lib/acme/email-${cfg.hostname}/key.pem";
         } // optionalAttrs (cfg.relay.host != null) {
           relayHost = cfg.relay.host;
           relayPort = cfg.relay.port;
@@ -446,8 +443,8 @@ in
             }
           '';
         } // optionalAttrs (cfg.enableACME) { 
-            sslServerCert = "/var/lib/acme/${cfg.hostname}/fullchain.pem";
-            sslServerKey = "/var/lib/acme/${cfg.hostname}/key.pem";
+            sslServerCert = "/var/lib/acme/email-${cfg.hostname}/fullchain.pem";
+            sslServerKey = "/var/lib/acme/email-${cfg.hostname}/key.pem";
         }; 
       }
     ]);
