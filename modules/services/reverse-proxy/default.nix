@@ -27,12 +27,12 @@ in
       httpPort = mkOption {
         type = types.int;
         default = 80;
-        description = ''Port where the reverse proxy listens for incoming http requests'';
+        description = ''Port where the reverse proxy listens for incoming http requests. Note: This port is added to `networking.allowedTCPPorts`.'';
       };
       httpsPort = mkOption {
         type = types.int;
         default = 443;
-        description = ''Port where the reverse proxy listens for incoming https requests'';
+        description = ''Port where the reverse proxy listens for incoming https requests. Note: This port is added to  `networking.allowedTCPPorts`'';
       };
       extendEtcHosts = mkOption {
         type = types.bool;
@@ -268,8 +268,15 @@ in
     configFile = generateNginxConfigFile allProxyOptions allNCWDomains;
 
   in mkIf (cfg.enable) {
-    networking.extraHosts = if cfg.extendEtcHosts then (concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allNCWDomains + "\n" + concatMapStringsSep "\n" (x: "::1 ${x}") allNCWDomains) else ""; 
-    
+    networking = {
+      extraHosts = if cfg.extendEtcHosts then (concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allNCWDomains + "\n" + concatMapStringsSep "\n" (x: "::1 ${x}") allNCWDomains) else ""; 
+      firewall = {
+        allowedTCPPorts = [
+          cfg.httpPort
+          cfg.httpsPort
+        ];
+      };
+    };
     systemd.services."nixcloud.reverse-proxy" = let
       acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
     in {
