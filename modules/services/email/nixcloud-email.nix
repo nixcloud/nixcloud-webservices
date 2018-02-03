@@ -204,7 +204,7 @@ in
         nixcloud.reverse-proxy.enable = true;
 
         security.acme.certs = {
-          "email-${cfg.hostname}" = {
+          "${cfg.hostname}_email" = {
             webroot = "/var/lib/acme/acme-challenges";
             domain = "${cfg.hostname}";
             #extraDomains = builtins.listToAttrs (fold (el: c: c ++ [ { name = "${el}"; value = null; } ] ) [] cfg.domains);
@@ -342,8 +342,8 @@ in
             smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
           };
         } // optionalAttrs (cfg.enableACME) {
-          sslCert = "/var/lib/acme/email-${cfg.hostname}/fullchain.pem";
-          sslKey = "/var/lib/acme/email-${cfg.hostname}/key.pem";
+          sslCert = "/var/lib/acme/${cfg.hostname}_email/fullchain.pem";
+          sslKey = "/var/lib/acme/${cfg.hostname}_email/key.pem";
         } // optionalAttrs (cfg.relay.host != null) {
           relayHost = cfg.relay.host;
           relayPort = cfg.relay.port;
@@ -443,8 +443,8 @@ in
             }
           '';
         } // optionalAttrs (cfg.enableACME) { 
-            sslServerCert = "/var/lib/acme/email-${cfg.hostname}/fullchain.pem";
-            sslServerKey = "/var/lib/acme/email-${cfg.hostname}/key.pem";
+            sslServerCert = "/var/lib/acme/${cfg.hostname}_email/fullchain.pem";
+            sslServerKey = "/var/lib/acme/${cfg.hostname}_email/key.pem";
         }; 
       }
     ]);
