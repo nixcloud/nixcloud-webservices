@@ -257,8 +257,8 @@ in
         server_name ${domain};
 
         ${optionalString (ACMEsupportSet.${domain} == "ACME") ''
-        ssl_certificate /var/lib/acme/ncws-${domain}/fullchain.pem;
-        ssl_certificate_key /var/lib/acme/ncws-${domain}/key.pem;
+        ssl_certificate /var/lib/acme/${domain}_ncws/fullchain.pem;
+        ssl_certificate_key /var/lib/acme/${domain}_ncws/key.pem;
         ''}
         ${createLocationRecords "https" filteredProxyOptions}
         ${createWsPaths "https" filteredProxyOptions}
@@ -313,7 +313,7 @@ in
       });
 
     security.acme.certs = (fold (el: con: if ((ACMEsupportSet.${el}) != "ACME") then con else con // {
-      "ncws-${el}" = {
+      "${el}_ncws" = {
         # FIXME: inject nixcloud.reverse-proxy user into acme groups (or the othern way round)
         #user = "acme";
         #group = "acme";
