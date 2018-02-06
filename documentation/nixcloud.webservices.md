@@ -14,15 +14,15 @@ See also [../README.md](../README.md).
 
 All `services` in the namespace `nixcloud.webservices` hold the `special properties` as listed below:
 
- * Multiple instantiation of webservices like `mediawiki`
+## Multiple instantiation of webservices like `mediawiki`
 
-    A primary design goal is to easily support 'multiple instances' of the same webservice (mediawiki), yet isolated from each other. This is a cool feature but requires to 'fork' most webservices coming with `nixpkgs` for the time being.
+A primary design goal is to easily support 'multiple instances' of the same webservice (mediawiki), yet isolated from each other. This is a cool feature but requires to 'fork' most webservices coming with `nixpkgs` for the time being.
 
- * Reverse-proxy setups, see [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md)
+## Reverse-proxy setups, see [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md)
 
-    Each webservice runs in its own webserver on a different `port`. Using `nixcloud.reverse-proxy` all these different ports are consolidated into a reverse-proxy (single webserver) which runs on port 80/443 and interconnects the services to the outside world.
+Each webservice runs in its own webserver on a different `port`. Using `nixcloud.reverse-proxy` all these different ports are consolidated into a reverse-proxy (single webserver) which runs on port 80/443 and interconnects the services to the outside world.
 
-    One can now easily change the URL from `example.com/` to `example.org/foo` (and back) without having to modify the webservice itself.
+One can now easily change the URL from `example.com/` to `example.org/foo` (and back) without having to modify the webservice itself.
 
         nixcloud.webservices.leaps.myservice = {
           enable = true;
@@ -33,56 +33,55 @@ All `services` in the namespace `nixcloud.webservices` hold the `special propert
           };
         };
         
-    The options `port`, `path` and `domain` must to be set always while options like `ip` and others are optional. The `port` has a special role as it can't be assigned
-    automatically using the nix programming language yet. One possible solution we work on would be to use /etc/portmap and inside service reference a 'name' instead
-    of a port number which is then translated into a number using the said /etc/portmap.
+The options `port`, `path` and `domain` must to be set always while options like `ip` and others are optional. The `port` has a special role as it can't be assigned automatically using the nix programming language yet. One possible solution we work on would be to use /etc/portmap and inside service reference a 'name' instead of a port number which is then translated into a number using the said /etc/portmap.
 
- * Each webservice can be addressed standalone, and as such can be automatically represented by e.g. a dedicated systemd job:
+## Each webservice can be addressed standalone, and as such can be automatically represented by e.g. a dedicated systemd job:
 
-    Each webservice is closely associated with a systemd service, making it easy to shutdown/restart individual services. This decoupling makes it rather easy to manage single services in a multi-tenant environment without having these interfering with each other. This makes user/group isolation per webservice easy!
+Each webservice is closely associated with a systemd service, making it easy to shutdown/restart individual services. This decoupling makes it rather easy to manage single services in a multi-tenant environment without having these interfering with each other. This makes user/group isolation per webservice easy!
 
- * Database abstraction for user/db creation:
+## Database abstraction for user/db creation:
 
-    * [main module](../modules/web/database/default.nix)
-    * [postgresql implementation](../modules/web/database/postgresql.nix)
-    * [mysql implementation](../modules/web/database/mysql.nix)
+  * [main module](../modules/web/database/default.nix)
+  * [postgresql implementation](../modules/web/database/postgresql.nix)
+  * [mysql implementation](../modules/web/database/mysql.nix)
 
-    Note: We spawn a custom database per webservice by default and `nixcloud.webservices.mediawiki` contains an test which is also an example how to use both mysql and postgresql in one webservice and how to make it a user choice which one to use.
+  Note: We spawn a custom database per webservice by default and `nixcloud.webservices.mediawiki` contains an test which is also an example how to use both mysql and postgresql in one webservice and how to make it a user choice which one to use.
 
- * A common webservice interface: `apache`, `nginx` and `lighttpd`:
+## A common webservice interface: `apache`, `nginx` and `lighttpd`:
 
-    The [common interface](../modules/web/core/webserver.nix) features web servers as [apache](../modules/web/webserver/apache.nix) and [nginx](../modules/web/webserver/nginx.nix) which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. 
+The [common interface](../modules/web/core/webserver.nix) features web servers as [apache](../modules/web/webserver/apache.nix) and [nginx](../modules/web/webserver/nginx.nix) which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. 
 
- * `nix evaluation time` configuration syntax checking: `apache`, `nginx` & `nixcloud-reverse-proxy`
+## configuration syntax checking
 
-    * [nginx_check_config.nix](../modules/web/webserver/lib/nginx_check_config.nix)
-    * [apache_check_config.nix](../modules/web/webserver/lib/apache_check_config.nix)
+`nix evaluation time` configuration syntax checking for `apache`, `nginx` & `nixcloud-reverse-proxy`
 
- * There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
+  * [nginx_check_config.nix](../modules/web/webserver/lib/nginx_check_config.nix)
+  * [apache_check_config.nix](../modules/web/webserver/lib/apache_check_config.nix)
 
-     In a nutshell you can run a test explicitly like this:
+## There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
 
-        cd nixcloud-webservices/tests
-        nix-build -A custom-webservice
+In a nutshell you can run a test explicitly like this:
 
-     But we made tests part of our evaluation: 
+    cd nixcloud-webservices/tests
+    nix-build -A custom-webservice
+
+But we made tests part of our evaluation: 
      
-         * if you are using any webservice, like `nixcloud.webservices.leaps`, it will always run the respective test (leaps) to make sure it works in general
-         * if you are using `nixcloud.reverse-proxy` it will always run the reverse-proxy test before
+   * if you are using any webservice, like `nixcloud.webservices.leaps`, it will always run the respective test (leaps) to make sure it works in general
+   * if you are using `nixcloud.reverse-proxy` it will always run the reverse-proxy test before
 
-     WARNING: `nixcloud.webservices` should be used from a machine with native virtualization support (KVM) but if you are using it from a VM, then the OS virtualization will be very slow.
+WARNING: `nixcloud.webservices` should be used from a machine with native virtualization support (KVM) but if you are using it from a VM, then the OS virtualization will be very slow.
 
- * Each webservice gets a unique, stateful directory called `stateDir`. 
+## Each webservice gets a unique, stateful directory called `stateDir`. 
  
-    For instance two webservices `service1` and `service2` would use: `/var/lib/nixcloud/webservices/owncloud-service1` and `/var/lib/nixcloud/webservices/owncloud-service2` thus not interfere.
-    The `stateDir` is independent of the `URL` and thus not influenced by `proxyOptions`.
+For instance two webservices `service1` and `service2` would use: `/var/lib/nixcloud/webservices/owncloud-service1` and `/var/lib/nixcloud/webservices/owncloud-service2` thus not interfere.
+The `stateDir` is independent of the `URL` and thus not influenced by `proxyOptions`.
     
-    Using `nixcloud.webservices.owncloud.service1` would create `/var/lib/nixcloud/webservices/owncloud-service1` and while `owncloud` would be the service class, `service1` would be a 
-    name, which has to be unique, given by the user. 
+Using `nixcloud.webservices.owncloud.service1` would create `/var/lib/nixcloud/webservices/owncloud-service1` and while `owncloud` would be the service class, `service1` would be a name, which has to be unique, given by the user. 
 
- * Startup scripts used to prepare the environment or perform updates, are executed as a normal user (not as a privileged user like root).
+## Startup scripts used to prepare the environment or perform updates, are executed as a normal user (not as a privileged user like root).
  
- * Nixcloud provides a common webserver logging interface.
+## Nixcloud provides a common webserver logging interface.
 
 # API stability
 
