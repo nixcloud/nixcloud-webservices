@@ -211,7 +211,7 @@ in
             email = null;
             postRun = ''
               systemctl restart postfix.service;
-              systemctl restart dovecot.service;
+              systemctl restart dovecot2.service;
             '';
           };
         };
