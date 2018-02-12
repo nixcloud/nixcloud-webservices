@@ -8,6 +8,7 @@
   ];
 
   imports = [
+    core/directories.nix
     core/packages.nix
     core/hashed-modules.nix
     core/testing.nix
