@@ -138,7 +138,7 @@ let
         type = types.bool;
         default = true;
         example = false;
-        descriptions = ''
+        description = ''
           Whether to fixup permissions recursively during instance startup.
         '';
       };
