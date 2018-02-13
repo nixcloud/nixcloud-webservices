@@ -243,7 +243,8 @@ let
 
     createService = mkService "mkdir" "Create Directory" {
       script = lib.concatStringsSep "\n" [
-        (mkCmd [ "mkdir" "-m" "0000" "-p" absPath ])
+        # XXX: Make 0755 configurable!
+        (mkCmd [ "mkdir" "-m" "0755" "-p" absPath ])
         setOwner setPerms
       ];
       unitConfig.ConditionPathExists = "!${absPath}";
