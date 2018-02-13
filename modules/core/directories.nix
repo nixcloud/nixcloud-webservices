@@ -1,4 +1,4 @@
-{ lib, config, ... }:
+{ pkgs, lib, config, ... }:
 
 let
   inherit (lib) types;
@@ -242,31 +242,58 @@ let
 
     mkCmd = lib.concatMapStringsSep " " lib.escapeShellArg;
 
-    recurseScript = ""; # TODO!
-
-    dirACL = let
+    mkACL = isDir: let
+      mask = with cfg.permissions; if isDir then dirMask else fileMask;
+      getPerms = cfgattr: let
+        realAttr = if isDir then cfgattr else cfgattr.filePerms;
+      in permConfToRWX isDir realAttr;
       perms = [
-        "u:${cfg.owner}:${permConfToRWX true cfg.permissions.owner}"
-        "g:${cfg.group}:${permConfToRWX true cfg.permissions.group}"
-        "o::${permConfToRWX true cfg.permissions.others}"
+        "u:${cfg.owner}:${getPerms cfg.permissions.owner}"
+        "g:${cfg.group}:${getPerms cfg.permissions.group}"
+        "o::${getPerms cfg.permissions.others}"
+        "m::${permConfToRWX isDir mask}"
       ];
-      defPerms = map (p: "d:${p}") perms;
+      defPerms = lib.optionals isDir (map (p: "d:${p}") perms);
     in lib.concatStringsSep "," (defPerms ++ perms);
 
-    setOwner = mkCmd [ "chown" cfg.owner cfg.group absPath ];
-    setPerms = mkCmd [ "setfacl" "-b" "-m" dirACL absPath ];
+    subPaths = let
+      allPaths = lib.attrNames config.nixcloud.directories;
+      isSubPath = p: p != path && lib.hasPrefix path p;
+    in lib.filter isSubPath allPaths;
+
+    mkdirCmd = "${pkgs.coreutils}/bin/mkdir";
+    chownCmd = "${pkgs.coreutils}/bin/chown";
+    setfaclCmd = "${pkgs.acl}/bin/setfacl";
+
+    setpermCmd = pkgs.writeScript "setperm.sh" ''
+      #!${pkgs.stdenv.shell} -e
+      acl="$1"; shift
+      usr="$1"; shift
+      grp="$1"; shift
+      ${chownCmd} "$usr:$grp" "$@"
+      ${setfaclCmd} -b -m "$acl" "$@"
+    '';
+
+    # XXX: Make 0755 configurable!
+    mkDir = mkCmd [ mkdirCmd "-m" "0755" "-p" absPath ];
+    setPerms = mkCmd [ setpermCmd (mkACL true) cfg.owner cfg.group absPath ];
 
     createService = mkService "mkdir" "Create Directory" {
-      script = lib.concatStringsSep "\n" [
-        # XXX: Make 0755 configurable!
-        (mkCmd [ "mkdir" "-m" "0755" "-p" absPath ])
-        setOwner setPerms
-      ];
+      script = lib.concatStringsSep "\n" [ mkDir setPerms ];
       unitConfig.ConditionPathExists = "!${absPath}";
     };
 
     fixupService = mkService "fixup" "Fixup Permissions for Directory" {
-      script = lib.concatStringsSep "\n" [ setOwner setPerms ];
+      script = let
+        mkExclude = p: [ "(" "-path" "/${p}" "-prune" ")" "-o" ];
+        excludes = lib.concatMap mkExclude subPaths;
+        findSetPerm = t: acl: [
+          "(" "-type" t "-exec" setpermCmd acl cfg.owner cfg.group "{}" "+" ")"
+        ];
+        permsDir = findSetPerm "d" (mkACL true);
+        permsFile = findSetPerm "f" (mkACL false);
+        perms = permsDir ++ [ "-o" ] ++ permsFile;
+      in mkCmd ([ "find" absPath ] ++ excludes ++ perms);
       unitConfig.ConditionPathExists = "${absPath}";
     };
 
