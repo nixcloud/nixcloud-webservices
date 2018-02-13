@@ -5,7 +5,7 @@ let
 
   permConfToRWX = isDir: cfg: let
     execAttr = if isDir then "search" else "execute";
-    fullBits = if isDir then "rwx" else "rw-";
+    fullBits = if isDir then "rwx" else "rw${execBit}";
     mkBit = val: bit: if val then bit else "-";
     readBit = mkBit cfg.read "r";
     writeBit = mkBit cfg.write "w";
@@ -14,7 +14,9 @@ let
      else if cfg.noAccess then "---"
      else readBit + writeBit + execBit;
 
-  mkPermOpts = desc: isDir: read: write: execute: let
+  mkPermOpts = { descCan, descHas, descIsDenied, isDir
+               , read ? true, write ? true, execute ? true
+               }: let
     extraDesc = lib.optionalString (!isDir) ''
       These permissions are set only for <emphasis>files</emphasis> and not
       directories and are only set/changed during startup
@@ -27,7 +29,7 @@ let
       mkOpt = opt: "<option>${opt}</option>";
       left = lib.concatMapStringsSep ", " mkOpt (lib.init values);
       right = mkOpt (lib.last values);
-      xAnd = lib.optionalString (lib.length values == 1) "${left} and ";
+      xAnd = lib.optionalString (lib.length values > 1) "${left} and ";
     in lib.optionalString (values != []) (xAnd + right);
     attrsInvolved = [ "read" "write" ] ++ lib.optional isDir execAttr;
   in {
@@ -36,7 +38,7 @@ let
       default = read;
       example = !read;
       description = ''
-        Whether ${desc} can read the contents of the ${dirOrFile}.
+        Whether ${descCan} read the contents of the ${dirOrFile}.
       '' + extraDesc;
     };
 
@@ -45,9 +47,9 @@ let
       default = write;
       example = !write;
       description = (if isDir then ''
-        Whether ${desc} can create new entries to the directory.
+        Whether ${descCan} add new entries to the directory.
       '' else ''
-        Whether ${desc} can alter the file's contents.
+        Whether ${descCan} alter the file's contents.
       '') + extraDesc;
     };
 
@@ -56,9 +58,9 @@ let
       default = execute;
       example = !execute;
       description = (if isDir then ''
-        Whether ${desc} can list the contents of the directory.
+        Whether ${descCan} list the contents of the directory.
       '' else ''
-        Whether ${desc} can execute the file.
+        Whether ${descCan} execute the file.
       '') + extraDesc;
     };
 
@@ -67,7 +69,7 @@ let
       default = false;
       example = true;
       description = ''
-        Whether ${desc} has full access to the ${dirOrFile}, which is a
+        Whether ${descHas} full access to the ${dirOrFile}, which is a
         short-hand of setting ${andOpt attrsInvolved} to
         <literal>true</literal>.
       '' + extraDesc + ''
@@ -81,28 +83,26 @@ let
       default = false;
       example = true;
       description = ''
-        Whether ${desc} is denied access to the ${dirOrFile}, which is a
-        short-hand of setting ${andOpt attrsInvolved} to
+        Whether ${descIsDenied} access to the ${dirOrFile}, which is a
+        short-hand of setting ${andOpt [ "read" "write" execAttr ]} to
         <literal>false</literal>.
       '' + extraDesc + ''
         Note that setting this takes precedence over setting any of the
-        ${andOpt attrsInvolved} options.
+        ${andOpt [ "read" "write" execAttr ]} options.
       '';
     };
   };
 
-  mkDirPermOpts = desc: read: write: execute: {
-    filePerms = mkPermOpts desc false read write false;
-  } // mkPermOpts desc true read write execute;
+  mkDirPermOpts = attrs: {
+    filePerms = mkPermOpts (attrs // { isDir = false; execute = false; });
+  } // mkPermOpts (attrs // { isDir = true; });
 
   dirModule.options = {
     create = lib.mkOption {
       type = types.bool;
       default = true;
       example = false;
-      description = ''
-        Whether to create the directory during instance initialisation.
-      '';
+      description = "Whether to create the directory during startup.";
     };
 
     before = lib.mkOption {
@@ -110,8 +110,8 @@ let
       default = [];
       example = [ "my-shiny.service" ];
       description = ''
-        The units which need this directory so creation or fixup should be done
-        prior to the startup of these units.
+        The systemd units which require this directory, so creation or fixup
+        should be done prior to the startup of these units.
       '';
     };
 
@@ -128,9 +128,7 @@ let
       type = types.str;
       default = "root";
       example = "nogroup";
-      description = ''
-        The group of the directory.
-      '';
+      description = "The group owning the directory.";
     };
 
     permissions = {
@@ -143,34 +141,59 @@ let
         '';
       };
 
-      owner = mkDirPermOpts "the owner" true true true;
-      group = mkDirPermOpts "the group" true false true;
-      others = mkDirPermOpts "others" true false true;
+      owner = mkDirPermOpts {
+        descCan = "the owner can";
+        descHas = "the owner has";
+        descIsDenied = "the owner is denied";
+      };
+
+      group = mkDirPermOpts {
+        descCan = "the group can";
+        descHas = "the group has";
+        descIsDenied = "the group is denied";
+        write = false;
+      };
+
+      others = mkDirPermOpts {
+        descCan = "others can";
+        descHas = "others have";
+        descIsDenied = "others are denied";
+        write = false;
+      };
     };
 
     users = lib.mkOption {
       type = types.attrsOf (types.submodule {
-        options = mkDirPermOpts "the user" true true true;
+        options = mkDirPermOpts {
+          descCan = "the user can";
+          descHas = "the user has";
+          descIsDenied = "the user is denied";
+        };
       });
       default = {};
       example.foo.write = false;
       description = ''
         Additional users with access to the directory along with permissions.
-        The attribute names are the users and the values specify its
+        The attribute names are the users and the submodule options specify its
         permissions.
       '';
     };
 
     groups = lib.mkOption {
       type = types.attrsOf (types.submodule {
-        options = mkDirPermOpts "the group" true false true;
+        options = mkDirPermOpts {
+          descCan = "the group can";
+          descHas = "the group has";
+          descIsDenied = "the group is denied";
+          write = false;
+        };
       });
       default = {};
       example.bar.write = false;
       description = ''
         Additional groups with access to the directory along with permissions.
-        The attribute names are the groups and the values specify its
-        permissions.
+        The attribute names are the groups and the submodule options specify
+        its permissions.
       '';
     };
   };
@@ -237,7 +260,9 @@ in {
   options.nixcloud.directories = lib.mkOption {
     type = types.attrsOf (types.submodule dirModule);
     default = {};
-    example."foo/bar" = {}; # TODO!
+    example."foo/bar".before = [ "my-shiny.service" ];
+    example."foo/bar".owner = "shiny";
+    example."foo/bar".group = "shinyones";
     apply = lib.mapAttrs' (path: value: {
       name = sanitizePath path;
       inherit value;
