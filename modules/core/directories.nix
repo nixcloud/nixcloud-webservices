@@ -160,6 +160,21 @@ let
         descIsDenied = "others are denied";
         write = false;
       };
+
+      dirMask = mkPermOpts {
+        descCan = "the maximum access mask for directories allows to";
+        descHas = "the maximum access mask for directories allows";
+        descIsDenied = "the maximum access for directories denies";
+        isDir = true;
+      };
+
+      fileMask = mkPermOpts {
+        descCan = "the maximum access mask for files allows to";
+        descHas = "the maximum access mask for files allows";
+        descIsDenied = "the maximum access for files denies";
+        isDir = false;
+        execute = false;
+      };
     };
 
     users = lib.mkOption {
