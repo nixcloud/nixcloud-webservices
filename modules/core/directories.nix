@@ -141,6 +141,30 @@ let
         '';
       };
 
+      defaultDirectoryMode = lib.mkOption {
+        type = lib.mkOptionType {
+          name = "file mode bits";
+          description = "file mode bits in octal form";
+          check = x: let
+            modeRegex = "[0-7]?[0-7][0-7][0-7]";
+          in types.str.check x && builtins.match modeRegex x != null;
+        };
+        apply = x: (lib.optionalString (lib.stringLength x == 3) "0") + x;
+        default = "0755";
+        example = "0711";
+        description = ''
+          The default mode to use when creating leading directories.
+
+          Leading directories will be owned by user <systemitem
+          class="username">root</systemitem> and group <systemitem
+          class="groupname">root</systemitem>.
+
+          <note><para>This applies only to <emphasis>leading</emphasis>
+          directories, the last component will have the permissions specified
+          via the options in this submodule.</para></note>
+        '';
+      };
+
       owner = mkDirPermOpts {
         descCan = "the owner can";
         descHas = "the owner has";
@@ -276,12 +300,44 @@ let
       ${setfaclCmd} -b -m "$acl" "$@"
     '';
 
-    # XXX: Make 0755 configurable!
-    mkDir = mkCmd [ mkdirCmd "-m" "0755" "-p" absPath ];
+    makedirsCmd = pkgs.writeScript "makedirs.sh" ''
+      #!${pkgs.stdenv.shell} -e
+      dirmode="$1"; shift
+
+      makedirs() {
+        local initial="$1"
+        local path="$2"
+        local segment="''${path%/*}"
+
+        if [ -n "$segment" ]; then
+          makedirs 0 "$segment"
+        fi
+
+        if [ ! -e "$path" ]; then
+          if [ "$initial" -eq 1 ]; then
+            ${mkdirCmd} -m 0000 "$path"
+          else
+            ${mkdirCmd} -m "$dirmode" "$path"
+          fi
+        fi
+      }
+
+      while [ -n "$1" ]; do
+        if [ "''${1:0:1}" != / ]; then
+          echo "FATAL: Path $1 is not absolute." >&2
+          exit 1
+        fi
+        makedirs 1 "$1"
+        shift
+      done
+    '';
+
+    inherit (cfg.permissions) defaultDirectoryMode;
+    mkDirectory = mkCmd [ makedirsCmd defaultDirectoryMode absPath ];
     setPerms = mkCmd [ setpermCmd (mkACL true) cfg.owner cfg.group absPath ];
 
     createService = mkService "mkdir" "Create Directory" {
-      script = lib.concatStringsSep "\n" [ mkDir setPerms ];
+      script = lib.concatStringsSep "\n" [ mkDirectory setPerms ];
       unitConfig.ConditionPathExists = "!${absPath}";
     };
 
