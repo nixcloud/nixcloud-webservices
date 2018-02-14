@@ -261,6 +261,8 @@ let
         description = "${desc} ${absPath}";
         wantedBy = [ "multi-user.target" ];
         inherit (cfg) before;
+        serviceConfig.Type = "oneshot";
+        serviceConfig.RemainAfterExit = true;
       } // attrs;
     };
 
