@@ -266,9 +266,11 @@ let
         before = let
           otherPathUnits = map (mkServiceName "mkdir") subPaths;
         in cfg.before ++ lib.optionals (name == "mkdir") otherPathUnits;
-        serviceConfig.Type = "oneshot";
-        serviceConfig.RemainAfterExit = true;
-      } // attrs;
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        } // (attrs.serviceConfig or {});
+      } // removeAttrs attrs [ "serviceConfig" ];
     };
 
     mkCmd = lib.concatMapStringsSep " " lib.escapeShellArg;
@@ -302,6 +304,7 @@ let
     mkdirCmd = "${pkgs.coreutils}/bin/mkdir";
     chownCmd = "${pkgs.coreutils}/bin/chown";
     setfaclCmd = "${pkgs.acl}/bin/setfacl";
+    findCmd = "${pkgs.findutils}/bin/find";
 
     setpermCmd = pkgs.writeScript "setperm.sh" ''
       #!${pkgs.stdenv.shell} -e
@@ -349,12 +352,12 @@ let
     setPerms = mkCmd [ setpermCmd (mkACL true) cfg.owner cfg.group absPath ];
 
     createService = mkService "mkdir" "Create Directory" {
-      script = lib.concatStringsSep "\n" [ mkDirectory setPerms ];
+      script = (lib.concatStringsSep "\n" [ mkDirectory setPerms ]) + "\n";
       unitConfig.ConditionPathExists = "!${absPath}";
     };
 
     fixupService = mkService "fixup" "Fixup Permissions for Directory" {
-      script = let
+      serviceConfig.ExecStart = let
         mkExclude = p: [ "(" "-path" "/${p}" "-prune" ")" "-o" ];
         excludes = lib.concatMap mkExclude subPaths;
         findSetPerm = t: acl: [
@@ -363,7 +366,7 @@ let
         permsDir = findSetPerm "d" (mkACL true);
         permsFile = findSetPerm "f" (mkACL false);
         perms = permsDir ++ [ "-o" ] ++ permsFile;
-      in mkCmd ([ "find" absPath ] ++ excludes ++ perms);
+      in mkCmd ([ findCmd absPath ] ++ excludes ++ perms);
       unitConfig.ConditionPathExists = "${absPath}";
     };
 
