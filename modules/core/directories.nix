@@ -3,6 +3,8 @@
 let
   inherit (lib) types;
 
+  # Turn a permission config (created by mkPermOpts) into short text
+  # permission form like eg. "rwx" or "r-x".
   permConfToRWX = isDir: cfg: let
     execAttr = if isDir then "search" else "execute";
     fullBits = if isDir then "rwx" else "rw${execBit}";
@@ -237,11 +239,14 @@ let
     };
   };
 
+  # Returns a list of the components of the given path.
   splitPath = path: let
     result = builtins.match "([^/]*)/(.*)" path;
     iter = [ (lib.head result) ] ++ splitPath (lib.last result);
   in if result == null then [ path ] else iter;
 
+  # Strips out every component that contains "." or ".." and also strips out
+  # unnecessary slashes (eg. "////" becomes "/").
   sanitizePath = path: let
     splitted = splitPath path;
     filtered = lib.filter (c: c != "" && c != "." && c != "..") splitted;
@@ -306,6 +311,7 @@ let
     setfaclCmd = "${pkgs.acl}/bin/setfacl";
     findCmd = "${pkgs.findutils}/bin/find";
 
+    # Permission setting helper for find -exec.
     setpermCmd = pkgs.writeScript "setperm.sh" ''
       #!${pkgs.stdenv.shell} -e
       acl="$1"; shift
@@ -315,6 +321,13 @@ let
       ${setfaclCmd} -b -m "$acl" "$@"
     '';
 
+    # This is needed because "mkdir -p" doesn't allow us to specify the mode
+    # for the parent directories. The latter is determined by the umask but we
+    # can't use setuid/setgid/stick bits via the umask.
+    #
+    # So we mkdir each component with the mode from defaultDirectoryMode and
+    # use mode 0000 for the last component in order to prevent privilege
+    # escalation vulnerabilities.
     makedirsCmd = pkgs.writeScript "makedirs.sh" ''
       #!${pkgs.stdenv.shell} -e
       dirmode="$1"; shift
@@ -359,6 +372,7 @@ let
     fixupService = mkService "fixup" "Fixup Permissions for Directory" {
       serviceConfig.ExecStart = let
         mkExclude = p: [ "(" "-path" "/${p}" "-prune" ")" "-o" ];
+        # All the paths that are subdirectories of the current directory.
         excludes = lib.concatMap mkExclude subPaths;
         findSetPerm = t: acl: [
           "(" "-type" t "-exec" setpermCmd acl cfg.owner cfg.group "{}" "+" ")"
