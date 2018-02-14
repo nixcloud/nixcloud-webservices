@@ -248,7 +248,9 @@ let
         realAttr = if isDir then cfgattr else cfgattr.filePerms;
       in permConfToRWX isDir realAttr;
       perms = [
+        "u::${getPerms cfg.permissions.owner}"
         "u:${cfg.owner}:${getPerms cfg.permissions.owner}"
+        "g::${getPerms cfg.permissions.group}"
         "g:${cfg.group}:${getPerms cfg.permissions.group}"
         "o::${getPerms cfg.permissions.others}"
         "m::${permConfToRWX isDir mask}"
