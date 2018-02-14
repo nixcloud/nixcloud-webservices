@@ -278,11 +278,16 @@ let
       getPerms = cfgattr: let
         realAttr = if isDir then cfgattr else cfgattr.filePerms;
       in permConfToRWX isDir realAttr;
+      mkUserGroupPerm = flag: name: perms: "${flag}:${name}:${getPerms perms}";
+      userPerms = lib.mapAttrsToList (mkUserGroupPerm "u") cfg.users;
+      groupPerms = lib.mapAttrsToList (mkUserGroupPerm "g") cfg.groups;
       perms = [
         "u::${getPerms cfg.permissions.owner}"
         "u:${cfg.owner}:${getPerms cfg.permissions.owner}"
+      ] ++ userPerms ++ [
         "g::${getPerms cfg.permissions.group}"
         "g:${cfg.group}:${getPerms cfg.permissions.group}"
+      ] ++ groupPerms ++ [
         "o::${getPerms cfg.permissions.others}"
         "m::${permConfToRWX isDir mask}"
       ];

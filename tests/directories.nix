@@ -7,6 +7,7 @@
     "./foo/./../bar/subdir" = {
       owner = "root";
       group = "vip";
+      groups.bobs.write = true;
     };
 
     "super/n/e/s/t/e/d" = {
@@ -14,10 +15,19 @@
       owner = "alice";
       group = "vip";
     };
+
+    "little/house/of/bob" = {
+      owner = "bob";
+      group = "vip";
+      users.alice = {};
+    };
   };
 
   machine.users.groups.vip = {};
+  machine.users.groups.bobs = {};
   machine.users.users.alice.isNormalUser = true;
+  machine.users.users.bob.isNormalUser = true;
+  machine.users.users.bob.extraGroups = [ "bobs" ];
 
   testScript = ''
     sub ensureStat ($$$$) {
@@ -47,12 +57,17 @@
     sub checkGenericPermissions {
       showPerms "/foo/bar";
       showPerms "/foo/bar/subdir";
+      showPerms "/little/house/of/bob";
+      showPerms "/super/n/e/s/t/e/d";
 
       ensureOwner "/foo/bar", "alice";
       ensureOwner "/foo/bar/subdir", "root";
 
       ensureGroup "/foo/bar", "root";
       ensureGroup "/foo/bar/subdir", "vip";
+
+      ensureOwner "/little/house/of/bob", "bob";
+      ensureGroup "/little/house/of/bob", "vip";
 
       ensureOwner "/super/n/e/s/t/e/d", "alice";
       ensureGroup "/super/n/e/s/t/e/d", "vip";
@@ -71,6 +86,16 @@
         'su -c "echo alice >> /foo/bar/writable_by_alice" alice',
         'test "$(tr -d \'\\n\' < /foo/bar/writable_by_alice)" = rootalice'
       );
+    });
+
+    $machine->nest("check if alice can write to bob's path", sub {
+      $machine->succeed(
+        'su -c "echo hello > /little/house/of/bob/alice.txt" alice'
+      );
+    });
+
+    $machine->nest('check if bob can write to /foo/bar/subdir', sub {
+      $machine->succeed('su -c "echo test > /foo/bar/subdir/bob.txt" bob');
     });
 
     $machine->nest('check default directory mode', sub {
