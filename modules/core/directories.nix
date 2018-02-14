@@ -250,17 +250,22 @@ let
   mkDir = path: cfg: let
     absPath = "/${path}";
 
-    escPath = let
+    escPath = p: let
       unsafeChars = [ "@" ":" "\\" "[" "]" "/" "." ];
       safeChars = map (lib.const "-") unsafeChars;
-    in lib.replaceStrings unsafeChars safeChars path;
+    in lib.replaceStrings unsafeChars safeChars p;
+
+    mkUnitName = prefix: p: "${prefix}-${escPath p}";
+    mkServiceName = prefix: p: "${mkUnitName prefix p}.service";
 
     mkService = name: desc: attrs: {
-      name = "${name}-${escPath}";
+      name = mkUnitName name path;
       value = {
         description = "${desc} ${absPath}";
         wantedBy = [ "multi-user.target" ];
-        inherit (cfg) before;
+        before = let
+          otherPathUnits = map (mkServiceName "mkdir") subPaths;
+        in cfg.before ++ lib.optionals (name == "mkdir") otherPathUnits;
         serviceConfig.Type = "oneshot";
         serviceConfig.RemainAfterExit = true;
       } // attrs;
