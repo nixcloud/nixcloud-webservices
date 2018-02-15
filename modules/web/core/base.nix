@@ -137,87 +137,89 @@ in {
     assertions = toplevel.options.assertions;
   };
 
-  config = lib.mkIf config.enable {
-    _module.args.mkUnique = suffix:
-      if suffix == config.uniqueName then suffix
-      else if suffix == wsName then config.uniqueName
-      else "${config.uniqueName}-${suffix}";
-
-    systemd.mounts = lib.singleton {
-      description = "Runtime Directory For ${config.uniqueName}";
-      requiredBy = lib.singleton (mkUnique "instance-init.target");
-      before = lib.singleton (mkUnique "instance-init.target");
-      what = "none";
-      where = config.runtimeDir;
-      type = "tmpfs";
-      options = "nodev,nosuid,mode=1777";
-    };
-
-    systemd.services.create-statedir = {
-      description = "Create State Directory For ${config.uniqueName}";
-      after = [ "local-fs.target" ];
-      instance.before = [ "instance-init.target" ];
-      instance.requiredBy = [ "instance-init.target" ];
-      instance.ignore-init = true;
-      serviceConfig.Type = "oneshot";
-      serviceConfig.RemainAfterExit = true;
-      script = "mkdir -m 0711 -p ${lib.escapeShellArg config.stateDir}";
-    };
-
-    systemd.targets.instance-init = {
-      description = "Instance Initialization For ${config.uniqueName}";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "local-fs.target" ];
-      instance.ignore-init = true;
-    };
-
-    toplevel = lib.mkIf config.enable {
-      environment.systemPackages = lib.singleton (pkgs.buildEnv {
-        name = "webservice-extra-path";
-        paths = config.extraPath;
-      });
-
-      users.users = lib.mapAttrs' (name: ucfg: {
-        name = mkUnique name;
-        value = lib.mkOverride 200 ({
-          name = mkUnique name;
-          group = mkUnique ucfg.group;
-        } // removeAttrs ucfg [ "name" "group" ]);
-      }) config.users;
-
-      users.groups = lib.mapAttrs' (name: gcfg: {
-        name = mkUnique name;
-        value = lib.mkOverride 200 ({
-          name = mkUnique name;
-        } // removeAttrs gcfg [ "name" ]);
-      }) config.groups;
-
-      assertions = (lib.mapAttrsToList (uname: ucfg: {
-        assertion = config.groups ? ${ucfg.group};
-        message = let
-          opt = "nixcloud.webservices.${wsName}.${name}.users.${uname}.group";
-        in "Group `${ucfg.group}' defined in `${opt}' does not exist.";
-      }) config.users) ++ config.assertions;
-
-      systemd = let
-        generator = name: lib.mapAttrs' (unitName: defs: {
-          name = mkUnique unitName;
-          value = let
-            defsWithoutInstance = removeAttrs defs [ "instance" ];
-          in defsWithoutInstance // lib.optionalAttrs (defs ? serviceConfig) {
-            serviceConfig = let
-              sc = defs.serviceConfig;
-            in sc // lib.optionalAttrs (sc ? User) {
-              User = mkUnique sc.User;
-            } // lib.optionalAttrs (sc ? Group) {
-              Group = mkUnique sc.Group;
-            };
-          } // mkInstanceDependencies (addInstanceInit defs);
-        }) config.systemd.${name};
-        attrOpts = lib.genAttrs (lib.attrNames systemdUnitOptions) generator;
-      in attrOpts // {
-        inherit (config.systemd) mounts automounts;
+  config = lib.mkMerge [
+    { _module.args.mkUnique = suffix:
+        if suffix == config.uniqueName then suffix
+        else if suffix == wsName then config.uniqueName
+        else "${config.uniqueName}-${suffix}";
+    }
+    (lib.mkIf config.enable {
+      systemd.mounts = lib.singleton {
+        description = "Runtime Directory For ${config.uniqueName}";
+        requiredBy = lib.singleton (mkUnique "instance-init.target");
+        before = lib.singleton (mkUnique "instance-init.target");
+        what = "none";
+        where = config.runtimeDir;
+        type = "tmpfs";
+        options = "nodev,nosuid,mode=1777";
       };
-    };
-  };
+
+      systemd.services.create-statedir = {
+        description = "Create State Directory For ${config.uniqueName}";
+        after = [ "local-fs.target" ];
+        instance.before = [ "instance-init.target" ];
+        instance.requiredBy = [ "instance-init.target" ];
+        instance.ignore-init = true;
+        serviceConfig.Type = "oneshot";
+        serviceConfig.RemainAfterExit = true;
+        script = "mkdir -m 0711 -p ${lib.escapeShellArg config.stateDir}";
+      };
+
+      systemd.targets.instance-init = {
+        description = "Instance Initialization For ${config.uniqueName}";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "local-fs.target" ];
+        instance.ignore-init = true;
+      };
+
+      toplevel = lib.mkIf config.enable {
+        environment.systemPackages = lib.singleton (pkgs.buildEnv {
+          name = "webservice-extra-path";
+          paths = config.extraPath;
+        });
+
+        users.users = lib.mapAttrs' (name: ucfg: {
+          name = mkUnique name;
+          value = lib.mkOverride 200 ({
+            name = mkUnique name;
+            group = mkUnique ucfg.group;
+          } // removeAttrs ucfg [ "name" "group" ]);
+        }) config.users;
+
+        users.groups = lib.mapAttrs' (name: gcfg: {
+          name = mkUnique name;
+          value = lib.mkOverride 200 ({
+            name = mkUnique name;
+          } // removeAttrs gcfg [ "name" ]);
+        }) config.groups;
+
+        assertions = (lib.mapAttrsToList (uname: ucfg: {
+          assertion = config.groups ? ${ucfg.group};
+          message = let
+            o = "nixcloud.webservices.${wsName}.${name}.users.${uname}.group";
+          in "Group `${ucfg.group}' defined in `${o}' does not exist.";
+        }) config.users) ++ config.assertions;
+
+        systemd = let
+          generator = name: lib.mapAttrs' (unitName: defs: {
+            name = mkUnique unitName;
+            value = let
+              defsWithoutInst = removeAttrs defs [ "instance" ];
+            in defsWithoutInst // lib.optionalAttrs (defs ? serviceConfig) {
+              serviceConfig = let
+                sc = defs.serviceConfig;
+              in sc // lib.optionalAttrs (sc ? User) {
+                User = mkUnique sc.User;
+              } // lib.optionalAttrs (sc ? Group) {
+                Group = mkUnique sc.Group;
+              };
+            } // mkInstanceDependencies (addInstanceInit defs);
+          }) config.systemd.${name};
+          attrOpts = lib.genAttrs (lib.attrNames systemdUnitOptions) generator;
+        in attrOpts // {
+          inherit (config.systemd) mounts automounts;
+        };
+      };
+    })
+  ];
 }
