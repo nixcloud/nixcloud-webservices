@@ -1,8 +1,11 @@
-{ lib }:
+{ config, lib, isWebServices ? false }:
 
 let
   inherit (lib) types;
   inherit (import ./lib.nix { inherit lib; }) sanitizePath;
+
+  # Only needed if isWebServices is true.
+  inherit (config._module.args) mkUnique;
 
   mkPermOpts = { descCan, descHas, descIsDenied, isDir
                , read ? true, write ? true, execute ? true
@@ -88,7 +91,7 @@ let
   } // mkPermOpts (attrs // { isDir = true; });
 
 in lib.mkOption {
-  type = types.attrsOf (types.submodule {
+  type = types.attrsOf (types.submodule ({ config, ... }: {
     options = {
       create = lib.mkOption {
         type = types.bool;
@@ -227,20 +230,45 @@ in lib.mkOption {
           options specify its permissions.
         '';
       };
+    } // lib.optionalAttrs isWebServices {
+      instance.before = lib.mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = [ "my-shiny.service" ];
+        description = ''
+          Similar to the <option>before</option> option but instead of applying
+          to top-level systemd units it applies to systemd units of this web
+          service instance.
+        '';
+      };
     };
-  });
+
+    config = lib.optionalAttrs isWebServices {
+      before = map mkUnique config.instance.before;
+    };
+  }));
   default = {};
   example."foo/bar".before = [ "my-shiny.service" ];
   example."foo/bar".owner = "shiny";
   example."foo/bar".group = "shinyones";
   apply = lib.mapAttrs' (path: value: {
-    name = sanitizePath path;
+    name = let
+      maybeStateDir = lib.optionalString isWebServices "${config.stateDir}/";
+      sanitized = sanitizePath (maybeStateDir + path);
+      errorMsg = "The path '${path}' (canonicalized: '${sanitized}') is"
+               + " either invalid or refers to '/', which is not allowed"
+               + " for the 'nixcloud.directories' option.";
+    in if sanitized == "" then errorMsg else sanitized;
     inherit value;
   });
-  description = ''
+  description = let
+    relativeDoc = "paths relative to <option>stateDir</option>";
+    absoluteDoc = "absolute paths";
+  in ''
     Directories to create and set permissions for.
 
-    The attribute names are <emphasis>always</emphasis> absolute paths and
+    The attribute names are <emphasis>always</emphasis>
+    ${if isWebServices then relativeDoc else absoluteDoc} and
     components such as <literal>.</literal> and <literal>..</literal> are
     stripped out.
 

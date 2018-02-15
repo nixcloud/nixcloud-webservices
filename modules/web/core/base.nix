@@ -38,7 +38,7 @@ let
   in defs // { instance = removeAttrs instance [ "ignore-init" ]; };
 
 in {
-  imports = [ ./webserver.nix ./meta.nix ../database ];
+  imports = [ ./webserver.nix ./meta.nix ./directories.nix ../database ];
 
   options = {
     enable = lib.mkOption {

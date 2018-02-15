@@ -1,7 +1,7 @@
 { pkgs, lib, config, ... }:
 
 {
-  options.nixcloud.directories = import ./options.nix { inherit lib; };
+  options.nixcloud.directories = import ./options.nix { inherit config lib; };
 
   config = lib.mkIf (config.nixcloud.directories != {}) {
     systemd.services = let
