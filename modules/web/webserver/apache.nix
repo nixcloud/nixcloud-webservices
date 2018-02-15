@@ -141,17 +141,17 @@ with lib;
       '';
     };
 
+    directories = lib.genAttrs [ "log" "runtime" ] (lib.const {
+      permissions.defaultDirectoryMode = "0750";
+      permissions.others.noAccess = true;
+      owner = mkUnique config.webserver.user;
+      group = mkUnique config.webserver.group;
+      instance.before = [ "webserver-init.service" "instance-init.target" ];
+    });
+
     webserver.init = ''
       #set -e
       #set +o pipefail
-
-      mkdir -p -m 0750 ${config.stateDir}/log/
-
-      # BUG: probably needs fixing as the assumption probably changed...
-      ${optionalString version24 ''
-        mkdir -p -m 0750 "${config.stateDir}/runtime" || true
-        [ $(id -u) != 0 ] || chown root.${mkUnique config.webserver.group} "${config.stateDir}/runtime"
-      ''}
 
       # BUG: check if that code makes any sense
       # Get rid of old semaphores.  These tend to accumulate across
@@ -160,10 +160,6 @@ with lib;
       for i in $(${pkgs.utillinux}/bin/ipcs -s | grep ' ${mkUnique config.webserver.user} ' | cut -f2 -d ' '); do
           ${pkgs.utillinux}/bin/ipcrm -s $i
       done
-
-      # fix permissions
-      chown -R ${mkUnique config.webserver.user}:${mkUnique config.webserver.group} \
-        ${config.stateDir}/log ${config.stateDir}/runtime
     '';
 
     systemd.services.apache = let

@@ -101,19 +101,20 @@ in {
 
     groups.postgres = {};
 
+    directories."postgresql/${psqlSchema}" = {
+      instance.before = [ "postgresql-initdb.service" ];
+      permissions.defaultDirectoryMode = "0711";
+      permissions.group.noAccess = true;
+      permissions.others.noAccess = true;
+      owner = mkUnique "postgres";
+      group = mkUnique "postgres";
+    };
+
     systemd.services = {
       postgresql-initdb = {
         description = "Initialize PostgreSQL Cluster";
         instance.requiredBy = [ "postgresql.service" ];
         instance.before = [ "postgresql.service" ];
-        preStart = let
-          escDataDir = lib.escapeShellArg dataDir;
-          escUserGroup = lib.escapeShellArg (mkUnique "postgres");
-        in ''
-          mkdir -m 0711 -p ${escDataDir}
-          chmod 0700 ${escDataDir}
-          chown ${escUserGroup}:${escUserGroup} ${escDataDir}
-        '';
         environment.PGDATA = dataDir;
         unitConfig.ConditionPathExists = "!${dataDir}/PG_VERSION";
         serviceConfig = {

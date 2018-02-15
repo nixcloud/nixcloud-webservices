@@ -154,15 +154,9 @@ in {
         options = "nodev,nosuid,mode=1777";
       };
 
-      systemd.services.create-statedir = {
-        description = "Create State Directory For ${config.uniqueName}";
-        after = [ "local-fs.target" ];
-        instance.before = [ "instance-init.target" ];
-        instance.requiredBy = [ "instance-init.target" ];
-        instance.ignore-init = true;
-        serviceConfig.Type = "oneshot";
-        serviceConfig.RemainAfterExit = true;
-        script = "mkdir -m 0711 -p ${lib.escapeShellArg config.stateDir}";
+      directories."/" = {
+        permissions.defaultDirectoryMode = "0711";
+        instance.before = [ "webserver-init.service" "instance-init.target" ];
       };
 
       systemd.targets.instance-init = {

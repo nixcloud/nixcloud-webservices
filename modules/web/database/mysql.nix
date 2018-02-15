@@ -120,19 +120,20 @@ in {
 
     groups.mysql = {};
 
+    directories.mysql = {
+      instance.before = [ "mysql-initdb.service" ];
+      permissions.defaultDirectoryMode = "0711";
+      permissions.group.noAccess = true;
+      permissions.others.noAccess = true;
+      owner = mkUnique "mysql";
+      group = mkUnique "mysql";
+    };
+
     systemd.services = {
       mysql-initdb = {
         description = "Initialize ${serverName} Server";
         instance.requiredBy = [ "mysql.service" ];
         instance.before = [ "mysql.service" ];
-        preStart = let
-          escDataDir = lib.escapeShellArg dataDir;
-          escUserGroup = lib.escapeShellArg (mkUnique "mysql");
-        in ''
-          mkdir -m 0711 -p ${escDataDir}
-          chmod 0700 ${escDataDir}
-          chown ${escUserGroup}:${escUserGroup} ${escDataDir}
-        '';
         unitConfig.ConditionPathExists = "!${dataDir}/mysql";
         serviceConfig = {
           ExecStart = "${package}/bin/mysql_install_db ${cmdLine}";

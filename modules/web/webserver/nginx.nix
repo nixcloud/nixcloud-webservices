@@ -53,13 +53,12 @@ with lib;
       fastcgi_param   REDIRECT_STATUS         200;
     '';
   in mkIf (config.webserver.variant == "nginx" && config.enable) {
-    webserver.init = ''
-      mkdir -p ${config.stateDir}/nginx/logs
 
-      # fix permissions
-      chown -R ${mkUnique config.webserver.user}:${mkUnique config.webserver.group} \
-        ${config.stateDir}/nginx
-    '';
+    directories = lib.genAttrs [ "nginx" "nginx/logs" ] (lib.const {
+      owner = mkUnique config.webserver.user;
+      group = mkUnique config.webserver.group;
+      instance.before = [ "webserver-init.service" "instance-init.target" ];
+    });
 
     systemd.services.nginx = let
       fileName = "${config.uniqueName}.conf";

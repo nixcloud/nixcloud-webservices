@@ -123,13 +123,13 @@ with lib;
       '';
     };
 
-    webserver.init = ''
-      mkdir -m 0750 -p ${config.stateDir}/log
-
-      # fix permissions
-      chown -R ${mkUnique config.webserver.user}:${mkUnique config.webserver.group} \
-        ${config.stateDir}/log
-    '';
+    directories.log = {
+      permissions.defaultDirectoryMode = "0750";
+      permissions.others.noAccess = true;
+      owner = mkUnique config.webserver.user;
+      group = mkUnique config.webserver.group;
+      instance.before = [ "webserver-init.service" "instance-init.target" ];
+    };
 
     systemd.services.lighttpd = {
       description = "lighttpd HTTPD";
