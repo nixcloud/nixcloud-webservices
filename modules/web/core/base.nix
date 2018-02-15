@@ -37,6 +37,12 @@ let
     } else (defs.instance or {});
   in defs // { instance = removeAttrs instance [ "ignore-init" ]; };
 
+  # User configuration attributes that have their home directory within the
+  # instance's stateDir.
+  instanceUsers = let
+    hasHomeInStatedir = ucfg: lib.hasPrefix config.stateDir ucfg.home;
+  in lib.filterAttrs (lib.const hasHomeInStatedir) config.users;
+
 in {
   imports = [ ./webserver.nix ./meta.nix ./directories.nix ../database ];
 
@@ -154,10 +160,29 @@ in {
         options = "nodev,nosuid,mode=1777";
       };
 
-      directories."/" = {
-        permissions.defaultDirectoryMode = "0711";
-        instance.before = [ "webserver-init.service" "instance-init.target" ];
-      };
+      directories = let
+        instance.before = [
+          "webserver-init.service" "instance-init.target"
+        ];
+
+        statedir."/" = {
+          permissions.defaultDirectoryMode = "0711";
+          inherit instance;
+        };
+
+        mkHomeDir = name: ucfg: {
+          name = let
+            withoutStatedir = lib.removePrefix config.stateDir ucfg.home;
+            result = lib.removePrefix "/" withoutStatedir;
+          in if result == "" then "/" else result;
+          value = {
+            owner = lib.mkOverride 200 (mkUnique name);
+            group = lib.mkOverride 200 (mkUnique ucfg.group);
+            create = lib.mkOverride 200 ucfg.createHome;
+            inherit instance;
+          };
+        };
+      in statedir // lib.mapAttrs' mkHomeDir instanceUsers;
 
       systemd.targets.instance-init = {
         description = "Instance Initialization For ${config.uniqueName}";
@@ -177,7 +202,9 @@ in {
           value = lib.mkOverride 200 ({
             name = mkUnique name;
             group = mkUnique ucfg.group;
-          } // removeAttrs ucfg [ "name" "group" ]);
+            createHome = if instanceUsers ? ${name} then false
+                         else ucfg.createHome;
+          } // removeAttrs ucfg [ "name" "group" "createHome" ]);
         }) config.users;
 
         users.groups = lib.mapAttrs' (name: gcfg: {

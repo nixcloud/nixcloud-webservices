@@ -20,8 +20,31 @@
   };
 
   testScript = ''
+    # XXX: This is copied from tests/directories.nix, make it DRY!
+    sub ensureStat ($$$$) {
+      my ($path, $expect, $desc, $flag) = @_;
+      my $result = $machine->succeed('stat -c %'.$flag.' '.$path);
+      chomp $result;
+      die "$desc for path $path is $result but expected $expect"
+        unless $result eq $expect;
+    }
+
+    sub ensureOwner ($$) {
+      ensureStat $_[0], $_[1], 'owner', 'U';
+    }
+
+    sub ensureGroup ($$) {
+      ensureStat $_[0], $_[1], 'group', 'G';
+    }
+
     $machine->waitForUnit('multi-user.target');
     $machine->succeed('curl http://example.com/ | grep -qF leaps_logo.png');
     $machine->succeed('curl http://example.org/ | grep -qF leaps_logo.png');
+
+    ensureOwner "/var/lib/nixcloud/webservices/leaps-foo", "leaps-foo";
+    ensureGroup "/var/lib/nixcloud/webservices/leaps-foo", "leaps-foo";
+
+    ensureOwner "/var/lib/nixcloud/webservices/leaps-bar", "leaps-bar";
+    ensureGroup "/var/lib/nixcloud/webservices/leaps-bar", "leaps-bar";
   '';
 }
