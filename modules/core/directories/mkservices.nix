@@ -74,9 +74,9 @@ let
     ${setfaclCmd} -b -m "$acl" "$@"
   '';
 
-  # This is needed because "mkdir -p" doesn't allow us to specify the mode
-  # for the parent directories. The latter is determined by the umask but we
-  # can't use setuid/setgid/stick bits via the umask.
+  # This is needed because "mkdir -p" by itself doesn't allow us to specify the
+  # mode for the parent directories. The latter is determined by the umask but
+  # we can't use setuid/setgid/stick bits via the umask.
   #
   # So we mkdir each component with the mode from defaultDirectoryMode and
   # use mode 0000 for the last component in order to prevent privilege
@@ -94,12 +94,10 @@ let
         makedirs 0 "$segment"
       fi
 
-      if [ ! -e "$path" ]; then
-        if [ "$initial" -eq 1 ]; then
-          ${mkdirCmd} -m 0000 "$path"
-        else
-          ${mkdirCmd} -m "$dirmode" "$path"
-        fi
+      if [ "$initial" -eq 1 ]; then
+        ${mkdirCmd} -p -m 0000 "$path"
+      else
+        ${mkdirCmd} -p -m "$dirmode" "$path"
       fi
     }
 

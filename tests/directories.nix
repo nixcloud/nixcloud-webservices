@@ -10,6 +10,12 @@
       groups.bobs.write = true;
     };
 
+    "common/ancestor1".owner = "alice";
+    "common/ancestor1".group = "bobs";
+
+    "common/ancestor2".owner = "bob";
+    "common/ancestor2".group = "vip";
+
     "super/n/e/s/t/e/d" = {
       permissions.defaultDirectoryMode = "0700";
       owner = "alice";
@@ -71,6 +77,12 @@
 
       ensureOwner "/super/n/e/s/t/e/d", "alice";
       ensureGroup "/super/n/e/s/t/e/d", "vip";
+
+      ensureOwner "/common/ancestor1", "alice";
+      ensureGroup "/common/ancestor1", "bobs";
+
+      ensureOwner "/common/ancestor2", "bob";
+      ensureGroup "/common/ancestor2", "vip";
     }
 
     $machine->waitForUnit('multi-user.target');
