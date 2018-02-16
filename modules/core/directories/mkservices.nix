@@ -20,6 +20,7 @@ let
     value = {
       description = "${desc} ${absPath}";
       wantedBy = [ "multi-user.target" ];
+      after = [ "local-fs.target" ];
       before = let
         otherPathUnits = map (mkServiceName "mkdir") subPaths;
       in cfg.before ++ lib.optionals (name == "mkdir") otherPathUnits;
