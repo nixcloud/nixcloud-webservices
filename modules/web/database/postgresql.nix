@@ -93,7 +93,7 @@ in {
     };
   };
 
-  config = lib.mkIf (dbs != {}) {
+  config = lib.mkIf (dbs != {} && config.enable) {
     users.postgres = {
       group = "postgres";
       description = "PostgreSQL Server User";

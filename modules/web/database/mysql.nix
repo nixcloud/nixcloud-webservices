@@ -112,7 +112,7 @@ in {
     };
   };
 
-  config = lib.mkIf (dbs != {}) {
+  config = lib.mkIf (dbs != {} && config.enable) {
     users.mysql = {
       group = "mysql";
       description = "${serverName} Server User";
