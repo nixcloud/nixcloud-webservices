@@ -252,8 +252,6 @@ in
             smtp_inet = {
               args = [ 
                "-o" "content_filter=spamassassin"
-               "-o" "smtp_bind_address=${cfg.ipAddress}"
-               "-o" "smtp_bind_address6=${cfg.ip6Address}"
                "-o" "smtp_header_checks=header_checks_incomming"
               ];
             };
@@ -294,6 +292,9 @@ in
             mailbox_size_limit = "1004800000";
             virtual_mailbox_domains = cfg.domains;
             virtual_transport = "lmtp:unix:private/lmtp-dovecot";
+
+            smtp_bind_address = cfg.ipAddress;
+            smtp_bind_address6 = cfg.ip6Address;
 
             smtpd_sasl_auth_enable = true;
             smtpd_sasl_security_options = "noanonymous";
