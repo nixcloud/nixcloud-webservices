@@ -201,7 +201,7 @@ in
             location ${ppp} {
             ${if r == "" then ''
               ${f}
-              proxy_pass http://${location.ip}:${toString location.port}${removeSuffix "/" (toString (builtins.toPath (location.path)))};
+              proxy_pass http://${location.ip}:${toString location.port}${ppp};
             '' else r #"
             }
               ${if (b != {}) then mkBasicAuth b else ""}

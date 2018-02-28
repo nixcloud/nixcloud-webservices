@@ -48,7 +48,7 @@ ws-go-server-src = pkgs.writeText "main.go" ''
   func main() {
           fmt.Println("GO websocket server running...")
 
-          http.Handle("/myapp", websocket.Handler(echoHandler))
+          http.Handle("/myapp/ws", websocket.Handler(echoHandler))
           http.Handle("/", http.FileServer(http.Dir(".")))
           err := http.ListenAndServe(":8080", nil)
           if err != nil {
@@ -68,7 +68,7 @@ ws-go-client-src = pkgs.writeText "main.go" ''
   )
 
   var origin = "http://localhost/"
-  var url = "ws://example.ws:80/myapp/leaps/ws"
+  var url = "ws://example.ws:80/myapp/ws"
 
   func main() {
     ws, err := websocket.Dial(url, "", origin)

@@ -5,7 +5,7 @@
   https = { mode = "on"; };
   websockets = {
     ws = {
-      subpath = "/leaps/ws";
+      subpath = "/ws";
       #https.basicAuth."nixclouduser" = "password_world_readable_in_nix_store";
       http.mode = "on";
     };
