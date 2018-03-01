@@ -144,6 +144,26 @@ Available at the top-level as well with the same functionality, which is a list
 of test expressions for NixOS VM tests that need to pass once this service is
 enabled.
 
+Path options
+------------
+
+There are two options, ``stateDir`` and ``runtimeDir``, which are both
+read-only and meant for module developers to reference the right path for the
+instance with its unique directory.
+
+The difference between those two is that ``runtimeDir`` is for files that
+do not persist and are only temporary (like sockets), while ``stateDir``
+contains all the data that should persist after restarts or reboots.
+
+Other helpers
+-------------
+
+The unique prefix for the service module is exposed via the ``uniqueName``
+option and there is another helper function that is passed to all modules as an
+argument called ``mkUnique``, which prepends the unique name in front of the
+string passed to it while removing duplicates (like eg.
+``uniquename-uniquename-foo``).
+
 .. [1] Look into the `socket(7)`_ manpage in section ``Socket options`` for
        more information.
 .. _writing NixOS modules: https://nixos.org/nixos/manual/index.html#sec-writing-modules
