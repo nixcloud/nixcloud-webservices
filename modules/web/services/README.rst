@@ -1,5 +1,6 @@
+***********************
 Writing service modules
-=======================
+***********************
 
 The basics for `writing NixOS modules`_ still apply here, but in order to
 support multiple instances, a few things are handled differently.
@@ -26,12 +27,13 @@ they interfere with the goal of having multiple instances.
 ``systemd``
 -----------
 
-The same option is available within the service modules (so simply don't use
-``toplevel.`` in front of it.
+The same option is available within the service modules, so simply don't use
+the ``toplevel.`` option for defining units.
 
 It differs from the top-level option such that it automatically gives the
 service name a unique prefix and orders the unit before
-``instance-init.target`` (which itself is prefixed with its unique name).
+``instance-init.target`` (which itself is prefixed with the unique name of the
+service).
 
 Unit options such as ``before``, ``after``, ``wantedBy`` and other ordering
 options can be prefixed with an ``instance`` attribute to ensure they get
@@ -54,8 +56,8 @@ For example:
 
 This will create two services ``foo`` and ``bar``, which both get their unique
 prefix, however there is ``wantedBy``, which is passed to the top-level without
-changes but ``instance.after`` passes ``foo.service`` with its prefix to the
-top-level.
+changes but ``instance.after`` passes ``foo.service`` with its instance prefix
+to the top-level.
 
 Another deviation from the top-level option is that the ``serviceConfig.User``
 and ``serviceConfig.Group`` options are automatically prefixed as well.
@@ -79,7 +81,7 @@ upstream NixOS modules. You can build a reference of these options by running
 ``nix-build release.nix -A manual`` from the root of this repository.
 
 Note that if you have systemd units defined that are dependant on a database
-being up, be sure to order them after "database.target" with
+being up, be sure to order them after ``database.target`` with
 ``instance.after``.
 
 ``database``
