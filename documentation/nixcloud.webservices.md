@@ -12,7 +12,7 @@ See also [../README.md](../README.md).
 
 # Motivation
 
-All `services` in the namespace `nixcloud.webservices` hold the `special properties` as listed below:
+All `services` in the namespace `nixcloud.webservices` hold the `special properties` as listed below. See also [../modules/web/services/README.rst](../modules/web/services/README.rst) for details how to write a new module.
 
 ## Multiple instantiation of webservices like `mediawiki`
 
