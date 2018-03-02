@@ -93,6 +93,10 @@ The code below will create a mapping: when you visit http(s)://example.com it wi
             basicAuth."joachim" = "foo";
             record = ''
               rewrite ^(.*)$ https://example.org permanent;
+              add_header Strict-Transport-Security max-age=63646566;
+              add_header Content-Security-Policy "default-src 'none';";
+        '';
+
             '';
           };
         }
