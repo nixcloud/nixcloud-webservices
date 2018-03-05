@@ -54,8 +54,7 @@ with lib;
       type = types.lines;
       description = ''
         These configuration lines will be appended to the generated lighttpd
-        config file. Note that this mechanism does not work when the manual
-        <option>configText</option> option is used.
+        config file. 
       '';
     };
 

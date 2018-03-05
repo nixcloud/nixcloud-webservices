@@ -17,8 +17,7 @@ with lib;
       default = "";
       description = ''
         Cnfiguration lines appended to the generated Apache
-        configuration file. Note that this mechanism may not work
-        when <option>configFile</option> is overridden.
+        configuration file. 
       '';
     };
     extraModules = mkOption {
