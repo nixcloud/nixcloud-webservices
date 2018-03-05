@@ -1,12 +1,8 @@
 # nixcloud.webservices
 
-`nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of multiple webservices on one or more machines .
+`nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of webservices as wordpress, owncloud, mediawiki and services like this. 
 
 See also [../README.md](../README.md).
-
-# Abstraction
-
-<!--![nixcloud.webservices layout](https://raw.githubusercontent.com/nixcloud/nixcloud-webservices/master/documentation/nixcloud-webservices.svg.png)-->
 
 ![nixcloud.webservices layout](nixcloud-webservices.svg.png)
 
@@ -58,12 +54,14 @@ The [common interface](../modules/web/core/webserver.nix) features web servers a
 
 which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. Also darkhttpd might be better suited for static serving of files.
 
-## configuration syntax checking
+## Configuration syntax checking
 
-`nix evaluation time` configuration syntax checking for `apache`, `nginx` & `nixcloud-reverse-proxy`
+We introduce `nix evaluation time` configuration syntax checking for `apache`, `nginx` & `nixcloud-reverse-proxy`
 
   * [nginx_check_config.nix](../modules/web/webserver/lib/nginx_check_config.nix)
   * [apache_check_config.nix](../modules/web/webserver/lib/apache_check_config.nix)
+  
+So when you start packaging your own webservice you will see configuration errors much earlier and don't have to deploy your service in order to see that there is a configuration error when nginx or apache starts up but instead you will already see many common errors when the configuration is generated.
 
 ## There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
 
@@ -72,28 +70,28 @@ In a nutshell you can run a test explicitly like this:
     cd nixcloud-webservices/tests
     nix-build -A custom-webservice
 
-But we made tests part of our evaluation: 
+To make testing easier we made them part of the evaluation: 
      
-   * if you are using any webservice, like `nixcloud.webservices.leaps`, it will always run the respective test (leaps) to make sure it works in general
+   * when using `nixcloud.webservices.leaps`, it will always run the respective [test.nix](https://github.com/nixcloud/nixcloud-webservices/blob/master/modules/web/services/leaps/test.nix) (leaps) to make sure it works in general
    * if you are using `nixcloud.reverse-proxy` it will always run the reverse-proxy test before
 
-WARNING: `nixcloud.webservices` should be used from a machine with native virtualization support (KVM) but if you are using it from a VM, then the OS virtualization will be very slow.
+WARNING: `nixcloud.webservices` is best used on a machine with native virtualization support (KVM) but you can still use it from within a VM, it just takes longer to evaluate.
 
-## Each webservice gets a unique, stateful directory called `stateDir`. 
+## Each webservice gets a unique, stateful directory called `stateDir`
  
-For instance two webservices `service1` and `service2` would use: `/var/lib/nixcloud/webservices/owncloud-service1` and `/var/lib/nixcloud/webservices/owncloud-service2` thus not interfere.
+For instance two owncloud based webservices called `service1` and `service2` would use: `/var/lib/nixcloud/webservices/owncloud-service1` and `/var/lib/nixcloud/webservices/owncloud-service2` thus not interfere.
 The `stateDir` is independent of the `URL` and thus not influenced by `proxyOptions`.
     
 Using `nixcloud.webservices.owncloud.service1` would create `/var/lib/nixcloud/webservices/owncloud-service1` and while `owncloud` would be the service class, `service1` would be a name, which has to be unique, given by the user. 
 
+Using ACLs we made sure, that mixed permissions of file user/group ownership won't screw your webservice. So files in `/var/lib/nixcloud/webservices/owncloud-service1` will always be accessible for the user `owncloud-service` no matter what user/group created it.
+
 ## Startup scripts used to prepare the environment or perform updates, are executed as a normal user (not as a privileged user like root).
  
-## Nixcloud provides a common webserver logging interface.
-
 # API stability
 
 WARNING: The nixcloud.reverse-proxy's `proxyOptions` API and `nixcloud.webservices` related API is not stable yet. This means that futher updates break your services. This is caused by the fact that
-we spent 8 months in developing `nixcloud.webservices` and related technologies and coming with the release of `nixcloud.webservices` we want to pinpoint the usage scenarios and stabalize the API afterwards.
+we spent months in developing `nixcloud.webservices` and related technologies and coming with the release of `nixcloud.webservices` we want to pinpoint the usage scenarios and stabalize the API afterwards.
 
 WARNING: We are aware of https://github.com/NixOS/nixpkgs/issues/24288#issuecomment-289032210 and we will fix this here as well.
  
