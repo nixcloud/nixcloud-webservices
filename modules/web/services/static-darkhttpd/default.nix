@@ -3,10 +3,18 @@
 with lib;
 
 {
-  options = {};
+  options = {
+    root = mkOption {
+      type = types.path;
+      default = config.stateDir;
+      example = /var/www/whatever;
+      description = "The directory where the static webserver looks for documents to serve.";
+    };
+  };
 
   config = rec {
     webserver.variant = "darkhttpd";
+    webserver.darkhttpd.root = config.root;
     tests.wanted = [ ./test.nix ];
   };
 

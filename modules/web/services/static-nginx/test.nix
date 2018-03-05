@@ -24,10 +24,8 @@
     searchFor = "works";
   in ''
     $machine->waitForUnit('multi-user.target');
-    $machine->succeed('mkdir /var/lib/nixcloud/webservices/static-nginx-foo/www/');
-    $machine->succeed('mkdir /var/lib/nixcloud/webservices/static-nginx-bar/www/');
-    $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-nginx-foo/www/index.html');
-    $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-nginx-bar/www/index.html');
+    $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-nginx-foo/index.html');
+    $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-nginx-bar/index.html');
     $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');
     $machine->succeed('curl -L http://example.org/ | grep -qF "${searchFor}"');
   '';

@@ -4,6 +4,12 @@ with lib;
 
 {
   options.webserver.darkhttpd = {
+    root = mkOption {
+      type = types.path;
+      default = config.stateDir;
+      example = /var/www/whatever;
+      description = "The directory where the static webserver looks for documents to serve.";
+    };
     extraServiceDependencies = mkOption {
       type = types.listOf types.str;
       default = [ ];
@@ -29,7 +35,7 @@ with lib;
       instance.after = [ "database.target" "webserver-init.service" ];
 
       serviceConfig = {
-        ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd ${config.stateDir} --port ${toString config.proxyOptions.port} --addr 127.0.0.1";
+        ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd ${toString config.root} --port ${toString config.proxyOptions.port} --addr 127.0.0.1";
         KillSignal = "SIGTERM";
         Restart = "always";
         RestartSec = "10s";
