@@ -54,7 +54,7 @@ in {
     };
 
     webserver.variant = lib.mkOption {
-      type = lib.types.nullOr (lib.types.enum [ "apache" "lighttpd" "nginx" ]);
+      type = lib.types.nullOr (lib.types.enum [ "apache" "lighttpd" "nginx" "darkhttpd" ]);
       default = null;
       description = "The webserver module to use for this webservice.";
     };
