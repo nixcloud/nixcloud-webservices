@@ -9,9 +9,8 @@ with lib;
       type = types.lines;
       default = "";
       description = ''
-        Cnfiguration lines appended to the generated Apache
-        configuration file. Note that this mechanism may not work
-        when <option>configFile</option> is overridden.
+        Cnfiguration lines appended to the generated Nginx
+        configuration file.
       '';
     };
     extraServiceDependencies = mkOption {
@@ -65,7 +64,7 @@ with lib;
     in {
       description = "Nginx HTTPD";
       wantedBy      = [ "multi-user.target" ];
-      after = [ "network.target" "fs.target" "keys.target" ] ++ config.webserver.ngixn.extraServiceDependencies;
+      after = [ "network.target" "fs.target" "keys.target" ] ++ config.webserver.nginx.extraServiceDependencies;
       instance.after = [ "database.target" "webserver-init.service" ];
       serviceConfig = let
         checkAndFormatNginxConfigfile = (import lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile {configFile = nginxConfigFile; inherit fileName;};
