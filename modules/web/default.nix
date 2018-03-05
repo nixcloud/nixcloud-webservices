@@ -6,6 +6,7 @@
     leaps             = services/leaps;
     mediawiki         = services/mediawiki;
     static-darkhttpd  = services/static-darkhttpd;
+    static-nginx      = services/static-nginx;
   };
 
   config = let
