@@ -49,7 +49,14 @@ Each webservice is closely associated with a systemd service, making it easy to 
 
 ## A common webservice interface: `apache`, `nginx` and `lighttpd`:
 
-The [common interface](../modules/web/core/webserver.nix) features web servers as [apache](../modules/web/webserver/apache.nix) and [nginx](../modules/web/webserver/nginx.nix) which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. 
+The [common interface](../modules/web/core/webserver.nix) features web servers as:
+
+* [apache](../modules/web/webserver/apache.nix)
+* [nginx](../modules/web/webserver/nginx.nix) 
+* [lighttpd](../modules/web/webserver/lighttpd.nix)
+* [darkhttpd](../modules/web/webserver/darkhttpd.nix)
+
+which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. Also darkhttpd might be better suited for static serving of files.
 
 ## configuration syntax checking
 
