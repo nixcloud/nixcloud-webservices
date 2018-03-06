@@ -10,7 +10,13 @@ See also [../README.md](../README.md).
 
 The reverse-proxy can be used explicitly using `extraMappings` or implicitly by using `nixcloud.webservices`.
 
-## extraMappings examples
+To enable the reverse-proxy simply put this into your configuration.nix:
+
+    nixcloud.reverse-proxy = {
+      enable = true;
+    };
+
+## extraMappings example(s)
 
 Motivations to use `nixcloud.reverse-proxy.extraMappings:
 
@@ -113,7 +119,7 @@ This example disables all http/https mappings but adds two websocket mappings:
 
 From the internet one could connect to: wss://example.com/backend/ or wss://example.com/backend/leaps/ws
 
-## `nixcloud.webservices` example
+## nixcloud.webservices example(s)
 
 `nixcloud.webservices` will automatically generate a reverse-proxy mapping:
 
