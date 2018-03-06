@@ -10,7 +10,7 @@ See also [../README.md](../README.md).
 
 The reverse-proxy can be used explicitly using `extraMappings` or implicitly by using `nixcloud.webservices`.
 
-## `nixcloud.reverse-proxy.extraMappings`
+## extraMappings examples
 
 Motivations to use `nixcloud.reverse-proxy.extraMappings:
 
