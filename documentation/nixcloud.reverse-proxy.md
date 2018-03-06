@@ -8,13 +8,13 @@ See also [../README.md](../README.md).
 
 # Usage
 
-The reverse-proxy can be used explicitly using `extraMappings` or implicitly by using `nixcloud.webservices`.
-
 To enable the reverse-proxy simply put this into your configuration.nix:
 
     nixcloud.reverse-proxy = {
       enable = true;
     };
+    
+The reverse-proxy can be used explicitly using `extraMappings` or implicitly by using `nixcloud.webservices`.
 
 ## extraMappings example(s)
 
@@ -121,9 +121,11 @@ From the internet one could connect to: wss://example.com/backend/ or wss://exam
 
 ## nixcloud.webservices example(s)
 
-`nixcloud.webservices` will automatically generate a reverse-proxy mapping:
 
     nixcloud.reverse-proxy.enable = true;
+    
+    ...
+    
     nixcloud.webservices.mediawiki.test1 = {
       enable = true;
       proxyOptions = {
@@ -135,6 +137,8 @@ From the internet one could connect to: wss://example.com/backend/ or wss://exam
         domain = "example.org";
       };
     };
+
+When using `nixcloud.webservices` the `nixcloud.reverse-proxy` will automatically collect all the proxyOptions and generate reverse-proxy mappings on Nix evaluation time.
 
 # Note
 
