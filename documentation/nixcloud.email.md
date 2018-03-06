@@ -4,15 +4,20 @@
 
 `nixcloud.email` currently supports these features:
 
+* IMAP support
+* POP3 support (optional)
+* greylisting (optional)
+* spamassassin (optional)
+* ACME TLS certificates (optional)
 * virtualMail user abstraction
      * assign users/passwords declaratively using nix
      * sieve filters
+     * quota support
      * catchall setups
-* optional greylisting
-* optional spamassassin
-* optional ACME TLS certificates
-* explicit ipv4/ipv6 support
 * meaningful mail server defaults for communication with gmail.com & similar
+* we score 10/10 at https://www.mail-tester.com/
+
+<!-- See https://nixdoc.io/nixcloud-webservices/index.html#nixcloud -->
 
 See also [../README.md](../README.md).
 
