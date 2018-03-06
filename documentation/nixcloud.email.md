@@ -1,22 +1,20 @@
 # nixcloud.email
 
-`nixcloud.email` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on the deployment of a mailserver stack.
+`nixcloud.email` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on easily operating a mailserver or a mail relay server.
 
-See also [../README.md](../README.md).
-
-# Documentation
-
-By using `nixcloud.email` you can easily maintain a mailserver with these features:
+`nixcloud.email` currently supports these features:
 
 * virtualMail user abstraction
-* easy way to assign passwords for mail users declaratively
+     * assign users/passwords declaratively using nix
+     * sieve filters
+     * catchall setups
 * optional greylisting
 * optional spamassassin
+* optional ACME TLS certificates
 * explicit ipv4/ipv6 support
-* automated ACME (for example: mail.lastlog.de)
-* helpful defaults to communicate with gmail and others
-* sieve filters per virtualMail user
-* catchall
+* meaningful mail server defaults for communication with gmail.com & similar
+
+See also [../README.md](../README.md).
 
 ## Basic example
 
@@ -39,12 +37,9 @@ By using `nixcloud.email` you can easily maintain a mailserver with these featur
 
 # Limitations
 
-* The mailserver setup requires a IPv4 and IPv6 address and the mailserver should be running on a machine exclusively working as a email server or some manual work is required. This is because we
-bind port 80 to acquire an SSL certificate using Let's Encrypt. What you put into `hostname` is the domain of the mailserver.
-
 * No support for shell users, only virtualUsers. This is by intention to reduce complexity in the backend.
-
-* No support for storing virtualUsers in a database or anything dynamically updatable.
+* No support for storing virtualUsers in a database or anything dynamically updatable (but we started to work on this)
+* No simple webmail support (but we started to work on this)
 
 # Creating virtual users
 
@@ -88,7 +83,7 @@ The following suffixes can be used:
 * `T` for terrabytes
 * `%`
 
-# Spamassassin
+## Spamassassin
 
 Spamassassin is a spam filter that uses rules and machine learning to detect spam. It can be configured with the `services.spamassassin` config.
 
@@ -96,7 +91,7 @@ Spamassassin will be enabled and configured automatically. If you don't want spa
 
     nixcloud.email.enableSpamassassin = false;
 
-# Greylisting
+## Greylisting
 
 Greylisting prevents spam by first declining your mails requiring other mail servers to resend their emails after about 10 minutes. Most spammers don't do this and therefor greylisting helps protect you against spam.
 
@@ -104,12 +99,15 @@ Greylisting will be enabled automatically. If you don't want greylisting you can
 
     nixcloud.email.enableGreylisting = false;
 
-# ACME Let's Encrypt
+## ACME Let's Encrypt
 
-Nixcloud Email automatically acquires a let's encrypt ssl certificate for your mail server.  This requires us to start a webserver on port 80.
-If you want a web application on the same host you should disable ACME and manually provide an SSL certificate to the mail server.
+When using `nixcloud.email.enableACME = true;`, which is a default we automatically acquires a let's encrypt TLS certificate for your mail server. 
 
-## Providing your own SSL certificate
+This is implemented by starting `nixcloud.reverse-proxy`  on port 80. 
+
+See [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md) if you need to connect legacy webservices based on `services.nginx` or `services.httpd` and [nixcloud.webservices.md](nixcloud.webservices.md) if you want to use the nixcloud-webservices infrastructure.
+
+## Providing your own TLS certificate
 
 Use
 
@@ -126,10 +124,32 @@ to disable ACME. To provide your own certificate you should set the following op
       sslServerKey = "/path/to/your/key.pem";
     };
 
+## Sieve filter setup
+
+Tested with `sieve-0.2.11.xpi` from https://github.com/thsmi/sieve/releases
+
+Settings are:
+
+    Server Name: mail.lastlog.de
+    Port: 4190
+    Authentication: Use login from IMAP Account
+    User Name: js@lastlog.de
+    Secure Connection: True
+    
+We already provide a minimal sieve setup for spamassassin:
+
+    require ["fileinto", "reject", "envelope", "mailbox", "reject"];
+
+    if header :contains "X-Spam-Flag" "YES" {
+      fileinto :create "Spam";
+      stop;
+    }
+    
+But it can be extended easily!
+    
 # Relay setup
 
-Nixcloud email provides simple options to configure your mailserver as a relay client.
-Usually you don't need to configure this.
+`nixcloud.email` provides simple options to configure your mailserver as a relay client which is basically the same as a ssmtp setup but with a mail queue.
 
 If the other mailserver is a mailserver with the default nixcloud email setup you
 only need to provide `nixcloud.email.relay.host` and `nixcloud.email.relay.passwords`.
