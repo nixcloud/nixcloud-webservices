@@ -2,7 +2,7 @@
 
 `nixcloud.email` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on easily operating a mailserver or a mail relay server.
 
-`nixcloud.email` currently supports these features:
+Supported features:
 
 * [x] IMAP support
 * [x] POP3 support (optional)
@@ -24,9 +24,18 @@
 * [x] Mail relay abstraction
 * [x] `nixcloud.email` scores 10/10 at https://www.mail-tester.com
 
-<!-- See https://nixdoc.io/nixcloud-webservices/index.html#nixcloud -->
+Upcoming features:
 
-See also [../README.md](../README.md).
+* [ ] DNS abstraction which shows all the required configuration(s) and if they are correct already
+* [ ] Webmail support (Roundcube)
+* [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
+* [ ] Rewrite sender mail address when forwarding (SRS) correctly
+* [ ] SNI support for Nix Dovecot abstraction
+* [ ] Advance logging
+* [ ] Adding group aliases
+* [ ] Add mailinglist support abstraction
+
+Thanks to the support of nlnet.nl!
 
 # Limitations
 
@@ -35,6 +44,10 @@ See also [../README.md](../README.md).
 * No simple webmail support (but we started to work on this)
 
 # Configuration
+
+See also [../README.md](../README.md).
+
+<!-- See https://nixdoc.io/nixcloud-webservices/index.html#nixcloud -->
 
 ## Basic example
 
@@ -283,16 +296,3 @@ A simple, yet fast strategy is 'rsync+ssh' which is explained here. But you can 
 # Alternative implementations
 
 * https://github.com/r-raymond/nixos-mailserver
-
-# Features
-
-Thanks to the support of nlnet.nl, we will introduce these features soon:
-
-* [ ] DNS abstraction which shows all the required configuration(s) and if they are correct already
-* [ ] Webmail support (Roundcube)
-* [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
-* [ ] Rewrite sender mail address when forwarding (SRS) correctly
-* [ ] SNI support for Nix Dovecot abstraction
-* [ ] Advance logging
-* [ ] Adding group aliases
-* [ ] Add mailinglist support abstraction
