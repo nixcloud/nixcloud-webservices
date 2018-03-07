@@ -38,6 +38,7 @@ Upcoming features:
 * [ ] Advanced logging
 * [ ] Adding group aliases
 * [ ] Add mailinglist support
+* [ ] Refactor `nixcloud.email.relay` into `nixcloud.email-relay`
 
 Thanks to the support of nlnet.nl!
 
@@ -150,14 +151,7 @@ You can set a per user quota by using the `quota` option.
     { name = "eris"; domain = "antifa.gmbh"; password = "{PLAIN}discordia"; quota = "10G"; }
 
 This gives eris a quota of 10 Gigabytes. If you just enter a number without a suffix this is the number of bytes.
-The following suffixes can be used:
-
-* `b` for bytes
-* `k` for kilobytes
-* `M` for megabytes
-* `G` for gigabytes
-* `T` for terrabytes
-* `%`
+The following suffixes can be used: `b` for bytes, `k` for kilobytes, `M` for megabytes, `G` for gigabytes and `T` for terrabytes.
 
 ## Spamassassin
 
