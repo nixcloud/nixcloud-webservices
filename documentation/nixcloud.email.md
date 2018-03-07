@@ -10,7 +10,7 @@ Supported features:
 * [x] Spamassassin (optional)
 * [x] TLS
      * ACME TLS certificates (optional)
-     * manual certificates
+     * manual certificates (optional)
 * [x] Automatically extend `networking.firewall` with required ports
 * [x] virtualMail user abstraction
      * define users/passwords declaratively using Nix
@@ -33,9 +33,9 @@ Upcoming features:
 * [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
 * [ ] Rewrite sender mail address when forwarding (SRS) correctly
 * [ ] SNI support for Nix Dovecot abstraction
-* [ ] Advance logging
+* [ ] Advanced logging
 * [ ] Adding group aliases
-* [ ] Add mailinglist support abstraction
+* [ ] Add mailinglist support
 
 Thanks to the support of nlnet.nl!
 
