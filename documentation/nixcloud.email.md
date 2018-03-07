@@ -277,19 +277,24 @@ A simple, yet fast strategy is 'rsync+ssh' which is explained here. But you can 
 
 ## Copy emails from previous .maildir using rsync (fast)
 
-1. create the email user: js@lastlog.de in the abstraction and 'nixos-rebuild switch'
+1. create the email user: js@lastlog.de in the abstraction and run `nixos-rebuild switch`
 
-2. rsync .maildir/ /var/lib/virtualMail/lastlog.de/users/js/mail/
+2. `rsync .maildir/* /var/lib/virtualMail/lastlog.de/users/js/mail/`
 
-3. chown virtualMail:virtualMail /var/lib/virtualMail/lastlog.de/users/js/mail -r
+3. `chown virtualMail:virtualMail /var/lib/virtualMail/lastlog.de/users/js/mail -r`
 
 # Backups
+
+You should take care of these files:
 
 * /etc/nixos/configuration.nix
 * revision of `nixpkgs` and `nixcloud-webservices` you were using
 * your DNS configuration
-* /var/lib/dkim/keys/ <- all files from here
-* /var/lib/virtualMail/ <- all files form here
+
+all files from:
+
+* /var/lib/dkim/keys/
+* /var/lib/virtualMail/
 
 # Links
 
