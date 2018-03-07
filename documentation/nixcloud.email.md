@@ -26,6 +26,8 @@ Supported features:
 * [x] Mail relay abstraction
 * [x] `nixcloud.email` scores 10/10 at https://www.mail-tester.com
 
+See [implementation](../modules/services/email)
+
 Upcoming features:
 
 * [ ] DNS abstraction which shows all the required configuration(s) and if they are correct already
