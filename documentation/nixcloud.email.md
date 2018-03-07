@@ -8,7 +8,9 @@ Supported features:
 * [x] POP3 support (optional)
 * [x] Greylisting (optional)
 * [x] Spamassassin (optional)
-* [x] ACME TLS certificates (optional)
+* [x] TLS
+     * ACME TLS certificates (optional)
+     * manual certificates
 * [x] Automatically extend `networking.firewall` with required ports
 * [x] virtualMail user abstraction
      * define users/passwords declaratively using Nix
