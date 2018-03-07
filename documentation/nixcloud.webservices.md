@@ -62,8 +62,8 @@ See also [../README.md](../README.md).
 
 If you need static file serving there are two backends available:
 
-* darkhttpd
-* nginx
+* [darkhttpd](../modules/web/services/static-darkhttpd/default.nix)
+* [nginx](../modules/web/services/static-nginx/default.nix)
 
 ## static-darkhttpd
 
