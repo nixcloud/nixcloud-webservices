@@ -58,6 +58,49 @@ See also [../README.md](../README.md).
 
             journalctl -u mediawiki-test1-apache
 
+# Static file serving (no CGI)
+
+If you need static file serving there are two backends available:
+
+* darkhttpd
+* nginx
+
+## static-darkhttpd
+
+Using `darkhttpd` backend:
+
+    nixcloud.webservices.static-darkhttpd.example1 = {
+      enable = true;
+      root = /www;
+      proxyOptions = {
+        port = 3032;
+        http.mode = "on";
+        https.mode = "off";
+        domain = "example.com";
+      };
+    };
+
+Note: If `root` is not set it falls back to serve `/var/lib/nixcloud/webservices/static-darkhttpd-example1/`. 
+This has the advantage that you don't have to manually alter directory/file permissions so that the webserver has access to it. Default user/group will be `static-darkhttpd-example1-webserver`.
+    
+## static-nginx    
+    
+Using `nginx` backend:
+    
+    nixcloud.webservices.static-nginx.example2 = {
+      enable = true;
+      root = /www;
+      proxyOptions = {
+        port = 3032;
+        http.mode = "on";
+        https.mode = "off";
+        domain = "example.com";
+      };
+    };
+    
+Note: If `root` is not set it falls back to serve `/var/lib/nixcloud/webservices/static-nginx-example2/`. 
+This has the advantage that you don't have to manually alter directory/file permissions so that the webserver has access to it. Default user/group will be `static-nginx-example2-webserver`.
+            
 # Extending nixcloud-webservices
 
 You have basically two options:
