@@ -144,7 +144,18 @@ From the internet one could connect to: wss://example.com/backend/ or wss://exam
 
 When using `nixcloud.webservices` the `nixcloud.reverse-proxy` will automatically collect all the proxyOptions and generate reverse-proxy mappings on Nix evaluation time.
 
-# Note
+The `leaps` webservice sets the websocket binding from the service itself:
+
+    # inject the leaps websocket for cooperative document opening/editing into proxyOptions
+    proxyOptions.websockets = {
+      ws = {
+        subpath = "/leaps/ws";
+      };
+    };
+    
+See [implementation](../modules/web/services/leaps/default.nix).
+
+# Source code documentation
 
 Most documentation should be generated from the source code of the reverse-proxy module, see: 
 
