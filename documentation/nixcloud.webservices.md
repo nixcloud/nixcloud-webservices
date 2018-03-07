@@ -6,98 +6,7 @@ See also [../README.md](../README.md).
 
 ![nixcloud.webservices layout](nixcloud-webservices.svg.png)
 
-# Motivation
-
-All `services` in the namespace `nixcloud.webservices` hold the `special properties` as listed below. See also [nixcloud.webservices.development.rst](nixcloud.webservices.development.rst) for details how to write a new module.
-
-## Multiple instantiation of webservices like `mediawiki`
-
-A primary design goal is to easily support 'multiple instances' of the same webservice (mediawiki), yet isolated from each other. This is a cool feature but requires to 'fork' most webservices coming with `nixpkgs` for the time being.
-
-## Reverse-proxy setups, see [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md)
-
-Each webservice runs in its own webserver on a different `port`. Using `nixcloud.reverse-proxy` all these different ports are consolidated into a reverse-proxy (single webserver) which runs on port 80/443 and interconnects the services to the outside world.
-
-One can now easily change the URL from `example.com/` to `example.org/foo` (and back) without having to modify the webservice itself.
-
-        nixcloud.webservices.leaps.myservice = {
-          enable = true;
-          proxyOptions = {
-            port   = 50000;
-            path   = "/foo";
-            domain = "example.com";
-          };
-        };
-        
-The options `port`, `path` and `domain` must to be set always while options like `ip` and others are optional. The `port` has a special role as it can't be assigned automatically using the nix programming language yet. One possible solution we work on would be to use /etc/portmap and inside service reference a 'name' instead of a port number which is then translated into a number using the said /etc/portmap.
-
-## Each webservice can be addressed standalone, and as such can be automatically represented by e.g. a dedicated systemd job:
-
-Each webservice is closely associated with a systemd service, making it easy to shutdown/restart individual services. This decoupling makes it rather easy to manage single services in a multi-tenant environment without having these interfering with each other. This makes user/group isolation per webservice easy!
-
-## Database abstraction for user/db creation:
-
-  * [main module](../modules/web/database/default.nix)
-  * [postgresql implementation](../modules/web/database/postgresql.nix)
-  * [mysql implementation](../modules/web/database/mysql.nix)
-
-  Note: We spawn a custom database per webservice by default and `nixcloud.webservices.mediawiki` contains an test which is also an example how to use both mysql and postgresql in one webservice and how to make it a user choice which one to use.
-
-## A common webservice interface: `apache`, `nginx` and `lighttpd`:
-
-The [common interface](../modules/web/core/webserver.nix) features web servers as:
-
-* [apache](../modules/web/webserver/apache.nix)
-* [nginx](../modules/web/webserver/nginx.nix) 
-* [lighttpd](../modules/web/webserver/lighttpd.nix)
-* [darkhttpd](../modules/web/webserver/darkhttpd.nix)
-
-which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. Also darkhttpd might be better suited for static serving of files.
-
-## Configuration syntax checking
-
-We introduce `nix evaluation time` configuration syntax checking for `apache`, `nginx` & `nixcloud-reverse-proxy`
-
-  * [nginx_check_config.nix](../modules/web/webserver/lib/nginx_check_config.nix)
-  * [apache_check_config.nix](../modules/web/webserver/lib/apache_check_config.nix)
-  
-So when you start packaging your own webservice you will see configuration errors much earlier and don't have to deploy your service in order to see that there is a configuration error when nginx or apache starts up but instead you will already see many common errors when the configuration is generated.
-
-## There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
-
-In a nutshell you can run a test explicitly like this:
-
-    cd nixcloud-webservices/tests
-    nix-build -A custom-webservice
-
-To make testing easier we made them part of the evaluation: 
-     
-   * when using `nixcloud.webservices.leaps`, it will always run the respective [test.nix](https://github.com/nixcloud/nixcloud-webservices/blob/master/modules/web/services/leaps/test.nix) (leaps) to make sure it works in general
-   * if you are using `nixcloud.reverse-proxy` it will always run the reverse-proxy test before
-
-WARNING: `nixcloud.webservices` is best used on a machine with native virtualization support (KVM) but you can still use it from within a VM, it just takes longer to evaluate.
-
-## Each webservice gets a unique, stateful directory called `stateDir`
- 
-For instance two owncloud based webservices called `service1` and `service2` would use: `/var/lib/nixcloud/webservices/owncloud-service1` and `/var/lib/nixcloud/webservices/owncloud-service2` thus not interfere.
-The `stateDir` is independent of the `URL` and thus not influenced by `proxyOptions`.
-    
-Using `nixcloud.webservices.owncloud.service1` would create `/var/lib/nixcloud/webservices/owncloud-service1` and while `owncloud` would be the service class, `service1` would be a name, which has to be unique, given by the user. 
-
-Using ACLs we made sure, that mixed permissions of file user/group ownership won't screw your webservice. So files in `/var/lib/nixcloud/webservices/owncloud-service1` will always be accessible for the user `owncloud-service` no matter what user/group created it.
-
-## Startup scripts used to prepare the environment or perform updates, are executed as a normal user (not as a privileged user like root).
- 
-# API stability
-
-WARNING: The nixcloud.reverse-proxy's `proxyOptions` API and `nixcloud.webservices` related API is not stable yet. This means that futher updates break your services. This is caused by the fact that
-we spent months in developing `nixcloud.webservices` and related technologies and coming with the release of `nixcloud.webservices` we want to pinpoint the usage scenarios and stabalize the API afterwards.
-
-WARNING: We are aware of https://github.com/NixOS/nixpkgs/issues/24288#issuecomment-289032210 and we will fix this here as well.
- 
-# Example usage
-
-# Using nixcloud-webservices `nixcloud.webservices`
+# Using nixcloud-webservices
 
 ## nixcloud.webservices.mediawiki
 
@@ -118,7 +27,7 @@ Add this code to your `/etc/nixos/configuration.nix` file:
       };
     };
 
-Warning: Using `extendEtcHosts = true;` extends `/etc/hosts` and if you use 'nixos.org' as example domain you won't be able to visit the official 'nixos.org' webpage!
+Warning: Using `extendEtcHosts = true;` extends `/etc/hosts` and if you use 'nixos.org' as example domain you won't be able to visit the official 'nixos.org' webpage from that machine!
 
 ## Rebuilding to use `nixcloud.webservices`
 
@@ -133,17 +42,6 @@ Finally visit:
 or
 
     http://localhost:40000/wiki
-
-## mediawiki's systemd backend
-
-`mediawiki` is using the apache web server and can be controlled using various services/targets:
-
-      systemctl | grep mediawiki
-
-try:
-
-      systemctl status mediawiki-test1-apache
-      journalctl -u mediawiki-test1-apache
 
 ## Upload files / logging 
 
@@ -160,7 +58,7 @@ try:
 
         journalctl -u mediawiki-test1-apache
 
-# Extending nixcloud-webservices with your service
+# Extending nixcloud-webservices
 
 You have basically two options:
 
@@ -169,26 +67,182 @@ You have basically two options:
 
 Note: The library usage scenario is probably easier as you don't have to use `git` to rebase your changes when updating.
 
-# History
+# Technological background
 
-Here is a short bullet list of issues found with the httpd abstraction currently in nixpkgs.
+All `services` in the namespace `nixcloud.webservices` hold the `special properties` as listed below. See also [nixcloud.webservices.development.rst](nixcloud.webservices.development.rst) on the module system extension.
 
-## `httpd` limitations
+## Multiple instantiation of webservices like `mediawiki`
 
-Motivation for creating `nixcloud-webservices` are `httpd abstraction` problems:
+A primary design goal is to easily support 'multiple instances' of the same webservice (mediawiki), yet isolated from each other. This is a cool feature but requires to 'fork' most webservices coming with `nixpkgs` for the time being.
 
-- `nixos-rebuild switch` or `systemctl restart httpd` kills basically all VHOSTs
-- Errors in `startup_script.sh` makes the service unsuable
-- Supporting old php stacks forces the whole apache to be insecure
-- Shared user/group with all webservices
-- Only one httpd instance possible without containers
-- Service options are not in the options search, if they were, they would mix with the options from http
-- Mediawiki (basically all these abstractions) still focus on 'one mediawiki' and leave it to the user to make several mediawiki instance
-  work in parallel. this can be complicated to manage.
-- Use one httpd for more than one service complicates the source code base, making it hard to update/modify -> !KISS
-- Not easy to get logging per instance which is sometimes nice to have just one place to look into
-- Does not implement a `common interface`. porting webservices from httpd to nginx was complicated before this framework
-- No syntax check of the apache.conf before it applies updates
-- You can use your own nixpkgs revision per LXC
+This example would create two mediawiki based webservices:
+
+    nixcloud.webservices.mediawiki.test1 = {
+      enable = true;
+
+      proxyOptions = {
+        port   = 40000;
+        path   = "/wiki";
+        domain = "example.com";
+      };
+    };
+    nixcloud.webservices.mediawiki.test2 = {
+      enable = true;
+
+      proxyOptions = {
+        port   = 40001;
+        path   = "/wiki2";
+        domain = "example.com";
+      };
+    };    
+
+## Reverse-proxy setups
+
+Each webservice runs in its own webserver on a different `port`. Using `nixcloud.reverse-proxy` all these different ports are consolidated into a reverse-proxy (single webserver) which runs on port 80/443 and interconnects the services to the outside world.
+
+One can now easily change the URL from `example.com/` to `example.org/foo` (and back) without having to modify the webservice itself.
+
+    nixcloud.webservices.leaps.myservice = {
+      enable = true;
+      proxyOptions = {
+        port   = 50000;
+        path   = "/foo";
+        domain = "example.com";
+      };
+    };
+        
+The options `port`, `path` and `domain` must to be set always while options like `ip` and others are optional. The `port` has a special role as it can't be assigned automatically using the nix programming language yet. One possible solution we work on would be to use /etc/portmap and inside service reference a 'name' instead of a port number which is then translated into a number using the said /etc/portmap.
+
+See also [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md).
+
+## systemd
+
+Each webservice is closely associated with systemd service(s), making it easy to shutdown/restart individual services. This decoupling makes it rather easy to manage single services in a multi-tenant environment without having these interfering with each other. This makes user/group isolation per webservice easy!
+
+
+For example: `mediawiki` is using the apache web server and can be controlled using various services/targets:
+
+    systemctl cat mediawiki-test1
+
+try:
+
+    systemctl status mediawiki-test1
+    journalctl -u mediawiki-test1
+
+## Database abstraction for user/db creation:
+
+  * [main module](../modules/web/database/default.nix)
+  * [postgresql implementation](../modules/web/database/postgresql.nix)
+  * [mysql implementation](../modules/web/database/mysql.nix)
+
+  Note: We spawn a custom database per webservice by default and `nixcloud.webservices.mediawiki` contains an test which is also an example how to use both mysql and postgresql in one webservice and how to make it a user choice which one to use.
+
+  * FIXME: give usage example from ./modules/web/services/mediawiki/default.nix on how to access either
+
+  * FIXME: how to access the database from command line for dumps or manual SQL queries
+
+  * FIXME: add example how to add a new database backend
+
+## A common webservice interface: `apache`, `nginx`, `lighttpd` & `darkhttpd`:
+
+The [common interface](../modules/web/core/webserver.nix) features web servers as:
+
+* [apache](../modules/web/webserver/apache.nix)
+* [nginx](../modules/web/webserver/nginx.nix) 
+* [lighttpd](../modules/web/webserver/lighttpd.nix)
+* [darkhttpd](../modules/web/webserver/darkhttpd.nix)
+
+which support the same subset of `mkOptions` so the webservice developers can easily migrate services between the supported webservers. Of course there are differences such as `.htaccess` which are solely supported by `apache` and thus implementation details might be bound to a particular webserver. Also darkhttpd might be better suited for static serving of files.
+
+See https://github.com/nixcloud/nixcloud-webservices/commit/2d0a3ada705b36521a1eceb803e8c6737f47b21f on how to add a new backend (darkhttpd) and use it in an new webservice (static-darkhttpd).
+
+## Testing webservice
+
+There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
+
+In a nutshell you can run a test explicitly like this:
+
+    cd nixcloud-webservices/tests
+    nix-build -A custom-webservice
+
+To make testing easier we made them part of the evaluation: 
+     
+   * when using `nixcloud.webservices.leaps`, it will always run the respective [test.nix](https://github.com/nixcloud/nixcloud-webservices/blob/master/modules/web/services/leaps/test.nix) (leaps) to make sure it works in general
+   * if you are using `nixcloud.reverse-proxy` it will always run the reverse-proxy test before
+
+WARNING: `nixcloud.webservices` is best used on a machine with native virtualization support (KVM) but you can still use it from within a VM, it just takes longer to evaluate.
+
+## stateDir(s)
+
+Each webservice gets a unique, stateful directory called `stateDir`.
+ 
+For instance two owncloud based webservices called `service1` and `service2` would use: `/var/lib/nixcloud/webservices/owncloud-service1` and `/var/lib/nixcloud/webservices/owncloud-service2` thus not interfere.
+The `stateDir` is independent of the `URL` and thus not influenced by `proxyOptions`.
+    
+Using `nixcloud.webservices.owncloud.service1` would create `/var/lib/nixcloud/webservices/owncloud-service1` and while `owncloud` would be the service class, `service1` would be a name, which has to be unique, given by the user. 
+
+Using ACLs we made sure, that mixed permissions of file user/group ownership won't screw your webservice. So files in `/var/lib/nixcloud/webservices/owncloud-service1` will always be accessible for the user `owncloud-service` no matter what user/group created it.
+
+## Startup script helpers
+
+Startup scripts are used to prepare the environment or perform updates, are executed as a special user (not as a privileged user like root).
+
+    webserver.startupScript = ''
+      ${config.webserver.apache.phpPackage}/bin/php ${mediawikiRoot}/maintenance/update.php
+    '';
+
+See also the implementation [mediawiki](../modules/web/services/mediawiki/default.nix).
+    
+## Configuration syntax checking
+
+We introduce `nix evaluation time` configuration syntax checking for `apache`, `nginx` & `nixcloud-reverse-proxy`
+
+  * [nginx_check_config.nix](../modules/web/webserver/lib/nginx_check_config.nix)
+  * [apache_check_config.nix](../modules/web/webserver/lib/apache_check_config.nix)
+  
+So when you start packaging your own webservice you will see configuration errors much earlier and don't have to deploy your service in order to see that there is a configuration error when nginx or apache starts up but instead you will already see many common errors when the configuration is generated.
+
+A simple example for a broken nginx configuration:
+
+    nixcloud.reverse-proxy = {
+      enable = true;
+      extendEtcHosts = true;
+      extraConfig = ''
+        this should break the config {{{{
+      '';
+    };
+
+A `nixos-rebuild switch` will fail with this error:
+
+    =========== nginx syntax check fail ===========
+    nginx: could not open error log file: open() "/nix/store/nn2fsp8z584b4ir2lqma95zk98vzb7w4-nginx-1.12.2/logs/error.log" failed (13: Permission denied) 2018/03/07 01:53:51 444#444: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /nix/store/5rdc8k4rvfw5hjcfcg5lvwiszlnm7pv2-nginx_check_config/nixcloud.reverse-proxy.conf_:3 2018/03/07 01:53:51 444#444: unknown directive "this" in /nix/store/5rdc8k4rvfw5hjcfcg5lvwiszlnm7pv2-nginx_check_config/nixcloud.reverse-proxy.conf_:102 nginx: configuration file /nix/store/5rdc8k4rvfw5hjcfcg5lvwiszlnm7pv2-nginx_check_config/nixcloud.reverse-proxy.conf_ test failed
+      -> /nix/store/5rdc8k4rvfw5hjcfcg5lvwiszlnm7pv2-nginx_check_config/nixcloud.reverse-proxy.conf
+    =========== /nginx syntax check fail ===========
+    You need to fix your nginx configuration!!1!
+
+It is a bit tricky to read the error message but the error is at line 102 and the 'broken' nginx configuration file remains in the nix store until the garbage collector is run.
+    
+## Subdirectory support
+
+Each `nixcloud.webservice` must be designed to run either with:
+
+* path = "/"
+* path = "/something"
+
+So from the web, this looks like:
+
+* https://example.com/
+* https://example.com/something
+
+See [mediawiki](../modules/web/services/mediawiki/default.nix) where we generate a different `Alias` directive based on the `config.proxyOptions.path` variable.
+
+# API stability
+
+WARNING: The nixcloud.reverse-proxy's `proxyOptions` API and `nixcloud.webservices` related API is not stable yet. This means that futher updates break your services. This is caused by the fact that
+we spent months in developing `nixcloud.webservices` and related technologies and coming with the release of `nixcloud.webservices` we want to pinpoint the usage scenarios and stabalize the API afterwards.
+
+WARNING: We are aware of https://github.com/NixOS/nixpkgs/issues/24288#issuecomment-289032210 and we will fix this here as well.
+ 
+
 
 
