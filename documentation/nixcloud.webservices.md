@@ -67,8 +67,8 @@ You have basically two options:
     * [leaps](../modules/web/services/leaps/default.nix) (GO implements a webserver basically)
 
     When `nixcloud-webservices` is updated, you can do a 'git pull --rebase' in your branch:
-        * You can integrate any programming language which implements a webserver interface (http).
-        * You can also extend apache with `mod_python`, see the trac example in nixpkgs.
+    * You can integrate any programming language which implements a webserver interface (http).
+    * You can also extend apache with `mod_python`, see the trac example in nixpkgs.
     
 * Use `nixcloud.webservices` as a library which is illustrated in [../tests/custom-webservice.nix](../tests/custom-webservice.nix)
 
