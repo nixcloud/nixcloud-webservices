@@ -10,53 +10,53 @@ See also [../README.md](../README.md).
 
 1. nixcloud.webservices.mediawiki
 
-Add this code to your `/etc/nixos/configuration.nix` file:
+    Add this code to your `/etc/nixos/configuration.nix` file:
 
-    nixcloud.reverse-proxy = {
-      enable = true;
-      extendEtcHosts = true;
-    };
+        nixcloud.reverse-proxy = {
+          enable = true;
+          extendEtcHosts = true;
+        };
 
-    nixcloud.webservices.mediawiki.test1 = {
-      enable = true;
+        nixcloud.webservices.mediawiki.test1 = {
+          enable = true;
 
-      proxyOptions = {
-        port   = 40000;
-        path   = "/wiki";
-        domain = "example.com";
-      };
-    };
+          proxyOptions = {
+            port   = 40000;
+            path   = "/wiki";
+            domain = "example.com";
+          };
+        };
 
-Warning: Using `extendEtcHosts = true;` extends `/etc/hosts` and if you use 'nixos.org' as example domain you won't be able to visit the official 'nixos.org' webpage from that machine!
+    Warning: Using `extendEtcHosts = true;` extends `/etc/hosts` and if you use 'nixos.org' as example domain you won't be able to visit the official 'nixos.org' webpage from that machine!
 
 2. Rebuilding to use `nixcloud.webservices`
 
-If you've used the above example as is, you can simply do:
+    If you've used the above example as is, you can simply do:
 
-    nixos-rebuild switch
+        nixos-rebuild switch
 
-Finally visit:
+    Finally visit:
 
-    https://example.com/wiki
+        https://example.com/wiki
 
-or
+    or
 
-    http://localhost:40000/wiki
+        http://localhost:40000/wiki
 
-3. Upload files / logging 
+3.  Upload files / logging 
 
-* static files:
+    * static files:
 
-      uploads (static files) can be found in `${stateDir}` which is `/var/lib/nixcloud/webservices/mediawiki-test1`
+          uploads (static files) can be found in `${stateDir}` which is `/var/lib/nixcloud/webservices/mediawiki-test1`
 
-* logging:
+    * logging:
 
-        ls /var/lib/nixcloud/webservices/mediawiki-test1/log 
-        access_log  error_log
+            ls /var/lib/nixcloud/webservices/mediawiki-test1/log 
+            access_log  error_log
 
-* debugging
+    * debugging
 
-        journalctl -u mediawiki-test1-apache
+            journalctl -u mediawiki-test1-apache
 
 # Extending nixcloud-webservices
 
