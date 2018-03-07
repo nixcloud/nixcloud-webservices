@@ -1,6 +1,6 @@
 # nixcloud.webservices
 
-`nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of webservices as wordpress, owncloud, mediawiki and services like this. 
+`nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of traditional webservices as wordpress, owncloud, [mediawiki](../modules/web/services/mediawiki/default.nix) or [leaps](../modules/web/services/leaps/default.nix) which is implemented in GO and comes with its own webserver implementation.
 
 See also [../README.md](../README.md).
 
@@ -62,10 +62,17 @@ See also [../README.md](../README.md).
 
 You have basically two options:
 
-* Hack your implementation into your clone of `nixcloud.webservices`, use mediawiki as an example
+* Hack your implementation into your clone of `nixcloud.webservices`, example:
+    * [mediawiki](../modules/web/services/mediawiki/default.nix) (traditional 'apache')
+    * [leaps](../modules/web/services/leaps/default.nix) (GO implements a webserver basically)
+
+    When `nixcloud-webservices` is updated, you can do a 'git pull --rebase' in your branch:
+        * You can integrate any programming language which implements a webserver interface (http).
+        * You can also extend apache with `mod_python`, see the trac example in nixpkgs.
+    
 * Use `nixcloud.webservices` as a library which is illustrated in [../tests/custom-webservice.nix](../tests/custom-webservice.nix)
 
-Note: The library usage scenario is probably easier as you don't have to use `git` to rebase your changes when updating.
+    Note: The library usage scenario quite simple to use, we'd recommend this, especially if you don't plan to commit your code into `nixcloud-webservices` later.
 
 # Technological background
 
@@ -235,6 +242,10 @@ So from the web, this looks like:
 * https://example.com/something
 
 See [mediawiki](../modules/web/services/mediawiki/default.nix) where we generate a different `Alias` directive based on the `config.proxyOptions.path` variable.
+
+## Transparent licenses
+
+Since we embrace FLOSS at nixcloud we've added a meta record to each webservice and enforce the license attribute and maintainer to be set.
 
 # API stability
 
