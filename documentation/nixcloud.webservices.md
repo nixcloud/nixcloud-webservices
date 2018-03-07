@@ -8,7 +8,7 @@ See also [../README.md](../README.md).
 
 # Using nixcloud-webservices
 
-## nixcloud.webservices.mediawiki
+1. nixcloud.webservices.mediawiki
 
 Add this code to your `/etc/nixos/configuration.nix` file:
 
@@ -29,7 +29,7 @@ Add this code to your `/etc/nixos/configuration.nix` file:
 
 Warning: Using `extendEtcHosts = true;` extends `/etc/hosts` and if you use 'nixos.org' as example domain you won't be able to visit the official 'nixos.org' webpage from that machine!
 
-## Rebuilding to use `nixcloud.webservices`
+2. Rebuilding to use `nixcloud.webservices`
 
 If you've used the above example as is, you can simply do:
 
@@ -43,7 +43,7 @@ or
 
     http://localhost:40000/wiki
 
-## Upload files / logging 
+3. Upload files / logging 
 
 * static files:
 
