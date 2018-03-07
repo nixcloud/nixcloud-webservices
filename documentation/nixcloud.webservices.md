@@ -206,7 +206,7 @@ which support the same subset of `mkOptions` so the webservice developers can ea
 
 See https://github.com/nixcloud/nixcloud-webservices/commit/2d0a3ada705b36521a1eceb803e8c6737f47b21f on how to add a new backend (darkhttpd) and use it in an new webservice (static-darkhttpd).
 
-## Testing webservice
+## Webservice testing 
 
 There are suitable CI tests using [curl](https://curl.haxx.se/)/[selenium](https://github.com/SeleniumHQ/selenium), see [../tests/README.md](../tests/README.md)
 

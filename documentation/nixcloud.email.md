@@ -4,18 +4,25 @@
 
 `nixcloud.email` currently supports these features:
 
-* IMAP support
-* POP3 support (optional)
-* greylisting (optional)
-* spamassassin (optional)
-* ACME TLS certificates (optional)
-* virtualMail user abstraction
-     * assign users/passwords declaratively using nix
-     * sieve filters
+* [x] IMAP support
+* [x] POP3 support (optional)
+* [x] Greylisting (optional)
+* [x] Spamassassin (optional)
+* [x] ACME TLS certificates (optional)
+* [x] Automatically extend `networking.firewall` with required ports
+* [x] virtualMail user abstraction
+     * define users/passwords declaratively using Nix
+     * maildir folders
      * quota support
-     * catchall setups
-* meaningful mail server defaults for communication with gmail.com & similar
-* we score 10/10 at https://www.mail-tester.com/
+     * regular aliases
+     * catchall aliases
+* [x] DKIM Signing
+* [x] Sieve
+    * A simple standard script that moves spam
+    * Allow user defined sieve scripts
+* [x] meaningful mail server defaults for communication with gmail.com & similar
+* [x] Mail relay abstraction
+* [x] `nixcloud.email` scores 10/10 at https://www.mail-tester.com
 
 <!-- See https://nixdoc.io/nixcloud-webservices/index.html#nixcloud -->
 
@@ -247,8 +254,45 @@ Usually one password will be sufficient but you can provide more than one.
 In the `nixcloud.email.relay.passwords.<name>` option the name is the user name
 and the provided value is the plaintext password.
 
+# Migration
+
+A simple, yet fast strategy is 'rsync+ssh' which is explained here. But you can always just use an IMAP client and copy the mails from your old account as well.
+
+## Copy emails from previous .maildir using rsync (fast)
+
+1. create the email user: js@lastlog.de in the abstraction and 'nixos-rebuild switch'
+
+2. rsync .maildir/ /var/lib/virtualMail/lastlog.de/users/js/mail/
+
+3. chown virtualMail:virtualMail /var/lib/virtualMail/lastlog.de/users/js/mail -r
+
+# Backups
+
+* /etc/nixos/configuration.nix
+* revision of `nixpkgs` and `nixcloud-webservices` you were using
+* your DNS configuration
+* /var/lib/dkim/keys/ <- all files from here
+* /var/lib/virtualMail/ <- all files form here
+
 # Links
 
 * [https://github.com/NixOS/nixpkgs/pull/29366](https://github.com/NixOS/nixpkgs/pull/29366)
 * [https://github.com/r-raymond/nixos-mailserver/issues/13](https://github.com/r-raymond/nixos-mailserver/issues/13)
 * [https://github.com/NixOS/nixpkgs/pull/29365](https://github.com/NixOS/nixpkgs/pull/29365)
+
+# Alternative implementations
+
+* https://github.com/r-raymond/nixos-mailserver
+
+# Features
+
+Thanks to the support of nlnet.nl, we will introduce these features soon:
+
+* [ ] DNS abstraction which shows all the required configuration(s) and if they are correct already
+* [ ] Webmail support (Roundcube)
+* [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
+* [ ] Rewrite sender mail address when forwarding (SRS) correctly
+* [ ] SNI support for Nix Dovecot abstraction
+* [ ] Advance logging
+* [ ] Adding group aliases
+* [ ] Add mailinglist support abstraction
