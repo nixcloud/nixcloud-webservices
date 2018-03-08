@@ -1,4 +1,4 @@
-{ config, pkgs, lib, options, wsName, mkUnique, ... }:
+{ config, pkgs, lib, options, wsName, mkUniqueUser, mkUniqueGroup, ... }:
 
 with lib;
 
@@ -22,8 +22,8 @@ with lib;
     directories.log = {
       permissions.defaultDirectoryMode = "0750";
       permissions.others.noAccess = true;
-      owner = mkUnique config.webserver.user;
-      group = mkUnique config.webserver.group;
+      owner = mkUniqueUser config.webserver.user;
+      group = mkUniqueGroup config.webserver.group;
       instance.before = [ "webserver-init.service" "instance-init.target" ];
     };
 

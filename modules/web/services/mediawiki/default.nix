@@ -1,4 +1,4 @@
-{ config, lib, pkgs, wsName, mkUnique, apache, ... }:
+{ config, lib, pkgs, wsName, mkUniqueUser, apache, ... }:
 
 # BUG: if you get this error message when visiting the wiki:
 #    [320cfa14bce5375c4e8daf65] 2017-03-20 16:17:44: Fatal exception of type MWException
@@ -122,7 +122,7 @@ with lib;
                          then "postgres"
                          else config.defaultDatabaseType}";
           $wgDBserver = "${config.database.mediawiki.phpHostname}";
-          $wgDBuser = "${mkUnique config.database.mediawiki.user}";
+          $wgDBuser = "${mkUniqueUser config.database.mediawiki.user}";
           $wgDBpassword = "";
           $wgDBname = "mediawiki";
 

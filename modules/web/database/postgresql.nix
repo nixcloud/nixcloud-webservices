@@ -1,4 +1,4 @@
-{ lib, mkUnique, pkgs, config, ... }:
+{ lib, mkUniqueUser, mkUniqueGroup, pkgs, config, ... }:
 
 let
   filterDb = lib.const (db: db.type == "postgresql");
@@ -10,7 +10,7 @@ let
   });
 
   dbservices = lib.listToAttrs (lib.concatMap (cfg: let
-    dbuser = mkUnique cfg.user;
+    dbuser = mkUniqueUser cfg.user;
     mkStateFile = action: let
       filename = ".database-${action}-${cfg.name}";
     in "${config.stateDir}/${filename}";
@@ -106,8 +106,8 @@ in {
       permissions.defaultDirectoryMode = "0711";
       permissions.group.noAccess = true;
       permissions.others.noAccess = true;
-      owner = mkUnique "postgres";
-      group = mkUnique "postgres";
+      owner = mkUniqueUser "postgres";
+      group = mkUniqueGroup "postgres";
     };
 
     systemd.services = {

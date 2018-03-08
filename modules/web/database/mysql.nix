@@ -1,4 +1,4 @@
-{ lib, mkUnique, pkgs, config, ... }:
+{ lib, mkUniqueUser, mkUniqueGroup, pkgs, config, ... }:
 
 let
   filterDb = lib.const (db: db.type == "mysql");
@@ -23,7 +23,7 @@ let
   in "${prog} " + lib.concatMapStringsSep " " lib.escapeShellArg args;
 
   dbservices = lib.listToAttrs (lib.concatMap (cfg: let
-    dbuser = mkUnique cfg.user;
+    dbuser = mkUniqueUser cfg.user;
     mkStateFile = action: let
       filename = ".database-${action}-${cfg.name}";
     in "${config.stateDir}/${filename}";
@@ -41,7 +41,7 @@ let
             GRANT ALL ON `${assertSqlIdent cfg.name}`.* TO
               ${escapeSql dbuser}@'localhost';
           '';
-        in "${mysqlShell (mkUnique "mysql") "mysql"} < ${createDb}";
+        in "${mysqlShell (mkUniqueUser "mysql") "mysql"} < ${createDb}";
         postStart = "touch ${lib.escapeShellArg (mkStateFile "create")}";
         unitConfig.ConditionPathExists = "!${mkStateFile "create"}";
         serviceConfig = {
@@ -64,7 +64,7 @@ let
         script = cfg.postCreate;
         path = lib.singleton (pkgs.writeScriptBin "sqlsh" ''
           #!${pkgs.stdenv.shell}
-          exec ${mysqlShell (mkUnique cfg.user) cfg.name} "$@"
+          exec ${mysqlShell (mkUniqueUser cfg.user) cfg.name} "$@"
         '');
         postStart = "touch ${lib.escapeShellArg (mkStateFile "post-create")}";
         unitConfig.ConditionPathExists = "!${mkStateFile "post-create"}";
@@ -125,8 +125,8 @@ in {
       permissions.defaultDirectoryMode = "0711";
       permissions.group.noAccess = true;
       permissions.others.noAccess = true;
-      owner = mkUnique "mysql";
-      group = mkUnique "mysql";
+      owner = mkUniqueUser "mysql";
+      group = mkUniqueGroup "mysql";
     };
 
     systemd.services = {
@@ -151,7 +151,7 @@ in {
         instance.before = [ "db-server.target" ];
         after = [ "network.target" ];
         postStart = let
-          superuser = escapeSql (mkUnique "mysql");
+          superuser = escapeSql (mkUniqueUser "mysql");
           dropRoot = pkgs.writeText "drop-root.sql" ''
             CREATE USER ${superuser}@'localhost' IDENTIFIED WITH ${authMethod};
             GRANT ALL ON *.* TO ${superuser}@'localhost' WITH GRANT OPTION;

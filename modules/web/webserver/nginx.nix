@@ -1,4 +1,4 @@
-{ config, pkgs, lib, options, wsName, mkUnique, ... }:
+{ config, pkgs, lib, options, wsName, mkUniqueUser, mkUniqueGroup, ... }:
 
 with lib;
 
@@ -54,8 +54,8 @@ with lib;
   in mkIf (config.webserver.variant == "nginx" && config.enable) {
 
     directories = lib.genAttrs [ "nginx" "nginx/logs" ] (lib.const {
-      owner = mkUnique config.webserver.user;
-      group = mkUnique config.webserver.group;
+      owner = mkUniqueUser config.webserver.user;
+      group = mkUniqueGroup config.webserver.group;
       instance.before = [ "webserver-init.service" "instance-init.target" ];
     });
 
@@ -71,7 +71,7 @@ with lib;
 
         # FIXME: add user record only if run as root (which is not the case if PermissionsStartOnly=false IIRC)
         nginxConfigFile = pkgs.writeText "${config.uniqueName}.conf" ''
-          user "${mkUnique config.webserver.user}" "${mkUnique config.webserver.group}";
+          user "${mkUniqueUser config.webserver.user}" "${mkUniqueGroup config.webserver.group}";
           error_log stderr;
           daemon off;
           events {}

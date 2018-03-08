@@ -164,6 +164,12 @@ argument called ``mkUnique``, which prepends the unique name in front of the
 string passed to it while removing duplicates (like eg.
 ``uniquename-uniquename-foo``).
 
+There are also variations of ``mkUnique``, one being ``mkUniqueUser`` and
+``mkUniqueGroup`` which are for generating unique names for users and groups
+respectively. The reason why this differs from ``mkUnique`` is that user and
+group names are limited in length, so we need to hash them if they exceed 32
+characters.
+
 .. [1] Look into the `socket(7)`_ manpage in section ``Socket options`` for
        more information.
 .. _writing NixOS modules: https://nixos.org/nixos/manual/index.html#sec-writing-modules

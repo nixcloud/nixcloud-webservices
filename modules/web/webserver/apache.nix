@@ -1,4 +1,6 @@
-{ toplevel, config, pkgs, lib, options, wsName, mkUnique, apache, ... }:
+{ toplevel, config, pkgs, lib, options, wsName, mkUniqueUser, mkUniqueGroup
+, apache, ...
+}:
 
 with lib;
 
@@ -143,8 +145,8 @@ with lib;
     directories = lib.genAttrs [ "log" "runtime" ] (lib.const {
       permissions.defaultDirectoryMode = "0750";
       permissions.others.noAccess = true;
-      owner = mkUnique config.webserver.user;
-      group = mkUnique config.webserver.group;
+      owner = mkUniqueUser config.webserver.user;
+      group = mkUniqueUser config.webserver.group;
       instance.before = [ "webserver-init.service" "instance-init.target" ];
     });
 
@@ -156,7 +158,7 @@ with lib;
       # Get rid of old semaphores.  These tend to accumulate across
       # server restarts, eventually preventing it from restarting
       # successfully.
-      for i in $(${pkgs.utillinux}/bin/ipcs -s | grep ' ${mkUnique config.webserver.user} ' | cut -f2 -d ' '); do
+      for i in $(${pkgs.utillinux}/bin/ipcs -s | grep ' ${mkUniqueUser config.webserver.user} ' | cut -f2 -d ' '); do
           ${pkgs.utillinux}/bin/ipcrm -s $i
       done
     '';
@@ -190,8 +192,8 @@ with lib;
         Listen *:${toString config.proxyOptions.port}
         #Listen unix:/var/run/nginx.sock
 
-        User ${mkUnique config.webserver.user}
-        Group ${mkUnique config.webserver.group}
+        User ${mkUniqueUser config.webserver.user}
+        Group ${mkUniqueGroup config.webserver.group}
 
         ${let
             load = {name, path}: "LoadModule ${name}_module ${path}\n";
