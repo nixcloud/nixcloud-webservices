@@ -1,11 +1,9 @@
-{ config, lib, pkgs, wsName, mkUnique, nginx, ... }:
-
-with lib;
+{ config, lib, ... }:
 
 {
   options = {
-    root = mkOption {
-      type = types.path;
+    root = lib.mkOption {
+      type = lib.types.path;
       default = config.stateDir;
       example = /var/www/whatever;
       description = "The directory where the static webserver looks for documents to serve.";
@@ -23,7 +21,7 @@ with lib;
 
   meta = {
     description = "Using nginx for static file serving (no CGI)";
-    maintainers = with maintainers; [ qknight ];
+    maintainers = with lib.maintainers; [ qknight ];
     license = lib.licenses.bsd2;
     homepage = https://github.com/nixcloud/nixcloud-webservices;
   };
