@@ -1,7 +1,6 @@
 {
   name = "static-darkhttpd";
 
-  machine.imports = [ ../../../../tests/common/eatmydata.nix ];
   machine.nixcloud.reverse-proxy.enable = true;
   machine.nixcloud.reverse-proxy.extendEtcHosts = true;
   machine.nixcloud.webservices.static-darkhttpd = {
@@ -20,14 +19,12 @@
     bar.proxyOptions.port = 8081;
   };
 
-  testScript = let
-    searchFor = "works";
-  in ''
+  testScript = ''
     $machine->waitForUnit('multi-user.target');
     $machine->waitForOpenPort(80);
-    $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-darkhttpd-foo/index.html');
-    $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-darkhttpd-bar/index.html');
-    $machine->succeed('curl -L http://example.com/index.html | grep -qF "${searchFor}"');
-    $machine->succeed('curl -L http://example.org/index.html | grep -qF "${searchFor}"');
+    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-darkhttpd-foo/index.html');
+    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-darkhttpd-bar/index.html');
+    $machine->succeed('test "$(curl -L http://example.com/index.html)" = works');
+    $machine->succeed('test "$(curl -L http://example.org/index.html)" = works');
   '';
 }
