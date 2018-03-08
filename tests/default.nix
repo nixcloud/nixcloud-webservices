@@ -11,4 +11,8 @@ in {
   reverse-proxy = callTest ../modules/services/reverse-proxy/test.nix;
   webservices.mediawiki = callTest ../modules/web/services/mediawiki/test.nix;
   webservices.leaps = callTest ../modules/web/services/leaps/test.nix;
+  webservices.static-darkhttpd = callTest
+    ../modules/web/services/static-darkhttpd/test.nix;
+  webservices.static-nginx = callTest
+    ../modules/web/services/static-darkhttpd/test.nix;
 }
