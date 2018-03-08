@@ -40,6 +40,7 @@ in {
 
   testScript = ''
     $machine->waitForUnit('multi-user.target');
+    $machine->waitForOpenPort(80);
     $machine->succeed('curl http://example.com/ | grep -qF "hello world"');
     $machine->succeed('curl http://example.org/ | grep -qF "hello world"');
   '';

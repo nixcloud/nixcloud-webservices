@@ -24,6 +24,7 @@
     searchFor = "works";
   in ''
     $machine->waitForUnit('multi-user.target');
+    $machine->waitForOpenPort(80);
     $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-nginx-foo/index.html');
     $machine->succeed('echo "works" > /var/lib/nixcloud/webservices/static-nginx-bar/index.html');
     $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');

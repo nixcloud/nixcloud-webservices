@@ -38,6 +38,7 @@
     }
 
     $machine->waitForUnit('multi-user.target');
+    $machine->waitForOpenPort(80);
     $machine->succeed('curl http://example.com/ | grep -qF leaps_logo.png');
     $machine->succeed('curl http://example.org/ | grep -qF leaps_logo.png');
 

@@ -26,6 +26,7 @@
     searchFor = "<title>Main Page - MediaWiki</title>";
   in ''
     $machine->waitForUnit('multi-user.target');
+    $machine->waitForOpenPort(80);
     $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');
     $machine->succeed('curl -L http://example.org/ | grep -qF "${searchFor}"');
   '';
