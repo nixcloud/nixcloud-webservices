@@ -3,7 +3,7 @@
 
 `nixcloud.email` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on easily operating a mailserver or a mail relay server.
 
-Supported features:
+# Features:
 
 * [x] IMAP support
 * [x] POP3 support (optional)
