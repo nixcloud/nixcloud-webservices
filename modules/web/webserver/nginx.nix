@@ -1,4 +1,4 @@
-{ config, pkgs, lib, options, wsName, mkUnique, ... }:
+{ config, pkgs, lib, options, wsName, mkUniqueUser, mkUniqueGroup, ... }:
 
 with lib;
 
@@ -9,9 +9,8 @@ with lib;
       type = types.lines;
       default = "";
       description = ''
-        Cnfiguration lines appended to the generated Apache
-        configuration file. Note that this mechanism may not work
-        when <option>configFile</option> is overridden.
+        Cnfiguration lines appended to the generated Nginx
+        configuration file.
       '';
     };
     extraServiceDependencies = mkOption {
@@ -55,8 +54,8 @@ with lib;
   in mkIf (config.webserver.variant == "nginx" && config.enable) {
 
     directories = lib.genAttrs [ "nginx" "nginx/logs" ] (lib.const {
-      owner = mkUnique config.webserver.user;
-      group = mkUnique config.webserver.group;
+      owner = mkUniqueUser config.webserver.user;
+      group = mkUniqueGroup config.webserver.group;
       instance.before = [ "webserver-init.service" "instance-init.target" ];
     });
 
@@ -65,14 +64,14 @@ with lib;
     in {
       description = "Nginx HTTPD";
       wantedBy      = [ "multi-user.target" ];
-      after = [ "network.target" "fs.target" "keys.target" ] ++ config.webserver.ngixn.extraServiceDependencies;
+      after = [ "network.target" "fs.target" "keys.target" ] ++ config.webserver.nginx.extraServiceDependencies;
       instance.after = [ "database.target" "webserver-init.service" ];
       serviceConfig = let
         checkAndFormatNginxConfigfile = (import lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile {configFile = nginxConfigFile; inherit fileName;};
 
         # FIXME: add user record only if run as root (which is not the case if PermissionsStartOnly=false IIRC)
         nginxConfigFile = pkgs.writeText "${config.uniqueName}.conf" ''
-          user "${mkUnique config.webserver.user}" "${mkUnique config.webserver.group}";
+          user "${mkUniqueUser config.webserver.user}" "${mkUniqueGroup config.webserver.group}";
           error_log stderr;
           daemon off;
           events {}

@@ -11,6 +11,7 @@ wsName: module:
         ../modules/web/webserver/apache.nix
         ../modules/web/webserver/lighttpd.nix
         ../modules/web/webserver/nginx.nix
+        ../modules/web/webserver/darkhttpd.nix
       ];
       _module.args = { inherit wsName pkgs toplevel; };
     });

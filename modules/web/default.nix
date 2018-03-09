@@ -2,9 +2,11 @@
 
 {
   imports = lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
-    filesender = services/filesender;
-    leaps      = services/leaps;
-    mediawiki  = services/mediawiki;
+    filesender        = services/filesender;
+    leaps             = services/leaps;
+    mediawiki         = services/mediawiki;
+    static-darkhttpd  = services/static-darkhttpd;
+    static-nginx      = services/static-nginx;
   };
 
   config = let

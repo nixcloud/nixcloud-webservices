@@ -42,11 +42,13 @@
     m2 = nodes.machine2.config.system.build.toplevel;
   in ''
     $machine1->waitForUnit('multi-user.target');
+    $machine1->waitForOpenPort(5000);
 
     $machine1->succeed('curl localhost:5000 >&2');
     $machine1->succeed('ls -lanthr /var/lib/nixcloud/webservices/mediawiki-one >&2');
 
     $machine1->succeed("${m2}/bin/switch-to-configuration test >&2");
+    $machine1->waitForOpenPort(5001);
     $machine1->succeed('curl localhost:5001 >&2');
     $machine1->succeed('cat /etc/passwd >&2');
     $machine1->succeed('ls -lanthr /var/lib/nixcloud/webservices/mediawiki-one >&2');

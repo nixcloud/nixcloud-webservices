@@ -1,4 +1,4 @@
-{ config, pkgs, lib, options, wsName, mkUnique, ... }:
+{ config, pkgs, lib, options, wsName, mkUniqueUser, mkUniqueGroup, ... }:
 
 # BUG: untested code
 # https://wiki.archlinux.org/index.php/lighttpd
@@ -54,8 +54,7 @@ with lib;
       type = types.lines;
       description = ''
         These configuration lines will be appended to the generated lighttpd
-        config file. Note that this mechanism does not work when the manual
-        <option>configText</option> option is used.
+        config file. 
       '';
     };
 
@@ -126,8 +125,8 @@ with lib;
     directories.log = {
       permissions.defaultDirectoryMode = "0750";
       permissions.others.noAccess = true;
-      owner = mkUnique config.webserver.user;
-      group = mkUnique config.webserver.group;
+      owner = mkUniqueUser config.webserver.user;
+      group = mkUniqueGroup config.webserver.group;
       instance.before = [ "webserver-init.service" "instance-init.target" ];
     };
 
@@ -153,8 +152,8 @@ with lib;
 
         configFile = pkgs.writeText "lighttpd.conf" ''
           server.port = ${toString config.proxyOptions.port}
-          server.username = "${mkUnique config.webserver.user}"
-          server.groupname = "${mkUnique config.webserver.group}"
+          server.username = "${mkUniqueUser config.webserver.user}"
+          server.groupname = "${mkUniqueGroup config.webserver.group}"
 
           # As for why all modules are loaded here, instead of having small
           # server.modules += () entries in each sub-service extraConfig snippet,

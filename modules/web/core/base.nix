@@ -1,4 +1,7 @@
-{ config, mkUnique, wsName, name, pkgs, lib, toplevel, ... }@webservice:
+{ config, mkUnique, mkUniqueUser, mkUniqueGroup, wsName, name
+, pkgs, lib, toplevel
+, ...
+}@webservice:
 
 let
   systemdUnitOptions = let
@@ -43,6 +46,16 @@ let
     hasHomeInStatedir = ucfg: lib.hasPrefix config.stateDir ucfg.home;
   in lib.filterAttrs (lib.const hasHomeInStatedir) config.users;
 
+  # Create a unique name for a user or group, creating a hashed version of it
+  # whenever the length exceeds 31 characters. The reason for that is that
+  # glibc imposes a restriction of maximum 31 characters on user and group
+  # names.
+  mkUniqueUserGroup = suffix: let
+    uniqueName = mkUnique suffix;
+    uniqueHash = builtins.hashString "sha256" uniqueName;
+    hashed = "user-${builtins.substring 0 26 uniqueHash}";
+  in if builtins.stringLength uniqueName > 31 then hashed else uniqueName;
+
 in {
   imports = [ ./webserver.nix ./meta.nix ./directories.nix ../database ];
 
@@ -54,7 +67,7 @@ in {
     };
 
     webserver.variant = lib.mkOption {
-      type = lib.types.nullOr (lib.types.enum [ "apache" "lighttpd" "nginx" ]);
+      type = lib.types.nullOr (lib.types.enum [ "apache" "lighttpd" "nginx" "darkhttpd" ]);
       default = null;
       description = "The webserver module to use for this webservice.";
     };
@@ -148,6 +161,9 @@ in {
         if suffix == config.uniqueName then suffix
         else if suffix == wsName then config.uniqueName
         else "${config.uniqueName}-${suffix}";
+
+      _module.args.mkUniqueUser = mkUniqueUserGroup;
+      _module.args.mkUniqueGroup = mkUniqueUserGroup;
     }
     (lib.mkIf config.enable {
       systemd.mounts = lib.singleton {
@@ -176,8 +192,8 @@ in {
             result = lib.removePrefix "/" withoutStatedir;
           in if result == "" then "/" else result;
           value = {
-            owner = lib.mkOverride 200 (mkUnique name);
-            group = lib.mkOverride 200 (mkUnique ucfg.group);
+            owner = lib.mkOverride 200 (mkUniqueUser name);
+            group = lib.mkOverride 200 (mkUniqueGroup ucfg.group);
             create = lib.mkOverride 200 ucfg.createHome;
             inherit instance;
           };
@@ -198,19 +214,19 @@ in {
         });
 
         users.users = lib.mapAttrs' (name: ucfg: {
-          name = mkUnique name;
+          name = mkUniqueUser name;
           value = lib.mkOverride 200 ({
-            name = mkUnique name;
-            group = mkUnique ucfg.group;
+            name = mkUniqueUser name;
+            group = mkUniqueGroup ucfg.group;
             createHome = if instanceUsers ? ${name} then false
                          else ucfg.createHome;
           } // removeAttrs ucfg [ "name" "group" "createHome" ]);
         }) config.users;
 
         users.groups = lib.mapAttrs' (name: gcfg: {
-          name = mkUnique name;
+          name = mkUniqueGroup name;
           value = lib.mkOverride 200 ({
-            name = mkUnique name;
+            name = mkUniqueGroup name;
           } // removeAttrs gcfg [ "name" ]);
         }) config.groups;
 
@@ -230,9 +246,9 @@ in {
               serviceConfig = let
                 sc = defs.serviceConfig;
               in sc // lib.optionalAttrs (sc ? User) {
-                User = mkUnique sc.User;
+                User = mkUniqueUser sc.User;
               } // lib.optionalAttrs (sc ? Group) {
-                Group = mkUnique sc.Group;
+                Group = mkUniqueGroup sc.Group;
               };
             } // mkInstanceDependencies (addInstanceInit defs);
           }) config.systemd.${name};

@@ -1,12 +1,10 @@
 {
-  name = "mediawiki";
+  name = "static-darkhttpd";
 
-  machine.imports = [ ../../../../tests/common/eatmydata.nix ];
   machine.nixcloud.reverse-proxy.enable = true;
   machine.nixcloud.reverse-proxy.extendEtcHosts = true;
-  machine.nixcloud.webservices.mediawiki = {
+  machine.nixcloud.webservices.static-darkhttpd = {
     foo.enable = true;
-    foo.defaultDatabaseType = "postgresql";
     foo.proxyOptions.TLS = "none";
     foo.proxyOptions.domain = "example.com";
     foo.proxyOptions.http.mode = "on";
@@ -14,7 +12,6 @@
     foo.proxyOptions.port = 8080;
 
     bar.enable = true;
-    bar.defaultDatabaseType = "mysql";
     bar.proxyOptions.TLS = "none";
     bar.proxyOptions.domain = "example.org";
     bar.proxyOptions.http.mode = "on";
@@ -22,12 +19,12 @@
     bar.proxyOptions.port = 8081;
   };
 
-  testScript = let
-    searchFor = "<title>Main Page - MediaWiki</title>";
-  in ''
+  testScript = ''
     $machine->waitForUnit('multi-user.target');
     $machine->waitForOpenPort(80);
-    $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');
-    $machine->succeed('curl -L http://example.org/ | grep -qF "${searchFor}"');
+    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-darkhttpd-foo/index.html');
+    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-darkhttpd-bar/index.html');
+    $machine->succeed('test "$(curl -L http://example.com/index.html)" = works');
+    $machine->succeed('test "$(curl -L http://example.org/index.html)" = works');
   '';
 }
