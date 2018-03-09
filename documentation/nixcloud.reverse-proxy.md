@@ -1,10 +1,16 @@
 # nixcloud.reverse-proxy
 
-The `nixcloud.reverse-proxy` acts as an intermediary to allow multiple webservices to run from the same IP address(es) using the same port (80/443), and mapping these to domain names. `nixcloud.reverse-proxy` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices).
+The `nixcloud.reverse-proxy` acts as an intermediary to allow multiple webservices to run from the same IP address(es) using the same port (80/443), and mapping these to domain names. `nixcloud.reverse-proxy` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and is based on https://www.nginx.com/.
 
 `nixcloud.reverse-proxy` fully implements `security.acme` certificate handling and transparently handles TLS contexts for the inner webservices. Note: ACME based domains handled by `nixcloud.reverse-proxy` will have a '_ncws' suffix and domains from `nixcloud.email` will have a '_email' suffix in their respective `security.acme.certs.<name>`.
 
 See also [../README.md](../README.md).
+
+# Options search (API documentation)
+
+Most documentation should be generated from the source code of the reverse-proxy module, see: 
+
+  * https://nixdoc.io/nixcloud-webservices/index.html
 
 # Usage
 
@@ -152,12 +158,6 @@ The `leaps` webservice sets the websocket binding from the service itself:
     };
     
 See [implementation](../modules/web/services/leaps/default.nix).
-
-# Source code documentation
-
-Most documentation should be generated from the source code of the reverse-proxy module, see: 
-
-  * https://nixdoc.io/nixcloud-webservices/index.html
 
 # Tests
 
