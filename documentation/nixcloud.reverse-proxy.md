@@ -82,11 +82,9 @@ The code below will create a mapping: when you visit http(s)://example.com it wi
             mode = "on";
             basicAuth."joachim" = "foo";
             record = ''
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_pass http://127.0.0.1:8081/;
+              rewrite ^(.*)$ https://example.org permanent;
+              add_header Strict-Transport-Security max-age=63646566;
+              add_header Content-Security-Policy "default-src 'none';";
             '';
           };
         }
