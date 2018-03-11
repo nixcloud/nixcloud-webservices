@@ -8,6 +8,14 @@ See also [../README.md](../README.md).
 
 # Using nixcloud-webservices
 
+You basically have 3 options:
+
+* [Using presets](nixcloud.webservices.md/#Using-presets)
+* [Static file serving](nixcloud.webservices.md/#Static-file-serving)
+* [Extending nixcloud-webservices](nixcloud.webservices.md/#Extending-nixcloud-webservices)
+
+# Using presets
+
 1. nixcloud.webservices.mediawiki
 
     Add this code to your `/etc/nixos/configuration.nix` file:
@@ -58,9 +66,9 @@ See also [../README.md](../README.md).
 
             journalctl -u mediawiki-test1-apache
 
-# Static file serving (no CGI)
+# Static file serving
 
-If you need static file serving there are two backends available:
+When you do not need CGI support as php then these services might be for you. They are optimized for serving files and there are two implementations available:
 
 * [static-darkhttpd](../modules/web/services/static-darkhttpd/default.nix)
 * [static-nginx](../modules/web/services/static-nginx/default.nix)
