@@ -46,8 +46,7 @@ Thanks to the support of nlnet.nl!
 # Limitations
 
 * No support for shell users, only virtualUsers. This is by intention to reduce complexity in the backend.
-* No support for storing virtualUsers in a database or anything dynamically updatable (but we started to work on this)
-* No simple webmail support (but we started to work on this)
+* Using `nixcloud.email.enableACME = true;` will not work with `services.nginx` out of the box as it requires `nixcloud.reverse-proxy`.
 
 # Configuration
 
