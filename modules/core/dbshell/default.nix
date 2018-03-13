@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, mapWebServiceConfigToList, ... }:
 
 let
   toPython = value: let
@@ -15,12 +15,6 @@ let
      else if lib.isInt value then toString value
      else if lib.isList value then mkTuple value
      else throw "Can't convert '${value}' into a Python value.";
-
-  # XXX: Duplicate of modules/web/default.nix
-  mapWebServiceConfigToList = fun: let
-    inherit (config.nixcloud) webservices;
-    getConfig = lib.mapAttrsToList (lib.const fun);
-  in lib.concatLists (lib.mapAttrsToList (lib.const getConfig) webservices);
 
   dbshellConfig = lib.listToAttrs (mapWebServiceConfigToList (cfg: {
     name = cfg.uniqueName;

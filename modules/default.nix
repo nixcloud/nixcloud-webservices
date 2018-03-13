@@ -13,6 +13,7 @@
     core/packages.nix
     core/hashed-modules.nix
     core/testing.nix
+    core/utils.nix
     services/reverse-proxy
     services/email/opendkim.nix
     services/email/postfix.nix
