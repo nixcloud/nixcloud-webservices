@@ -10,9 +10,9 @@ See also [../README.md](../README.md).
 
 You basically have 3 options:
 
-* [Using presets](nixcloud.webservices.md/#Using-presets)
-* [Static file serving](nixcloud.webservices.md/#Static-file-serving)
-* [Extending nixcloud-webservices](nixcloud.webservices.md/#Extending-nixcloud-webservices)
+* [Using presets](nixcloud.webservices.md#using-presets)
+* [Static file serving](nixcloud.webservices.md#static-file-serving)
+* [Extending nixcloud-webservices](nixcloud.webservices.md#extending-nixcloud-webservices)
 
 # Using presets
 
