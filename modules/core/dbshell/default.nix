@@ -16,7 +16,7 @@ let
      else if lib.isList value then mkTuple value
      else throw "Can't convert '${value}' into a Python value.";
 
-  dbshellConfig = lib.listToAttrs (mapWebServiceConfigToList (cfg: {
+  dbshellConfig = mapWebServiceConfigToList (cfg: lib.optional cfg.enable {
     name = cfg.uniqueName;
     value = lib.mapAttrs' (lib.const (dbcfg: {
       inherit (dbcfg) name;
@@ -33,11 +33,11 @@ let
         '');
       };
     })) cfg.database;
-  }));
+  });
 
   wrapper = pkgs.runCommand "nixcloud-dbshell" {
     sourceFile = ./dbshell.py;
-    dbshellConfig = toPython dbshellConfig;
+    dbshellConfig = toPython (lib.listToAttrs (lib.concatLists dbshellConfig));
     inherit (pkgs.python3Packages.python) interpreter;
   } ''
     mkdir -p "$out/bin"
