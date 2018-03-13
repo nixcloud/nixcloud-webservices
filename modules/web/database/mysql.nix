@@ -120,6 +120,13 @@ in {
 
     groups.mysql = {};
 
+    dbShellCommand.mysql = ''
+      exec ${lib.escapeShellArg "${package}/bin/mysql"} \
+        --user="$1" \
+        --socket=${lib.escapeShellArg configuration.socket} \
+        "$2"
+    '';
+
     directories.mysql = {
       instance.before = [ "mysql-initdb.service" ];
       permissions.defaultDirectoryMode = "0711";

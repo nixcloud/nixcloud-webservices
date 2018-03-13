@@ -101,6 +101,11 @@ in {
 
     groups.postgres = {};
 
+    dbShellCommand.postgresql = ''
+      export PGHOST=${lib.escapeShellArg config.runtimeDir}
+      exec ${lib.escapeShellArg "${package}/bin/psql"} "$2"
+    '';
+
     directories."postgresql/${psqlSchema}" = {
       instance.before = [ "postgresql-initdb.service" ];
       permissions.defaultDirectoryMode = "0711";

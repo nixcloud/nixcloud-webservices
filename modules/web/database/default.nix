@@ -95,6 +95,23 @@ in {
     '';
   };
 
+  options.dbShellCommand = mkOption {
+    type = types.attrsOf types.str;
+    example = {
+      mysql = "exec mysql --user=\"$1\" --socket=/tmp/.mysql.sock \"$2\"";
+    };
+    internal = true;
+    description = ''
+      The attribute name is the specific database module and the attribute
+      value is a shell script snippet which should connect to a database
+      specified by its first argument using the user specified by the second
+      argument.
+
+      This option is only needed if you want to create your own database
+      module.
+    '';
+  };
+
   options.defaultDatabaseType = mkOption {
     type = types.enum dbTypes;
     default = "postgresql";

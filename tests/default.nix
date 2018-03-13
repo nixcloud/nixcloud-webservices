@@ -4,6 +4,7 @@ let
   callTest = import ../lib/call-test.nix { inherit system pkgs; };
 in {
   custom-webservice = callTest ./custom-webservice.nix;
+  dbshell = callTest ./dbshell.nix;
   directories = callTest ./directories.nix;
   user-allocation-uid-gid-test = callTest ./user-allocation-uid-gid-test.nix;
   username-hashing = callTest ./username-hashing.nix;

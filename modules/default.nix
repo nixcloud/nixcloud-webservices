@@ -8,6 +8,7 @@
   ];
 
   imports = [
+    core/dbshell
     core/directories
     core/packages.nix
     core/hashed-modules.nix
