@@ -195,9 +195,50 @@ try:
 
   Note: We spawn a custom database per webservice by default and `nixcloud.webservices.mediawiki` contains an test which is also an example how to use both mysql and postgresql in one webservice and how to make it a user choice which one to use.
 
-  * FIXME: give usage example from ./modules/web/services/mediawiki/default.nix on how to access either
+  Within the web service configuration, there is a `database` option, which makes it easy to define databases in a declarative way, for example:
 
-  * FIXME: how to access the database from command line for dumps or manual SQL queries
+  ```nix
+  {
+    database.example.type = "mysql";
+    database.example.user = "foo";
+    database.example.postCreate = ''
+      echo 'CREATE TABLE foo (bar INT)' | sqlsh
+    '';
+  }
+  ```
+
+   * The first option specifies the type of the database, in this case `mysql`. If the type is not defined, the value specified in `defaultDatabaseType` is used, which makes it easier for users to specify the database type without the need to know the actual database names.
+
+     For example, let's say the top level configuration looks similar to this:
+
+     ```nix
+     {
+       nixcloud.webservices.mediawiki.foo.defaultDatabaseType = "postgresql";
+     }
+     ```
+
+     All databases which do not specify an explicit type within its web service module implementation will now use PostgreSQL as their database management system.
+   * The second option is the user, which corresponds to a real UNIX user that is allowed to access the database.
+   * Lastly, there is a `postCreate` option, which allows to provide a shell script that is executed directly after creating the database. This script has access to a special `sqlsh` command, which reads SQL commands to be executed within the the current database.
+
+  All databases are accessed using UNIX sockets only, so there is no connection overhead and it's also more secure because no passwords are involved.
+
+  For maintenance however, this makes it harder to establish a connection to the database, so there is a helper utility called `nixcloud-dbshell`, which makes it more convenient.
+
+  Let's say there is a web service with the unique name `foo-bar`, which has a database called `example`. The following command can be used to connect to the database:
+
+  ```sh-session
+  $ nixcloud-dbshell foo-bar example
+  ```
+
+  Alternatively the following also works:
+
+  ```sh-session
+  $ cd /var/lib/nixcloud/webservices/foo-bar
+  $ nixcloud-dbshell example
+  ```
+
+  Here the helper utility automatically figures out the right unique name based on the current working directory.
 
   * FIXME: add example how to add a new database backend
 
