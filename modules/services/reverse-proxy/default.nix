@@ -117,7 +117,7 @@ in
     allHttpOnlyProxyOptions = filter (el: (el.http.mode != "off") || (checkWebsockets el.websockets "http") ) allProxyOptions;
     allHttpNCDomains = unique (map (el: el.domain) allHttpOnlyProxyOptions);
 
-    ACMEImpliedDomains = unique (mapAttrsToList (name: value: value.domain) config.security.acme.certs);
+    ACMEImpliedDomains = unique (mapAttrsToList (name: value: if (value.domain != null) then value.domain else name) config.security.acme.certs);
     ACMEImpliedDomains_ = unique (mapAttrsToList (name: value: 
       { name = if (value.domain != null) then value.domain else name; value = value.webroot; }) config.security.acme.certs);
   
