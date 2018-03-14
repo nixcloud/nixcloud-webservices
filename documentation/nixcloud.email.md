@@ -46,13 +46,13 @@ Thanks to the support of nlnet.nl!
 # Limitations
 
 * No support for shell users, only virtualUsers. This is by intention to reduce complexity in the backend.
-* Using `nixcloud.email.enableACME = true;` will not work with `services.nginx` out of the box as it requires `nixcloud.reverse-proxy`.
+* Using `nixcloud.email.enableACME = true;` will not work with `services.nginx` out of the box, [see this](nixcloud.reverse-proxy.md#extramappings-examples).
 
 # Configuration
 
 See also [../README.md](../README.md).
 
-<!-- See https://nixdoc.io/nixcloud-webservices/index.html#nixcloud -->
+See https://nixdoc.io/nixcloud-webservices#nixcloud
 
 ## Basic example
 
