@@ -339,6 +339,27 @@ See [mediawiki](../modules/web/services/mediawiki/default.nix) where we generate
 
 Since we embrace FLOSS at nixcloud we've added a meta record to each webservice and enforce the license attribute and maintainer to be set.
 
+## Let's encrypt (TLS)
+
+Using `nixcloud.webservices` or `nixcloud.email` has implications on the way TLS is terminated. 
+
+* Traditionally one would have a single webserver which handles TLS and one would decide between a backend like [apache](https://nixos.org/nixos/options.html#services.httpd) or [nginx](https://nixos.org/nixos/options.html#services.nginx). This webserver would then run on port 80 http / 443 https. It is complicated to scale this setup and the best approach was to use the `virtualhosts` pattern which would use the `fork syscall`.
+
+* A interesting approach is [tlspool](https://github.com/arpa2/tlspool) so this single service would terminate TLS connections and hand them over to the webserver (443), email server (993) or whatever service (arbitrary port) is able to talk TLS. Here TLS certificates would only be visible to the tlspool daemon.
+
+* Finally our `nixcloud-webservices` is a tradeoff between these two worlds as we favour **Let's encrypt's ACME** which is implemented in [security.acme](https://nixos.org/nixos/options.html#security.acme). In this setup the deployment of TLS certificates is automated using `nixcloud.reverse-proxy` and services using TLS certificats are reloaded/restarted automatically when new certificates were deployed.
+
+    `security.acme` requires a webserver on port 80 and there are currently two implementations for this:
+    
+        * services.nginx
+        * nixcloud.reverse-proxy
+        
+    `nixcloud.reverse-proxy` has full `security.acme` backend support when ran on port 80. We can't allow `services.nginx` to run on port 80 instead, as this would force all webservices to be implemented in `services.nginx`. But one can run `services.nginx` on a different port as 8080 and connect it to the `nixcloud.reverse-proxy` using a `nixcloud.reverse-proxy.extraMappings` entry.
+    
+    
+    
+    
+
 # API stability
 
 WARNING: The nixcloud.reverse-proxy's `proxyOptions` API and `nixcloud.webservices` related API is not stable yet. This means that futher updates break your services. This is caused by the fact that
