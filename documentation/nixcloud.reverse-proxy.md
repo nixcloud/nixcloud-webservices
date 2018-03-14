@@ -2,9 +2,12 @@
 
 The `nixcloud.reverse-proxy` acts as an intermediary to allow multiple webservices to run from the same IP address(es) using the same port (80/443), and mapping these to domain names. `nixcloud.reverse-proxy` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and is based on https://www.nginx.com/.
 
-`nixcloud.reverse-proxy` fully implements `security.acme` certificate handling and transparently handles TLS contexts for the inner webservices. Note: ACME based domains handled by `nixcloud.reverse-proxy` will have a '_ncws' suffix and domains from `nixcloud.email` will have a '_email' suffix in their respective `security.acme.certs.<name>`.
-
 ![nixcloud.webservices layout](nixcloud-webservices.svg.png)
+
+`nixcloud.reverse-proxy` fully implements `security.acme` certificate handling and transparently handles TLS contexts for the inner webservices. 
+
+* ACME based domains handled by `nixcloud.reverse-proxy` will have a '_ncws' suffix and 
+* ACME based domains from `nixcloud.email` will have a '_email' suffix in their respective `security.acme.certs.<name>`.
 
 See also [../README.md](../README.md).
 
