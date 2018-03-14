@@ -4,10 +4,13 @@ The `nixcloud.reverse-proxy` acts as an intermediary to allow multiple webservic
 
 ![nixcloud.webservices layout](nixcloud-webservices.svg.png)
 
-`nixcloud.reverse-proxy` fully implements `security.acme` certificate handling and transparently handles TLS contexts for the inner webservices. 
+`nixcloud.reverse-proxy` fully implements `security.acme` certificate handling and transparently handles TLS contexts for the inner webservices. ACME based domains handled by:
 
-* ACME based domains handled by `nixcloud.reverse-proxy` will have a '_ncws' suffix and 
-* ACME based domains from `nixcloud.email` will have a '_email' suffix in their respective `security.acme.certs.<name>`.
+* `nixcloud.webservices` will have a '_ncws' suffix
+* `nixcloud.email` will have a '_email' suffix
+* additional certificates found in `security.acme.certs`, which were not induced by the former two services, will also be handled by `nixcloud.reverse-proxy`
+
+The suffixes are set for `security.acme.certs.<name>` but the domains might be the same. This is required because of https://github.com/NixOS/nixpkgs/issues/34422
 
 See also [../README.md](../README.md).
 
