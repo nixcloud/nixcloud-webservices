@@ -68,6 +68,27 @@ The code below has a few properties:
             }
           ];
         };
+        
+        services.nginx = {
+          enable = true;
+          virtualHosts.nixcloud-backend = {
+            default = true;
+            listen = [ { addr = "127.0.0.1"; port = 8081; } ];
+            serverName = "example.com";
+            enableACME = false;
+            forceSSL = false;
+            locations = {
+              "/" = {
+                root = /www;
+                extraConfig = ''
+                  try_files $uri $uri/ /index.html;
+                '';
+              };
+            };
+          };
+        };
+
+        
 
 ### Example 2: URL rewriting
 
@@ -99,7 +120,7 @@ The code below will create a mapping: when you visit http(s)://example.com it wi
       ];
     };
 
-### Example 3: Exposing Websocket(s) only
+### Example 3: Exposing only websocket(s)
 
 This example disables all http/https mappings but adds two websocket mappings:
 
