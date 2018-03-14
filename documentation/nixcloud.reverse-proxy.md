@@ -72,25 +72,53 @@ The code below has a few properties:
           ];
         };
         
-        services.nginx = {
-          enable = true;
-          virtualHosts.nixcloud-backend = {
-            default = true;
-            listen = [ { addr = "127.0.0.1"; port = 8081; } ];
-            serverName = "example.com";
-            enableACME = false;
-            forceSSL = false;
-            locations = {
-              "/" = {
-                root = /www;
-                extraConfig = ''
-                  try_files $uri $uri/ /index.html;
-                '';
+    * nginx example
+        
+          services.nginx = {
+            enable = true;
+            virtualHosts.nixcloud-backend = {
+              default = true;
+              listen = [ { addr = "127.0.0.1"; port = 8081; } ];
+              serverName = "example.com";
+              enableACME = false;
+              forceSSL = false;
+              locations = {
+                "/" = {
+                  root = /www;
+                  extraConfig = ''
+                    try_files $uri $uri/ /index.html;
+                  '';
+                };
               };
             };
           };
-        };
 
+    * httpd example
+
+
+          services.httpd = {
+            enable = true;
+            adminAddr = "js@lastlog.de";
+            listen = [{port = 8081;}];
+            virtualHosts =
+            [
+              {
+                hostName = "nixdoc.io";
+                serverAliases = [ "nixdoc.io" ];
+                enableSSL = false;
+                listen = [{port = 8081;}];
+                documentRoot = "/www";
+
+                extraConfig = ''
+                  <Directory /www>
+                          Options Indexes FollowSymLinks
+                          AllowOverride None
+                          Require all granted
+                  </Directory>
+                '';
+              }
+            ];
+          };
         
 
 ### Example 2: URL rewriting
