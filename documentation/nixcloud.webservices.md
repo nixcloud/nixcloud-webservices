@@ -2,11 +2,9 @@
 
 ![nixcloud.webservices](https://github.com/nixcloud/nixcloud-webservices/blob/master/documentation/logo/nixcloud.webservices.png)
 
-`nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of traditional webservices as wordpress, owncloud, [mediawiki](../modules/web/services/mediawiki/default.nix) or [leaps](../modules/web/services/leaps/default.nix) which is implemented in GO and comes with its own webserver implementation.
+`nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of traditional webservices as wordpress, owncloud, [mediawiki](../modules/web/services/mediawiki/default.nix) or [leaps](../modules/web/services/leaps/default.nix) (leaps is implemented in GO and comes with its own webserver implementation).
 
 See also [../README.md](../README.md).
-
-![nixcloud.webservices layout](nixcloud-webservices.svg.png)
 
 # Using nixcloud-webservices
 
@@ -15,6 +13,8 @@ You basically have 3 options:
 * [Using presets](nixcloud.webservices.md#using-presets)
 * [Static file serving](nixcloud.webservices.md#static-file-serving)
 * [Extending nixcloud-webservices](nixcloud.webservices.md#extending-nixcloud-webservices)
+
+![nixcloud.webservices layout](nixcloud-webservices.svg.png)
 
 # Using presets
 
