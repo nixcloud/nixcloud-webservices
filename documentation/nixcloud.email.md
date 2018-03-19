@@ -1,7 +1,7 @@
 
 ![nixcloud.email](https://github.com/nixcloud/nixcloud-webservices/blob/master/documentation/logo/nixcloud.email.png)
 
-`nixcloud.email` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on easily operating a mailserver or a mail relay server.
+`nixcloud.email` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on easily **operating a mailserver** or a **mail relay server**.
 
 # Features:
 
