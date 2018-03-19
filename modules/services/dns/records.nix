@@ -3,10 +3,16 @@
 let
   inherit (lib) mkOption types;
 
+  domainType = (import ./lib { inherit lib; }).types.domain;
+
+  # This coerces a single type to a singleton list, so that we can either write
+  # T or [ T ] and they both boil down to a list of Ts.
+  oneOrMore = t: types.coercedTo t lib.singleton (types.listOf t);
+
   recordTypeOptions = {
     SOA = {
       mname = mkOption {
-        type = types.str;
+        type = domainType;
         default = "ns";
         example = "ns.example.org";
         description = ''
@@ -16,7 +22,7 @@ let
       };
 
       rname = mkOption {
-        type = types.str;
+        type = domainType;
         default = "dnsadmin";
         example = "admin.example.org";
         description = ''
@@ -78,7 +84,7 @@ let
     };
 
     NS = mkOption {
-      type = types.listOf types.str;
+      type = oneOrMore domainType;
       example = [ "ns1.example.com" "ns2.example.com" ];
       description = ''
         List of NS resource records for this zone.
@@ -86,7 +92,7 @@ let
     };
 
     CNAME = mkOption {
-      type = types.listOf types.str;
+      type = domainType;
       example = "foo";
       description = ''
         XXX
@@ -111,7 +117,7 @@ let
 
     A = mkOption {
       # XXX: Validate IPv4 address
-      type = types.listOf types.str;
+      type = oneOrMore types.str;
       example = {
         www = [ "1.2.3.4" "1.2.3.5" ];
         mail = [ "5.6.7.8" ];
@@ -126,7 +132,7 @@ let
 
     AAAA = mkOption {
       # XXX: Validate IPv6 address
-      type = types.listOf types.str;
+      type = oneOrMore types.str;
       example = {
         www = [ "dead::1" "dead::2" ];
         mail = [ "dead::3" ];
