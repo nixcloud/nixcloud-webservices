@@ -5,10 +5,10 @@ let
 
   # This one is special, because we need to use this for generation of the
   # documentation on the zones option.
-  recordsType = types.submodule {
+  recordsType = domain: types.submodule {
     imports = [ ./records.nix ];
     options = { inherit (options) assertions; };
-    config._module.args.domainName = "xxx"; # TODO!
+    config._module.args = { inherit domain; };
   };
 
   # The maximum domain name length is 255 and every label is encoded by
@@ -61,7 +61,7 @@ let
   # In the tree above we have "com", which is not a zone neither is it a
   # resource name. We also have "example.com", which then descents down to
   # "xxx" and "bar" the same way as the root (defaulting to isZone = false).
-  zoneOptions = nestLevel: {
+  zoneOptions = nestLevel: domain: {
     isZone = lib.mkOption {
       type = types.bool;
       internal = true;
@@ -69,21 +69,21 @@ let
     };
 
     records = lib.mkOption {
-      type = recordsType;
+      type = recordsType domain;
       internal = true;
       default = {};
       description = "Records for this zone.";
     };
   } // lib.optionalAttrs (nestLevel <= maxNodes) {
     subZones = lib.mkOption {
-      type = types.attrsOf (zoneType (nestLevel + 1));
+      type = types.attrsOf (zoneType (nestLevel + 1) domain);
       internal = true;
       default = {};
       description = "Subzones or simple resource records.";
     };
   };
 
-  zoneType = nestLevel: let
+  zoneType = nestLevel: domain: let
     # This is needed because we can't just use types.addCheck on submodules
     # because the submodule type has a self-reference in substSubModules which
     # doesn't get the additional check function.
@@ -93,7 +93,11 @@ let
 
     # The actual submodule representing a potential zone.
     submod = submoduleTypeWithCheck isZoneSubmodule ({ name, options, ... }: {
-      options = zoneOptions nestLevel;
+      options = let
+        # Append label to domain in reverse so it's consistent with our domain
+        # type.
+        newDomain = lib.singleton name ++ domain;
+      in zoneOptions nestLevel (if nestLevel == 0 then domain else newDomain);
 
       # Only if there is a SOA record, we do have a real zone, otherwise this
       # is just an ordinary resource record name.
@@ -103,7 +107,7 @@ let
     # Used for the coercion to determine whether this is actually the submodule
     # or just a plain attribute set of DNS labels.
     isZoneSubmodule = attrs: let
-      hasOpts = builtins.intersectAttrs attrs (zoneOptions nestLevel) != {};
+      hasOpts = builtins.intersectAttrs attrs (zoneOptions nestLevel []) != {};
     in attrs == {} || hasOpts;
 
     # Coerces an attribute set to a submodule for the current zone so that we
@@ -134,7 +138,7 @@ let
       description = "nested attribute set of DNS nodes";
       # Make sure we hide the internal options and provide only the record type
       # options, so that we get nice documentation.
-      getSubOptions = prefix: recordsType.getSubOptions (prefix ++ [
+      getSubOptions = prefix: (recordsType domain).getSubOptions (prefix ++ [
         "<label1>" "<label2>" "<labelN>"
       ]);
     };
@@ -145,7 +149,7 @@ let
 
 in {
   options.nixcloud.dns.zones = lib.mkOption {
-    type = zoneType 0;
+    type = zoneType 0 [];
     default = {};
     example = lib.literalExample (builtins.readFile ./example.nix);
     description = ''

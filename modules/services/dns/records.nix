@@ -1,8 +1,9 @@
-{ name, domainName, lib, options, ... }:
+{ name, domain, lib, options, ... }:
 
 let
   inherit (lib) mkOption types;
 
+  domainName = lib.concatStringsSep "." domain;
   domainType = (import ./lib { inherit lib; }).types.domain;
 
   # This coerces a single type to a singleton list, so that we can either write
