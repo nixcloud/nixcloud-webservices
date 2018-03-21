@@ -93,28 +93,56 @@ in rec {
     ${resultAttr} = fqdn;
   };
 
-  types.domain = lib.mkOptionType {
-    name = "domain";
-    description = "absolute or relative domain name";
-    check = s: convertDomain s != {};
-    merge = loc: defs: let
-      value = lib.mergeOneOption loc defs;
-      converted = convertDomain value;
-      err = "Invalid domain '${value}' specified in '${lib.showOption loc}'.";
-    in if converted == {} then throw err else converted;
-  };
+  types = {
+    domain = lib.mkOptionType {
+      name = "domain";
+      description = "absolute or relative domain name";
+      check = s: convertDomain s != {};
+      merge = loc: defs: let
+        value = lib.mergeOneOption loc defs;
+        converted = convertDomain value;
+        err = "Invalid domain '${value}' specified in "
+            + "'${lib.showOption loc}'.";
+      in if converted == {} then throw err else converted;
+    };
 
-  types.ipv4Address = lib.mkOptionType {
-    name = "ipv4Address";
-    description = "IPv4 address";
-    check = addr: lib.isString addr && builtins.match v4Re addr != null;
-    merge = lib.mergeOneOption;
-  };
+    ipv4Address = lib.mkOptionType {
+      name = "ipv4Address";
+      description = "IPv4 address";
+      check = addr: lib.isString addr && builtins.match v4Re addr != null;
+      merge = lib.mergeOneOption;
+    };
 
-  types.ipv6Address = lib.mkOptionType {
-    name = "ipv6Address";
-    description = "IPv6 address";
-    check = addr: lib.isString addr && checkIPv6 addr;
-    merge = lib.mergeOneOption;
+    ipv6Address = lib.mkOptionType {
+      name = "ipv6Address";
+      description = "IPv6 address";
+      check = addr: lib.isString addr && checkIPv6 addr;
+      merge = lib.mergeOneOption;
+    };
+
+    # This coerces a single type to a singleton list, so that we can either
+    # write T or [ T ] and they both boil down to a list of Ts.
+    oneOrMore = t: lib.types.coercedTo t lib.singleton (lib.types.listOf t);
+
+    # This is used for generation of zone information for different DNS server
+    # types and represents a RDATA value as a list.
+    #
+    # So the values are either plain strings or an attribute set with only one
+    # key, those being:
+    #
+    #  relative: A relative domain
+    #  absolute: An absolute domain
+    #  autoSerial: Signal that the serial value should be automatically
+    #              determined by either the name server or by the zone
+    #              generator.
+    #
+    recordData = let
+      rdataCheck = attrs: let
+        names = lib.attrNames attrs;
+        isDomain = names == [ "absolute" ] || names == [ "relative" ];
+        isSerial = names == [ "autoSerial" ] && attrs.autoSerial == true;
+      in isSerial || isDomain;
+      rdataType = lib.types.addCheck lib.types.attrs rdataCheck;
+    in lib.types.listOf (lib.types.either rdataType lib.types.str);
   };
 }

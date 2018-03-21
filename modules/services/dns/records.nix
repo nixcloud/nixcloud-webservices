@@ -3,125 +3,79 @@
 let
   inherit (lib) mkOption types;
   dnsLib = import ./lib { inherit lib; };
+  inherit (import ./base-record.nix { inherit lib; }) mkRecord mkRecordModule;
 
   domainName = lib.concatStringsSep "." domain;
 
-  # This coerces a single type to a singleton list, so that we can either write
-  # T or [ T ] and they both boil down to a list of Ts.
-  oneOrMore = t: types.coercedTo t lib.singleton (types.listOf t);
-
   recordTypeOptions = {
-    SOA = {
-      mname = mkOption {
-        type = dnsLib.types.domain;
-        default = "ns";
-        example = "ns.example.org";
-        description = ''
-          The domain name of the name server that was the original or primary
-          source of data for this zone.
-        '';
+    SOA = mkRecordModule ./records/soa.nix {
+      recordType = "SOA";
+      singleton = true;
+      example = {
+        mname = "ns1.example.com";
+        rname = "admin.example.com";
+        serial = "2018032001";
+        refresh = 86400;
+        retry = 7200;
+        expire = 604800;
+        minimum = 300;
       };
-
-      rname = mkOption {
-        type = dnsLib.types.domain;
-        default = "dnsadmin";
-        example = "admin.example.org";
-        description = ''
-          A domain name which specifies the mailbox of the person responsible
-          for this zone.
-        '';
-      };
-
-      serial = mkOption {
-        type = types.nullOr types.int;
-        default = 0;
-        example = 19700101;
-        description = ''
-          The unsigned 32 bit version number of the original copy of the zone.
-          Zone transfers preserve this value. This value wraps and will be
-          compared using sequence space arithmetic.
-
-          <note><para>The value <literal>null</literal> results in using the
-          current Unix timestamp during build time, so be sure to take this
-          into account, especially when multiple DNS servers are to be
-          deployed.</para></note>
-        '';
-      };
-
-      refresh = mkOption {
-        type = types.int;
-        default = 28800;
-        description = ''
-          A 32 bit time interval before the zone should be refreshed.
-        '';
-      };
-
-      retry = mkOption {
-        type = types.int;
-        default = 7200;
-        description = ''
-          A 32 bit time interval that should elapse before a failed refresh
-          should be retried.
-        '';
-      };
-
-      expire = mkOption {
-        type = types.int;
-        default = 604800;
-        description = ''
-          A 32 bit time value that specifies the upper limit on the time
-          interval that can elapse before the zone is no longer authoritative.
-        '';
-      };
-
-      minimum = mkOption {
-        type = types.int;
-        default = 86400;
-        description = ''
-          The unsigned 32 bit minimum TTL field that should be
-          exported with any RR from this zone.
-        '';
-      };
+      description = ''
+        The Start of Authority resource record, which designates that the name
+        server is authoriative for this zone. This also marks whether a
+        particular domain is a zone or just a resource record within a zone.
+      '';
     };
 
-    NS = mkOption {
-      type = oneOrMore dnsLib.types.domain;
+    NS = mkRecord {
+      type = dnsLib.types.oneOrMore dnsLib.types.domain;
+      recordType = "NS";
       example = [ "ns1.example.com" "ns2.example.com" ];
       description = ''
-        List of NS resource records for this zone.
+        List of authoriative name servers for this domain.
+
+        If the value is a list, more than one name servers can be specified and
+        the record is resolved in a round-robin way.
       '';
     };
 
-    CNAME = mkOption {
+    CNAME = mkRecord {
       type = dnsLib.types.domain;
+      recordType = "CNAME";
       example = "foo";
+      description = "An alias of this domain.";
+    };
+
+    # FIXME: This one is a bit more complicated, because we have basically an
+    # attribute set of flags in addition to an issuer critical flag.
+    CAA = mkRecord {
+      type = types.attrsOf types.str;
+      recordType = "CAA";
+      example.issue.domain = "ca.example.org";
       description = ''
-        XXX
+        Certification Authority Authorization, which indicates to certificate
+        authorities whether they are authorized to issue certificates for this
+        domain name.
       '';
     };
 
-    CAA = mkOption {
-      type = types.unspecified;
-      example = "foo";
-      description = ''
-        XXX
-      '';
-    };
-
-    SSHFP = mkOption {
-      type = types.unspecified;
-      example = "foo";
-      description = ''
-        XXX
-      '';
-    };
-
-    A = mkOption {
-      type = oneOrMore dnsLib.types.ipv4Address;
+    SSHFP = mkRecordModule ./records/sshfp.nix {
+      recordType = "SSHFP";
       example = {
-        www = [ "1.2.3.4" "1.2.3.5" ];
-        mail = [ "5.6.7.8" ];
+        algorithm = "ed25519";
+        hashType = "sha256";
+        fingerprint = "8Ohy8G7tDQmm4AponxBklkT+BCBnDFkBNFySkxuKz0w";
       };
+      description = ''
+        A Secure Shell fingerprint record which identifies SSH keys that are
+        associated with the current host name.
+      '';
+    };
+
+    A = mkRecord {
+      type = dnsLib.types.oneOrMore dnsLib.types.ipv4Address;
+      recordType = "A";
+      example = [ "1.2.3.4" "5.6.7.8" ];
       description = ''
         Maps a domain name to an IPv4 address.
 
@@ -130,12 +84,10 @@ let
       '';
     };
 
-    AAAA = mkOption {
-      type = oneOrMore dnsLib.types.ipv6Address;
-      example = {
-        www = [ "dead::1" "dead::2" ];
-        mail = [ "dead::3" ];
-      };
+    AAAA = mkRecord {
+      type = dnsLib.types.oneOrMore dnsLib.types.ipv6Address;
+      recordType = "AAAA";
+      example = [ "dead::1" "dead::2" ];
       description = ''
         Maps a domain name to an IPv6 address.
 
@@ -144,40 +96,29 @@ let
       '';
     };
 
-    MX = mkOption {
-      type = types.attrsOf types.unspecified;
+    MX = mkRecordModule ./records/mx.nix {
+      recordType = "MX";
       example = {
-        "mail1" = 10;
-        "mail2" = 20;
+        preference = 10;
+        exchange = "mail";
       };
-      description = "TODO";
+      description = ''
+        Specifies a mail server responsible for accepting email messages on
+        behalf of a recipient's domain.
+      '';
     };
 
-    SRV = mkOption {
-      type = types.attrsOf types.unspecified;
+    SRV = mkRecordModule ./records/srv.nix {
+      recordType = "SRV";
       example = {
-        "_jabber._tcp" = {
-          prio = 10;
-          weight = 0;
-          port = 5269;
-          dest = "legacy-xmpp.example.org.";
-        };
-
-        "_xmpp-client._tcp" = {
-          prio = 10;
-          weight = 0;
-          port = 5222;
-          dest = "xmpp";
-        };
-
-        "_xmpp-server._tcp" = {
-          prio = 10;
-          weight = 0;
-          port = 5269;
-          dest = "xmpp";
-        };
+        priority = 10;
+        weight = 0;
+        port = 5222;
+        target = "xmpp";
       };
-      description = "TODO";
+      description = ''
+        Specifies the location of services for a specific protocol and domain.
+      '';
     };
   };
 
