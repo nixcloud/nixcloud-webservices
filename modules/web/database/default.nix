@@ -122,7 +122,7 @@ in {
     '';
   };
 
-  config = lib.mkIf config.enable {
+  config = lib.mkIf (config.enable && config.database != {}) {
     systemd.targets = {
       db-server = {
         description = "Database Management Systems For ${config.uniqueName}";
