@@ -16,13 +16,11 @@
     A = "5.6.7.8";
     AAAA = "1234::1";
 
-    CAA = {
-      critical = true;
-      issue = "letsencrypt.org; policy=ev";
-      iodef = [
-        "https://sslissues.nixcloud.io" "mailto:sslissues@nixcloud.io"
-      ];
-    };
+    CAA = [
+      { critical = true; issue = "letsencrypt.org"; properties.policy = "ev"; }
+      { iodef = "https://sslissues.nixcloud.io"; }
+      { iodef = "mailto:sslissues@nixcloud.io"; }
+    ];
 
     www.A = "1.2.3.4";
     www.AAAA = "dead::1";
@@ -47,7 +45,10 @@
 
     NS = [ "ns1.nixcloud.io." "ns2.nixcloud.io." ];
 
-    CAA.issue = [ "letsencrypt.org" "ca.example.org" ];
+    CAA = [
+      { issue = "letsencrypt.org"; }
+      { issue = "ca.example.org"; }
+    ];
 
     MX.preference = 10;
     MX.exchange = "mail";

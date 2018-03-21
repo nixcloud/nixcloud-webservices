@@ -46,12 +46,9 @@ let
       description = "An alias of this domain.";
     };
 
-    # FIXME: This one is a bit more complicated, because we have basically an
-    # attribute set of flags in addition to an issuer critical flag.
-    CAA = mkRecord {
-      type = types.attrsOf types.str;
+    CAA = mkRecordModule ./records/caa.nix {
       recordType = "CAA";
-      example.issue.domain = "ca.example.org";
+      example.issue = "ca.example.org";
       description = ''
         Certification Authority Authorization, which indicates to certificate
         authorities whether they are authorized to issue certificates for this
