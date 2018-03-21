@@ -71,7 +71,7 @@ in {
       options = (mkBaseRecordOptions recordType) // {
         value = lib.mkOption optionAttrs;
       };
-      config.record.rdata = config.value;
+      config.record.rdata = lib.toList config.value;
     };
   in lib.mkOption (optionAttrs // {
     type = types.coercedTo type coerceToRecord (types.submodule baseRecord);
