@@ -1,11 +1,9 @@
-{ name, domain, lib, options, ... }:
+{ name, domain, lib, config, options, ... }:
 
 let
   inherit (lib) mkOption types;
   dnsLib = import ./lib { inherit lib; };
   inherit (import ./base-record.nix { inherit lib; }) mkRecord mkRecordModule;
-
-  domainName = lib.concatStringsSep "." domain;
 
   recordTypeOptions = {
     SOA = mkRecordModule ./records/soa.nix {
@@ -119,6 +117,23 @@ let
     };
   };
 
+  internalOptions = {
+    domain = lib.mkOption {
+      type = types.listOf types.str;
+      internal = true;
+      description = ''
+        The current domain name in the hieararchy, which is internally used to
+        help with turning the zone tree into a flat list.
+      '';
+    };
+
+    recordList = lib.mkOption {
+      type = types.listOf types.attrs;
+      internal = true;
+      description = "A list of the data of all resource records.";
+    };
+  };
+
   # All of the option attributes of the options declared in recordTypeOptions.
   allRecordTypes = lib.mapAttrs' (name: lib.const {
     inherit name;
@@ -138,6 +153,7 @@ let
   cnameAssertion = let
     definedOthers = removeAttrs rtypeDefMatrix [ "CNAME" ];
     definedDesc = lib.concatStringsSep ", " (lib.attrNames definedOthers);
+    domainName = lib.concatStringsSep "." domain;
   in {
     assertion = options.CNAME.isDefined -> definedOthers == {};
     message = "Having a CNAME record on '${domainName}' doesn't allow other "
@@ -146,6 +162,21 @@ let
   };
 
 in {
-  options = recordTypeOptions;
-  config.assertions = [ cnameAssertion ];
+  options = internalOptions // recordTypeOptions;
+
+  config = {
+    assertions = [ cnameAssertion ];
+
+    # All of the following is strictly internal and is used to gather record
+    # data from the top module to generate a flat list of zone information.
+    inherit domain;
+    recordList = let
+      definedRecords = lib.filterAttrs (lib.const lib.id) rtypeDefMatrix;
+      mkRecordDef = rtype: let
+        mkSingle = cfg: { inherit (cfg.record) ttl class type rdata; };
+        multiple = map mkSingle config.${rtype};
+        single = lib.singleton (mkSingle config.${rtype});
+      in if lib.isList config.${rtype} then multiple else single;
+    in lib.concatMap mkRecordDef (lib.attrNames definedRecords);
+  };
 }

@@ -67,8 +67,11 @@ in {
   mkRecord = { type, recordType, description, ... }@attrs: let
     optionAttrs = removeAttrs attrs [ "recordType" ];
     coerceToRecord = def: { value = def; };
-    baseRecord.options = (mkBaseRecordOptions recordType) // {
-      value = lib.mkOption optionAttrs;
+    baseRecord = { config, ... }: {
+      options = (mkBaseRecordOptions recordType) // {
+        value = lib.mkOption optionAttrs;
+      };
+      config.record.rdata = config.value;
     };
   in lib.mkOption (optionAttrs // {
     type = types.coercedTo type coerceToRecord (types.submodule baseRecord);
