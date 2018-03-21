@@ -91,6 +91,19 @@ let
       '';
     };
 
+    TXT = mkRecord {
+      type = dnsLib.types.oneOrMore types.str;
+      recordType = "TXT";
+      example = [ "some interesting text" "another_text" ];
+      description = ''
+        Associate arbitrary text, such as human readable information about a
+        server, network, data center, or other accounting information.
+
+        If the value is a list, more than one TXT resource record can be
+        specified for the current node.
+      '';
+    };
+
     MX = mkRecordModule ./records/mx.nix {
       recordType = "MX";
       example = {
