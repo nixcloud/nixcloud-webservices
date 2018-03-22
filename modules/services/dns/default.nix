@@ -1,15 +1,30 @@
-{ lib, options, ... }:
+{ lib, config, options, ... }:
 
 let
   inherit (lib) types;
 
   # This one is special, because we need to use this for generation of the
   # documentation on the zones option.
-  recordsType = domain: types.submodule {
+  recordsType = domain: types.submodule ({ options, ... }: {
     imports = [ ./records.nix ];
-    options = { inherit (options) assertions; };
-    config._module.args = { inherit domain; };
-  };
+    options = {
+      inherit (options) assertions;
+
+      isZone = lib.mkOption {
+        type = types.bool;
+        internal = true;
+        description = ''
+          This is basically the same as <option>isZone</option> in
+          <literal>zoneOptions</literal>, but we define it here again in order
+          to make it easier to pass through the actual value.
+        '';
+      };
+    };
+    config = {
+      _module.args = { inherit domain; };
+      isZone = options.SOA.isDefined;
+    };
+  });
 
   # The maximum domain name length is 255 and every label is encoded by
   # prepending the size of the label to its name, terminating this with a NUL
@@ -92,7 +107,7 @@ let
     in (types.submodule opts) // { substSubModules = m: wrapped m; };
 
     # The actual submodule representing a potential zone.
-    submod = submoduleTypeWithCheck isZoneSubmodule ({ name, options, ... }: {
+    submod = submoduleTypeWithCheck isZoneSubmodule ({ name, config, ... }: {
       options = let
         # Append label to domain in reverse so it's consistent with our domain
         # type.
@@ -100,8 +115,9 @@ let
       in zoneOptions nestLevel (if nestLevel == 0 then domain else newDomain);
 
       # Only if there is a SOA record, we do have a real zone, otherwise this
-      # is just an ordinary resource record name.
-      config.isZone = options.records ? SOA;
+      # is just an ordinary resource record name. The actual checking of the
+      # definition of the SOA record is done in "recordsType".
+      config.isZone = config.records.isZone;
     });
 
     # Used for the coercion to determine whether this is actually the submodule
@@ -146,6 +162,41 @@ let
   in (mkFinalType submod) // {
     substSubModules = m: mkFinalType (submod.substSubModules m);
   };
+
+  # Traverse the tree and turn it into a flat list of zones, which will also
+  # contain the corresponding domain names for *real* zones (not just nodes
+  # within a zone).
+  zoneList = let
+    gather = oldDomain: zcfg: let
+      inherit (zcfg.records) domain recordList;
+      next = lib.mapAttrsToList (lib.const (gather newDomain)) zcfg.subZones;
+      newDomain = if zcfg.isZone then domain else oldDomain;
+      augmented = map (record: {
+        ${lib.concatStringsSep "." newDomain} = record // {
+          domain = newDomain;
+          relativeDomain = let
+            inherit (import ./lib { inherit lib; }) getRelativeDomain;
+          in getRelativeDomain newDomain domain;
+        };
+      }) recordList;
+    in lib.optionals (newDomain != null) augmented ++ lib.concatLists next;
+
+    # At this point we have an attribute set that contains all the domain names
+    # concatenated using periods mapped to their records. The latter also
+    # includes the domain names although not concatenated, which is what we
+    # want in the end. So we're going to throw the concatenated attribute names
+    # away eventually.
+    gathered = lib.zipAttrs (gather null config.nixcloud.dns.zones);
+
+    # Transforms the gathered data into a list of attribute set with only a
+    # "domain" and a "records" key, so the actual zone file generators can
+    # easily work with the data.
+    transformed = lib.concatMap (rlist: lib.optional (rlist != []) {
+      inherit (lib.head rlist) domain;
+      records = map (lib.flip removeAttrs [ "domain" ]) rlist;
+    }) (lib.attrValues gathered);
+
+  in transformed;
 
 in {
   options.nixcloud.dns.zones = lib.mkOption {
