@@ -73,6 +73,20 @@ in rec {
     final = splitted.result ++ lib.singleton splitted.current;
   in if domain == "" then [] else final;
 
+  # Get the relative part of "domain" respective to "root", so for example if
+  # "root" is [ "foo" "bar" ] and "domain" is [ "foo" "bar" "xyz" ] the result
+  # would be [ "xyz" ].
+  getRelativeDomain = root: domain: let
+    rootDesc = lib.concatStringsSep "." root;
+    domainDesc = lib.concatStringsSep "." domain;
+    noSubset = "The domain '${domainDesc}' is not a subset of '${rootDesc}'.";
+    divide = rootPart: acc: let
+      current = lib.last acc;
+      rest = lib.init acc;
+      result = if rootPart == current then rest else throw noSubset;
+    in if acc == [] then [] else result;
+  in lib.foldr divide domain root;
+
   # Escaping and unescaping for single labels.
   escapeLabel = import ./escape-label builtins.replaceStrings;
   unescapeLabel = import ./escape-label (lib.flip builtins.replaceStrings);

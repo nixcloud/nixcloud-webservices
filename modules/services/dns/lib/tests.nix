@@ -159,4 +159,39 @@ in (import <nixpkgs/lib>).runTests {
     expr = map lib.types.ipv6Address.check ipAddrFixtures.v6invalid;
     expected = map (x: false) ipAddrFixtures.v6invalid;
   };
+
+  testGetRelativeDomainSingleNode = {
+    expr = let
+      root = [ "example" "org" ];
+      domain = [ "foo" "example" "org" ];
+    in lib.getRelativeDomain root domain;
+    expected = [ "foo" ];
+  };
+
+  testGetRelativeDomainMultipleNodes = {
+    expr = let
+      root = [ "example" "org" ];
+      domain = [ "foo" "bar" "xyz" "example" "org" ];
+    in lib.getRelativeDomain root domain;
+    expected = [ "foo" "bar" "xyz" ];
+  };
+
+  testGetRelativeDomainNonMatching = {
+    expr = let
+      root = [ "example" "org" ];
+      domain = [ "foo" "example" "net" ];
+    in builtins.tryEval (lib.getRelativeDomain root domain);
+    expected.success = false;
+    expected.value = false;
+  };
+
+  testGetRelativeDomainEmpty = {
+    expr = lib.getRelativeDomain [] [];
+    expected = [];
+  };
+
+  testGetRelativeDomainRootEmpty = {
+    expr = lib.getRelativeDomain [] [ "a" "b" "c" ];
+    expected = [ "a" "b" "c" ];
+  };
 }
