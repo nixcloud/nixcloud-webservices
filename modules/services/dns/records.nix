@@ -6,6 +6,7 @@ let
 
   inherit (import ./base-record.nix {
     inherit lib domain;
+    extraOptions = { inherit (options) assertions; };
   }) mkRecord mkRecordModule;
 
   recordTypeOptions = {
@@ -182,11 +183,19 @@ let
             + " defined: ${definedDesc}";
   };
 
+  # All the assertions from all the defined resource record types.
+  rtypeAssertions = let
+    getAssertions = record: let
+      cfg = config.${record};
+    in if lib.isList cfg then lib.concatMap (rcfg: rcfg.assertions) cfg
+       else cfg.assertions;
+  in lib.concatMap getAssertions (lib.attrNames definedRecords);
+
 in {
   options = internalOptions // recordTypeOptions;
 
   config = {
-    assertions = [ cnameAssertion ];
+    assertions = [ cnameAssertion ] ++ rtypeAssertions;
 
     # All of the following is strictly internal and is used to gather record
     # data from the top module to generate a flat list of zone information.

@@ -1,4 +1,4 @@
-{ lib ? import <nixpkgs/lib>, domain ? "" }:
+{ lib ? import <nixpkgs/lib>, extraOptions ? {}, domain ? "" }:
 
 let
   inherit (lib) types;
@@ -70,7 +70,7 @@ in {
     baseRecord = { config, ... }: {
       options = (mkBaseRecordOptions recordType) // {
         value = lib.mkOption optionAttrs;
-      };
+      } // extraOptions;
       config.record.rdata = lib.singleton config.value;
     };
   in lib.mkOption (optionAttrs // {
@@ -96,7 +96,7 @@ in {
     optionAttrs = removeAttrs attrs [ "recordType" "singleton" ];
     type = types.submodule {
       imports = lib.singleton submodule;
-      options = mkBaseRecordOptions recordType;
+      options = (mkBaseRecordOptions recordType) // extraOptions;
       config._module.args = { inherit dnsLib domain; };
     };
   in lib.mkOption (optionAttrs // {

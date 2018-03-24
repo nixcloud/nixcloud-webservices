@@ -2,13 +2,22 @@
 
 let
   inherit (lib) types;
+  dnsLib = import ./lib { inherit lib; };
 
   # This one is special, because we need to use this for generation of the
   # documentation on the zones option.
   recordsType = domain: types.submodule ({ options, ... }: {
     imports = [ ./records.nix ];
     options = {
-      inherit (options) assertions;
+      assertions = lib.mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        internal = true;
+        description = ''
+          Assertions that are passed to the top level
+          <option>assertions</option> option.
+        '';
+      };
 
       isZone = lib.mkOption {
         type = types.bool;
@@ -168,15 +177,14 @@ let
   # within a zone).
   zoneList = let
     gather = oldDomain: zcfg: let
-      inherit (zcfg.records) domain recordList;
+      inherit (zcfg.records) domain recordList assertions;
       next = lib.mapAttrsToList (lib.const (gather newDomain)) zcfg.subZones;
       newDomain = if zcfg.isZone then domain else oldDomain;
       augmented = map (record: {
         ${lib.concatStringsSep "." newDomain} = record // {
           domain = newDomain;
-          relativeDomain = let
-            inherit (import ./lib { inherit lib; }) getRelativeDomain;
-          in getRelativeDomain newDomain domain;
+          relativeDomain = dnsLib.getRelativeDomain newDomain domain;
+          inherit assertions;
         };
       }) recordList;
     in lib.optionals (newDomain != null) augmented ++ lib.concatLists next;
@@ -225,5 +233,11 @@ in {
       <option>subZones</option> option as well, using something like
       <literal>org.example.subzones.records.A = ...</literal>.
     '';
+  };
+
+  config = lib.mkIf (config.nixcloud.dns.zones != {}) {
+    assertions = let
+      getAssertions = z: lib.concatMap (r: r.assertions) z.records;
+    in lib.unique (lib.concatMap getAssertions zoneList);
   };
 }
