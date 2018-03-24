@@ -22,7 +22,7 @@
       { iodef = "mailto:sslissues@nixcloud.io"; }
     ];
 
-    www.A = "1.2.3.4";
+    www.A = { record.ttl = 60; value = "1.2.3.4"; };
     www.AAAA = "dead::1";
 
     "*".CNAME = "fallback.nixcloud.io.";
