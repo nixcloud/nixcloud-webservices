@@ -240,6 +240,17 @@ in {
   };
 
   config = lib.mkIf (config.nixcloud.dns.zones != {}) {
+    services.nsd.enable = true;
+    services.nsd.zones = let
+      mkZone = { domain, defaultTTL, records }: {
+        name = "${lib.concatStringsSep "." domain}.";
+        value.data = import ./generators/bind-zonefile.nix {
+          inherit lib dnsLib domain defaultTTL;
+          records = map (lib.flip removeAttrs [ "assertions" ]) records;
+        };
+      };
+    in lib.listToAttrs (map mkZone zoneList);
+
     assertions = let
       getAssertions = z: lib.concatMap (r: r.assertions) z.records;
     in lib.unique (lib.concatMap getAssertions zoneList);
