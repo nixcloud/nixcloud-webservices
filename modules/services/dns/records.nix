@@ -26,7 +26,7 @@ let
     };
 
     NS = mkRecord {
-      type = dnsLib.types.oneOrMore dnsLib.types.domain;
+      type = dnsLib.types.domain;
       recordType = "NS";
       example = [ "ns1.example.com" "ns2.example.com" ];
       description = ''
@@ -39,6 +39,7 @@ let
 
     CNAME = mkRecord {
       type = dnsLib.types.domain;
+      singleton = true;
       recordType = "CNAME";
       example = "foo";
       description = "An alias of this domain.";
@@ -68,7 +69,7 @@ let
     };
 
     A = mkRecord {
-      type = dnsLib.types.oneOrMore dnsLib.types.ipv4Address;
+      type = dnsLib.types.ipv4Address;
       recordType = "A";
       example = [ "1.2.3.4" "5.6.7.8" ];
       description = ''
@@ -80,7 +81,7 @@ let
     };
 
     AAAA = mkRecord {
-      type = dnsLib.types.oneOrMore dnsLib.types.ipv6Address;
+      type = dnsLib.types.ipv6Address;
       recordType = "AAAA";
       example = [ "dead::1" "dead::2" ];
       description = ''
@@ -92,7 +93,7 @@ let
     };
 
     TXT = mkRecord {
-      type = dnsLib.types.oneOrMore types.str;
+      type = types.str;
       recordType = "TXT";
       example = [ "some interesting text" "another_text" ];
       description = ''

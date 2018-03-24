@@ -65,16 +65,19 @@ let
 
 in {
   mkRecord = { type, recordType, description, ... }@attrs: let
-    optionAttrs = removeAttrs attrs [ "recordType" ];
+    optionAttrs = removeAttrs attrs [ "recordType" "singleton" ];
     coerceToRecord = def: { value = def; };
     baseRecord = { config, ... }: {
       options = (mkBaseRecordOptions recordType) // {
         value = lib.mkOption optionAttrs;
       };
-      config.record.rdata = lib.toList config.value;
+      config.record.rdata = lib.singleton config.value;
     };
   in lib.mkOption (optionAttrs // {
-    type = types.coercedTo type coerceToRecord (types.submodule baseRecord);
+    type = let
+      base = types.coercedTo type coerceToRecord (types.submodule baseRecord);
+      wrapped = types.either (types.listOf base) base;
+    in if attrs.singleton or false then base else wrapped;
     description = ''
       ${description}
 
