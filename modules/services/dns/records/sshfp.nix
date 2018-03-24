@@ -1,4 +1,4 @@
-{ config, lib, dnsLib, ... }:
+{ config, lib, dnsLib, domain, ... }:
 
 let
   inherit (lib) types mkOption;
@@ -68,6 +68,20 @@ in {
     };
     example = "c56e95d1a3015e55ad38b25e59867dc5d12f73ca";
     description = "The fingerprint of the public key.";
+  };
+
+  config.assertions = lib.mapAttrsToList (hashType: reqiredLen: {
+    assertion = config.hashType == hashType
+             -> lib.stringLength config.fingerprint == reqiredLen;
+    message = "The SSHFP fingerprint '${config.fingerprint}' on domain"
+            + " '${lib.concatStringsSep "." domain}' is of type"
+            + " '${config.hashType}' so it needs to have a length of"
+            + " ${toString reqiredLen} characters but it has a length of"
+            + " ${toString (lib.stringLength config.fingerprint)} characters"
+            + " instead.";
+  }) {
+    sha1 = 40;
+    sha256 = 64;
   };
 
   config.record.rdata = [
