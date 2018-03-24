@@ -147,7 +147,11 @@ let
     # types, we only check whether the first letter is uppercase. The reason is
     # that we want to get a type error whenever we have mistyped a record type.
     coerceZone = attrs: let
-      isRType = attrName: builtins.match "[A-Z].*" attrName != null;
+      # All the upper-case names are resource records, however we do have one
+      # exception, which is defaultTTL. The latter is some kind of pseudo
+      # resource record because it affects all the records in the zone.
+      isRType = attrName: builtins.match "[A-Z].*" attrName != null
+                       || attrName == "defaultTTL";
       partitioned = lib.partition isRType (lib.attrNames attrs);
       mkDefs = lib.flip lib.genAttrs (name: attrs.${name});
     in rec {
@@ -177,14 +181,14 @@ let
   # within a zone).
   zoneList = let
     gather = oldDomain: zcfg: let
-      inherit (zcfg.records) domain recordList assertions;
+      inherit (zcfg.records) domain recordList assertions defaultTTL;
       next = lib.mapAttrsToList (lib.const (gather newDomain)) zcfg.subZones;
       newDomain = if zcfg.isZone then domain else oldDomain;
       augmented = map (record: {
         ${lib.concatStringsSep "." newDomain} = record // {
           domain = newDomain;
           relativeDomain = dnsLib.getRelativeDomain newDomain domain;
-          inherit assertions;
+          inherit assertions defaultTTL;
         };
       }) recordList;
     in lib.optionals (newDomain != null) augmented ++ lib.concatLists next;
@@ -200,8 +204,8 @@ let
     # "domain" and a "records" key, so the actual zone file generators can
     # easily work with the data.
     transformed = lib.concatMap (rlist: lib.optional (rlist != []) {
-      inherit (lib.head rlist) domain;
-      records = map (lib.flip removeAttrs [ "domain" ]) rlist;
+      inherit (lib.head rlist) domain defaultTTL;
+      records = map (lib.flip removeAttrs [ "domain" "defaultTTL" ]) rlist;
     }) (lib.attrValues gathered);
 
   in transformed;

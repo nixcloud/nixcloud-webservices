@@ -210,7 +210,18 @@ let
   in lib.concatMap getAssertions (lib.attrNames definedRecords);
 
 in {
-  options = internalOptions // recordTypeOptions;
+  options = internalOptions // recordTypeOptions // {
+    defaultTTL = lib.mkOption {
+      type = types.ints.between 0 2147483647;
+      default = 60;
+      example = 300;
+      description = ''
+        An integer that specifies the time interval (in seconds) that resource
+        records without an explicit TTL of this zone may be cached before they
+        should be discarded.
+      '';
+    };
+  };
 
   config = {
     assertions = lib.singleton cnameAssertion
