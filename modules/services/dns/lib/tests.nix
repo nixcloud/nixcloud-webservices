@@ -201,27 +201,46 @@ in (import <nixpkgs/lib>).runTests {
   };
 
   testJoinDomainSimpleEmpty = {
-    expr = builtins.tryEval (lib.joinDomain []);
-    expected.success = false;
-    expected.value = false;
+    expr = lib.joinDomainSimple [];
+    expected = "";
   };
 
   testJoinDomainRelative = {
-    expr = lib.joinDomain { relative = [ "a" "b" "c." ]; };
+    expr = lib.joinDomainRelative [ "a" "b" "c." ];
     expected = "a.b.c\\.";
   };
 
   testJoinDomainRelativeEmpty = {
-    expr = lib.joinDomain { relative = []; };
+    expr = lib.joinDomainRelative [];
     expected = "@";
   };
 
   testJoinDomainAbsolute = {
+    expr = lib.joinDomainAbsolute [ "a" "b" "c." ];
+    expected = "a.b.c\\..";
+  };
+
+  testJoinDomainAbsoluteEmpty = {
+    expr = lib.joinDomainAbsolute [];
+    expected = ".";
+  };
+
+  testJoinDomainRelativeAttr = {
+    expr = lib.joinDomain { relative = [ "a" "b" "c." ]; };
+    expected = "a.b.c\\.";
+  };
+
+  testJoinDomainRelativeAttrEmpty = {
+    expr = lib.joinDomain { relative = []; };
+    expected = "@";
+  };
+
+  testJoinDomainAbsoluteAttr = {
     expr = lib.joinDomain { absolute = [ "a" ".b" "c" ]; };
     expected = "a.\\.b.c.";
   };
 
-  testJoinDomainAbsoluteEmpty = {
+  testJoinDomainAbsoluteAttrEmpty = {
     expr = lib.joinDomain { absolute = []; };
     expected = ".";
   };
