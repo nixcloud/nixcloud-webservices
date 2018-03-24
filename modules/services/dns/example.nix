@@ -70,7 +70,8 @@
     SSHFP = {
       algorithm = "ed25519";
       hashType = "sha256";
-      fingerprint = "8Ohy8G7tDQmm4AponxBklkT+BCBnDFkBNFySkxuKz0w";
+      fingerprint = "aec070645fe53ee3b3763059376134f0"
+                  + "58cc337247c978add178b6ccdfb0019f";
     };
   };
 }

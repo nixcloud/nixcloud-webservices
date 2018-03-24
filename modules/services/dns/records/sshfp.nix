@@ -59,8 +59,14 @@ in {
   };
 
   options.fingerprint = mkOption {
-    type = types.str;
-    example = "d7e6cd1e6a10faec05e9ef42f95a157b6ec797a7";
+    type = lib.mkOptionType {
+      name = "hexEncodedHash";
+      description = "hex-encoded hash";
+      check = x: lib.isString x
+              && builtins.match "([a-fA-F0-9]{2})+" x != null;
+      merge = lib.mergeOneOption;
+    };
+    example = "c56e95d1a3015e55ad38b25e59867dc5d12f73ca";
     description = "The fingerprint of the public key.";
   };
 
