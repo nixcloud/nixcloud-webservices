@@ -213,7 +213,6 @@ let
 in {
   options.nixcloud.dns.zones = lib.mkOption {
     type = zoneType 0 [];
-    default = {};
     example = lib.literalExample (builtins.readFile ./example.nix);
     description = ''
       The DNS hierarchy of zones, where attribute names are labels and the
@@ -239,7 +238,7 @@ in {
     '';
   };
 
-  config = lib.mkIf (config.nixcloud.dns.zones != {}) {
+  config = lib.mkIf (options.nixcloud.dns.zones.isDefined) {
     services.nsd.enable = true;
     services.nsd.zones = let
       mkZone = { domain, defaultTTL, records }: {
