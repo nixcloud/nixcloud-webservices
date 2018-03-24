@@ -158,6 +158,9 @@ let
   # option for a particular record type is defined.
   rtypeDefMatrix = lib.mapAttrs (lib.const (o: o.isDefined)) allRecordTypes;
 
+  # All the defined record types.
+  definedRecords = lib.filterAttrs (lib.const lib.id) rtypeDefMatrix;
+
   # https://tools.ietf.org/html/rfc1034#section-3.6.2:
   #
   # If a CNAME RR is present at a node, no other data should be present; this
@@ -165,13 +168,14 @@ let
   # different. This rule also insures that a cached CNAME can be used without
   # checking with an authoritative server for other RR types.
   cnameAssertion = let
-    definedOthers = removeAttrs rtypeDefMatrix [ "CNAME" ];
+    matrixWithoutCname = removeAttrs rtypeDefMatrix [ "CNAME" ];
+    definedOthers = lib.filterAttrs (lib.const lib.id) matrixWithoutCname;
     definedDesc = lib.concatStringsSep ", " (lib.attrNames definedOthers);
     domainName = lib.concatStringsSep "." domain;
   in {
     assertion = options.CNAME.isDefined -> definedOthers == {};
-    message = "Having a CNAME record on '${domainName}' doesn't allow other "
-            + "resource record types. However, the following record types are "
+    message = "Having a CNAME record on '${domainName}' doesn't allow other"
+            + " resource record types. However, the following record types are"
             + " defined: ${definedDesc}";
   };
 
@@ -185,7 +189,6 @@ in {
     # data from the top module to generate a flat list of zone information.
     inherit domain;
     recordList = let
-      definedRecords = lib.filterAttrs (lib.const lib.id) rtypeDefMatrix;
       mkRecordDef = rtype: let
         mkSingle = cfg: { inherit (cfg.record) ttl class type rdata; };
         multiple = map mkSingle config.${rtype};
