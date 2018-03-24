@@ -1,5 +1,7 @@
 {
   de.nixcloud = {
+    defaultTTL = 300;
+
     SOA = {
       mname = "ns.nixcloud.io.";
       rname = "dnsadmin.nixcloud.de.";
