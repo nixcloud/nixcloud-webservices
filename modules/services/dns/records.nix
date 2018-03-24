@@ -4,6 +4,8 @@ let
   inherit (lib) mkOption types;
   dnsLib = import ./lib { inherit lib; };
 
+  domainName = lib.concatStringsSep "." domain;
+
   inherit (import ./base-record.nix {
     inherit lib domain;
     extraOptions = { inherit (options) assertions; };
@@ -175,13 +177,29 @@ let
     matrixWithoutCname = removeAttrs rtypeDefMatrix [ "CNAME" ];
     definedOthers = lib.filterAttrs (lib.const lib.id) matrixWithoutCname;
     definedDesc = lib.concatStringsSep ", " (lib.attrNames definedOthers);
-    domainName = lib.concatStringsSep "." domain;
   in {
     assertion = options.CNAME.isDefined -> definedOthers == {};
     message = "Having a CNAME record on '${domainName}' doesn't allow other"
             + " resource record types. However, the following record types are"
             + " defined: ${definedDesc}";
   };
+
+  # https://tools.ietf.org/html/rfc1035#section-2.3.4:
+  #
+  # labels: 63 octets or less
+  # names: 255 octets or less
+  lengthAssertions = [
+    { assertion = lib.all (x: lib.stringLength x <= 63) domain;
+      message = "The domain '${domainName}' has labels which exceeed 63"
+              + " characters, which is not allowed.";
+    }
+    # 253 characters here instead of 255, because the limit on 255 characters
+    # is *including* the root zone.
+    { assertion = lib.stringLength domainName <= 253;
+      message = "The domain '${domainName}' exceeds 253 characters, which is"
+              + " not allowed.";
+    }
+  ];
 
   # All the assertions from all the defined resource record types.
   rtypeAssertions = let
@@ -195,7 +213,9 @@ in {
   options = internalOptions // recordTypeOptions;
 
   config = {
-    assertions = [ cnameAssertion ] ++ rtypeAssertions;
+    assertions = lib.singleton cnameAssertion
+              ++ rtypeAssertions
+              ++ lengthAssertions;
 
     # All of the following is strictly internal and is used to gather record
     # data from the top module to generate a flat list of zone information.
