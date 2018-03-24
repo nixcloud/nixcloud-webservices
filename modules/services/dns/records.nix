@@ -3,7 +3,10 @@
 let
   inherit (lib) mkOption types;
   dnsLib = import ./lib { inherit lib; };
-  inherit (import ./base-record.nix { inherit lib; }) mkRecord mkRecordModule;
+
+  inherit (import ./base-record.nix {
+    inherit lib domain;
+  }) mkRecord mkRecordModule;
 
   recordTypeOptions = {
     SOA = mkRecordModule ./records/soa.nix {

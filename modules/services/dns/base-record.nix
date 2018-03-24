@@ -1,4 +1,4 @@
-{ lib ? import <nixpkgs/lib> }:
+{ lib ? import <nixpkgs/lib>, domain ? "" }:
 
 let
   inherit (lib) types;
@@ -97,7 +97,7 @@ in {
     type = types.submodule {
       imports = lib.singleton submodule;
       options = mkBaseRecordOptions recordType;
-      config._module.args = { inherit dnsLib; };
+      config._module.args = { inherit dnsLib domain; };
     };
   in lib.mkOption (optionAttrs // {
     type = if singleton then type else types.either type (types.listOf type);
