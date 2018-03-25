@@ -18,6 +18,11 @@
     A = "5.6.7.8";
     AAAA = "1234::1";
 
+    # Define labels that collide with options from the internal submodule.
+    foo.subZones.records.A = "6.6.6.6";
+    foo.subZones.isZone.A = "5.5.5.5";
+    foo.subZones.subZones.A = "4.4.4.4";
+
     CAA = [
       { critical = true; issue = "letsencrypt.org"; properties.policy = "ev"; }
       { iodef = "https://sslissues.nixcloud.io"; }
