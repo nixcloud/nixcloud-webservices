@@ -238,6 +238,17 @@ in {
     '';
   };
 
+  options.nixcloud.dns.zoneList = lib.mkOption {
+    type = types.listOf types.attrs;
+    internal = true;
+    readOnly = true;
+    description = ''
+      This is the intermediate representation of the zone hierarchy defined in
+      <option>zones</option> and it's only to be used for testing and/or
+      generators.
+    '';
+  };
+
   config = lib.mkIf (options.nixcloud.dns.zones.isDefined) {
     services.nsd.enable = true;
     services.nsd.zones = let
@@ -249,6 +260,8 @@ in {
         };
       };
     in lib.listToAttrs (map mkZone zoneList);
+
+    nixcloud.dns = { inherit zoneList; };
 
     assertions = let
       getAssertions = z: lib.concatMap (r: r.assertions) z.records;
