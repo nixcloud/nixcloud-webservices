@@ -266,5 +266,7 @@ in {
     assertions = let
       getAssertions = z: lib.concatMap (r: r.assertions) z.records;
     in lib.unique (lib.concatMap getAssertions zoneList);
+
+    nixcloud.tests.wanted = [ ./test.nix ];
   };
 }

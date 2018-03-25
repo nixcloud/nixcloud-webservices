@@ -10,6 +10,7 @@ in {
   username-hashing = callTest ./username-hashing.nix;
 
   # XXX: These tests should be automatically gathered by the module system!
+  dns = callTest ../modules/services/dns/test.nix;
   reverse-proxy = callTest ../modules/services/reverse-proxy/test.nix;
   webservices.mediawiki = callTest ../modules/web/services/mediawiki/test.nix;
   webservices.leaps = callTest ../modules/web/services/leaps/test.nix;
