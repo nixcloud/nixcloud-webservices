@@ -14,6 +14,7 @@
     core/hashed-modules.nix
     core/testing.nix
     core/utils.nix
+    core/version.nix
     services/reverse-proxy
     services/email/opendkim.nix
     services/email/postfix.nix
