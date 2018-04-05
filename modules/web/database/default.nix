@@ -12,7 +12,7 @@ let
 
     mysql = rec {
       socketPath = "${config.runtimeDir}/.mysql.sock";
-      phpHostname = ":${socketPath}";
+      phpHostname = "localhost:${socketPath}";
     };
   };
 
