@@ -101,6 +101,9 @@ in {
 
     groups.postgres = {};
 
+    tempDbSetupHook.dependencies = [ package ];
+    tempDbSetupHook.script = ./postgresql-hook.sh;
+
     dbShellCommand.postgresql = ''
       export PGHOST=${lib.escapeShellArg config.runtimeDir}
       exec ${lib.escapeShellArg "${package}/bin/psql"} "$2"

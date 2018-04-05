@@ -127,6 +127,10 @@ in {
         "$2"
     '';
 
+    tempDbSetupHook.dependencies = [ package ];
+    tempDbSetupHook.script = ./mysql-hook.sh;
+    tempDbSetupHook.substitutions.mysqlBaseDir = package;
+
     directories.mysql = {
       instance.before = [ "mysql-initdb.service" ];
       permissions.defaultDirectoryMode = "0711";

@@ -1,8 +1,8 @@
-{ config, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 let
   inherit (lib) mkOption types;
-  inherit (config) defaultDatabaseType;
+  inherit (config) defaultDatabaseType tempDbSetupHook;
 
   dbSpec = {
     postgresql = rec {
@@ -82,6 +82,34 @@ let
         </para></note>
       '';
     };
+
+    options.tempDbSetupHook = mkOption {
+      type = lib.mkOptionType {
+        name = "setupHook";
+        inherit (types.package) check;
+      };
+      readOnly = true;
+      description = ''
+        This is the final setup hook that can be used in derivations to
+        temporarily spin up a database server for preinitializing databases and
+        dumping them to an SQL file.
+      '';
+    };
+
+    config.tempDbSetupHook = pkgs.makeSetupHook {
+      name = "dump-from-temp-db";
+      deps = tempDbSetupHook.dependencies;
+      substitutions = {
+        eatmydata = let
+          soFile = "${pkgs.libeatmydata}/lib/libeatmydata.so";
+        in "LD_PRELOAD=${lib.escapeShellArg soFile}";
+      } // tempDbSetupHook.substitutions;
+    } (pkgs.writeText "dump-from-temp-db.hook" ''
+      export tempDbName=${lib.escapeShellArg config.name}
+      export tempDbUser=${lib.escapeShellArg config.user}
+      ${builtins.readFile tempDbSetupHook.script}
+      postUnpackHooks+=(tempdbInit)
+    '');
   };
 
 in {
@@ -110,6 +138,74 @@ in {
       This option is only needed if you want to create your own database
       module.
     '';
+  };
+
+  options.tempDbSetupHook = {
+    dependencies = mkOption {
+      type = types.listOf types.package;
+      internal = true;
+      default = [];
+      description = ''
+        The dependencies that need to be available for the setup hook.
+      '';
+    };
+
+    script = mkOption {
+      type = types.path;
+      internal = true;
+      description = ''
+        The path to the setup hook script, which automatically gets the
+        following environment variables assigned on each run:
+
+        <variablelist>
+          <varlistentry>
+            <term><envar>tempDbName</envar></term>
+            <listitem><para>The temporary database name to
+              create</para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><envar>tempDbUser</envar></term>
+            <listitem><para>The temporary user name for creating/connecting to
+              the database</para></listitem>
+          </varlistentry>
+        </variablelist>
+
+        When using the setup hook in a derivation, the function
+        <function>tempdbInit</function> is called after unpacking the source.
+
+        In addition, the hook script <emphasis>must</emphasis> export the
+        following environment variables to the build environment:
+
+        <variablelist>
+          <varlistentry>
+            <term><envar>tempDbSocketPath</envar></term>
+            <listitem><para>The path to the UNIX socket file</para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><envar>tempDbPhpHostname</envar></term>
+            <listitem><para>A hostname for PHP connection strings to connect
+              via UNIX socket file </para></listitem>
+          </varlistentry>
+        </variablelist>
+      '';
+    };
+
+    substitutions = mkOption {
+      type = types.attrsOf (types.either types.str types.package);
+      internal = true;
+      default = {};
+      description = ''
+        A mapping of keys and values, where <literal>@key@</literal> is then
+        replaced by its value within the hook script.
+
+        By default <literal>@eatmydata@</literal> is
+        <emphasis>always</emphasis> available and can be prepended to commands
+        that need to run without <citerefentry>
+          <refentrytitle>fsync</refentrytitle>
+          <manvolnum>2</manvolnum>
+        </citerefentry>.
+      '';
+    };
   };
 
   options.defaultDatabaseType = mkOption {
