@@ -1,4 +1,5 @@
-{ pkgs, ... }:
+{ pkgs, nixpkgs, ... }:
+
 let
 
 ws-go-server = pkgs.buildGoPackage rec {
@@ -110,7 +111,7 @@ in
   name = "reverse-proxy";
 
   machine = { pkgs, lib, ... }: {
-    nix.nixPath = [ "nixpkgs=${<nixpkgs>}" "nixos-config=/etc/nixos/configuration.nix" ];
+    nix.nixPath = [ "nixpkgs=${nixpkgs}" "nixos-config=/etc/nixos/configuration.nix" ];
     nix.binaryCaches = lib.mkForce [];
     nixcloud.reverse-proxy = {
       enable = true;

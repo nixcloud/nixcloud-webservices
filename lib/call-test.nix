@@ -71,6 +71,7 @@ let
     pkgs = pkgs // {
       inherit (import ../pkgs { inherit pkgs; }) nixcloud;
     };
+    inherit nixpkgs;
   });
 
   unpackTestFun = tf:
