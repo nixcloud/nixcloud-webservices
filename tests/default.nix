@@ -6,8 +6,8 @@ in {
   custom-webservice = callTest ./custom-webservice.nix;
   dbshell = callTest ./dbshell.nix;
   directories = callTest ./directories.nix;
+  mkunique = callTest ./mkunique.nix;
   user-allocation-uid-gid-test = callTest ./user-allocation-uid-gid-test.nix;
-  username-hashing = callTest ./username-hashing.nix;
   version = callTest ./version.nix;
 
   # XXX: These tests should be automatically gathered by the module system!
