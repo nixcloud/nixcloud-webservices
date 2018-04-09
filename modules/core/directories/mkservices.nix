@@ -31,6 +31,16 @@ let
     } // removeAttrs attrs [ "serviceConfig" ];
   };
 
+  mkCreateService = { name, desc, ... }@attrs: {
+    name = mkUnitName name path;
+    value = {
+      description = "${desc} ${absPath}";
+      serviceConfig = {
+        Type = "oneshot";
+      } // (attrs.serviceConfig or {});
+    } // removeAttrs attrs [ "serviceConfig" "name" "desc" ];
+  };
+
   mkCmd = lib.concatMapStringsSep " " lib.escapeShellArg;
 
   mkACL = isDir: let
@@ -115,10 +125,45 @@ let
   mkDirectory = mkCmd [ makedirsCmd defaultDirectoryMode absPath ];
   setPerms = mkCmd [ setpermCmd (mkACL true) cfg.owner cfg.group absPath ];
 
+  createTarget = {
+    name = mkUnitName "mkdir" path;
+    value.description = "Create Directory ${absPath}";
+    value.unitConfig.ConditionPathExists = "!${absPath}";
+    value.wantedBy = [ "multi-user.target" ];
+  };
+
+  onPostCreate = lib.optional (cfg.postCreate != "");
+  onPostCreateAsRoot = lib.optional (cfg.postCreateAsRoot != "");
+
   createService = mkService "mkdir" "Create Directory" {
     script = (lib.concatStringsSep "\n" [ mkDirectory setPerms ]) + "\n";
+    postStart = let
+      triggers = onPostCreate (mkServiceName "post-create" path)
+              ++ onPostCreateAsRoot (mkServiceName "post-create-as-root" path);
+      mkTrigger = unit: mkCmd [ "systemctl" "--wait" "start" unit ];
+    in (lib.concatMapStringsSep "\n" mkTrigger triggers) + "\n";
     unitConfig.ConditionPathExists = "!${absPath}";
   };
+
+  postCreateService = mkCreateService {
+    name = "post-create";
+    desc = "Run postCreate Commands on";
+    script = cfg.postCreate;
+    serviceConfig.User = cfg.owner;
+    serviceConfig.Group = cfg.group;
+    serviceConfig.WorkingDirectory = absPath;
+  };
+
+  postCreateAsRootService = mkCreateService {
+    name = "post-create-as-root";
+    desc = "Run postCreateAsRoot Commands on";
+    script = cfg.postCreateAsRoot;
+    serviceConfig.WorkingDirectory = absPath;
+  };
+
+  createServices = lib.singleton createService
+                ++ onPostCreate postCreateService
+                ++ onPostCreateAsRoot postCreateAsRootService;
 
   fixupService = mkService "fixup" "Fixup Permissions for Directory" {
     serviceConfig.ExecStart = let
@@ -135,4 +180,4 @@ let
     unitConfig.ConditionPathExists = "${absPath}";
   };
 
-in [ fixupService ] ++ lib.optional cfg.create createService
+in lib.singleton fixupService ++ lib.optionals cfg.create createServices

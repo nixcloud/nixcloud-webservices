@@ -90,6 +90,34 @@ let
     filePerms = mkPermOpts (attrs // { isDir = false; execute = false; });
   } // mkPermOpts (attrs // { isDir = true; });
 
+  mkPostCreateOpt = useRootUser: lib.mkOption {
+    type = types.lines;
+    default = "";
+    example = "echo hello world > test.txt";
+    description = ''
+      Shell commands to run directly after creating the directory. If the
+      directory already exists nothing is executed.
+
+      The current working directory for this is set to the newly created
+      directory.
+
+      This runs only if <option>create</option> is set to
+      <literal>true</literal> (the default) and execution takes place
+    '' + (if useRootUser then ''
+      after <option>postCreate</option>.
+
+      <note><para>The command is run as user <systemitem
+      class="username">root</systemitem> and group <systemitem
+      class="groupname">root</systemitem>.</para></note>
+    '' else ''
+      before <option>postCreateAsRoot</option>.
+
+      <note><para>The command is run as the user specified in
+      <option>owner</option> and the group specified in
+      <option>group</option>.</para></note>
+    '');
+  };
+
 in lib.mkOption {
   type = types.attrsOf (types.submodule ({ config, ... }: {
     options = {
@@ -195,6 +223,9 @@ in lib.mkOption {
           execute = false;
         };
       };
+
+      postCreate = mkPostCreateOpt false;
+      postCreateAsRoot = mkPostCreateOpt true;
 
       users = lib.mkOption {
         type = types.attrsOf (types.submodule {

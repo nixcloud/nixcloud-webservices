@@ -20,6 +20,8 @@
       permissions.defaultDirectoryMode = "0700";
       owner = "alice";
       group = "vip";
+      postCreate = "id -nu > owner.txt";
+      postCreateAsRoot = "id -nu > root.txt";
     };
 
     "little/house/of/bob" = {
@@ -119,6 +121,20 @@
       ensureMode "/super/n/e/s/t/e", "0700";
     });
 
+    $machine->nest('check whether postCreate has worked', sub {
+      ensureOwner "/super/n/e/s/t/e/d/owner.txt", "alice";
+      ensureGroup "/super/n/e/s/t/e/d/owner.txt", "vip";
+      ensureOwner "/super/n/e/s/t/e/d/root.txt", "root";
+      ensureGroup "/super/n/e/s/t/e/d/root.txt", "root";
+      $machine->succeed('test "$(< /super/n/e/s/t/e/d/owner.txt)" = alice');
+      $machine->succeed('test "$(< /super/n/e/s/t/e/d/root.txt)" = root');
+    });
+
+    $machine->nest('remove postCreate files to check after reboot', sub {
+      $machine->succeed('rm -f /super/n/e/s/t/e/d/owner.txt');
+      $machine->succeed('rm -f /super/n/e/s/t/e/d/root.txt');
+    });
+
     $machine->nest('rebooting machine', sub {
       $machine->shutdown;
       $machine->waitForUnit('multi-user.target');
@@ -130,6 +146,11 @@
       showPerms "/foo/bar/writable_by_alice";
       ensureOwner "/foo/bar/writable_by_alice", "alice";
       ensureGroup "/foo/bar/writable_by_alice", "root";
+    });
+
+    $machine->nest('check whether postCreate ran on existing directory', sub {
+      $machine->fail('test -e /super/n/e/s/t/e/d/owner.txt');
+      $machine->fail('test -e /super/n/e/s/t/e/d/root.txt');
     });
   '';
 }
