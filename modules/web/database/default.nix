@@ -219,16 +219,52 @@ in {
   };
 
   config = lib.mkIf (config.enable && config.database != {}) {
+    # Let's assume we have two databases, one is a PostgreSQL database called
+    # "abc" and the second one is a MariaDB database "xyz". The following chart
+    # illustrates the ordering of the targets/services during startup:
+    #
+    #                             network.target
+    #                                   |
+    #                                  \|/
+    #                  .-------- db-server.target -------.
+    #                  |                |                |
+    #                 \|/               |                |
+    #         mysql-initdb.service      |     postgresql-initdb.service
+    #                  |                |                |
+    #                 \|/               |               \|/
+    #            mysql.service          |        postgresql.service
+    #                  | |              |              | |
+    #                  | `--------------|--------------' |
+    #                  |                |                |
+    #                 \|/               |               \|/
+    #         database-abc.service      |       database-xyz.service
+    #                  |                |                |
+    #                 \|/               |               \|/
+    #  database-abc-post-create.service | database-xyz-post-create.service
+    #                  |                |                |
+    #                  |               \|/               |
+    #                  |--------- database.target -------|
+    #                  |                                 |
+    #                 \|/                               \|/
+    #          database-abc.target              database-xyz.target
+    #                  |                                 |
+    #                  `---------------------------------'
+    #
+    # So this means, that every service that pulls in database.target will get
+    # all the databases necessary. Note that mysql.service/postgresql.service
+    # are NOT ordered before database.target, so that we can ensure parallel
+    # creation of these databases. For example if PostgreSQL is still starting
+    # up, MariaDB databases will still be created in the meantime.
     systemd.targets = {
       db-server = {
         description = "Database Management Systems For ${config.uniqueName}";
         after = [ "network.target" ];
-        instance.requiredBy = [ "database.target" ];
       };
       database = {
         description = "Databases For ${config.uniqueName}";
         after = [ "network.target" ];
-        wantedBy = [ "multi-user.target" ];
+        instance.after = [ "db-server.target" ];
+        instance.requires = [ "db-server.target" ];
       };
     } // lib.mapAttrs' (lib.const (dbcfg: {
       name = "database-${dbcfg.name}";
@@ -236,6 +272,7 @@ in {
         description = "Create Database ${dbcfg.name}";
         instance.requiredBy = [ "database.target" ];
         instance.after = [ "db-server.target" ];
+        instance.before = [ "database.target" ];
       };
     })) config.database;
   };
