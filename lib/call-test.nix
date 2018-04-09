@@ -32,7 +32,12 @@ let
           else if builtins.isAttrs tf then tf
           else unpackTestFun (import tf);
 
-      in (import <nixpkgs/lib>).runTests (unpackTestFun ${testPath}).tests
+        tests = pkgs.lib.mapAttrs' (name: value: {
+          name = "test_''${name}";
+          inherit value;
+        }) (unpackTestFun ${testPath}).tests;
+
+      in (import <nixpkgs/lib>).runTests tests
     '';
 
     buildCommand = ''
