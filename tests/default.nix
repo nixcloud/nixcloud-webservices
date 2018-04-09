@@ -1,7 +1,10 @@
-{ system ? builtins.currentSystem, pkgs ? import <nixpkgs> {} }:
+{ system ? builtins.currentSystem
+, nixpkgs ? <nixpkgs>
+, pkgs ? import nixpkgs { inherit system; }
+}:
 
 let
-  callTest = import ../lib/call-test.nix { inherit system pkgs; };
+  callTest = import ../lib/call-test.nix { inherit system pkgs nixpkgs; };
 in {
   custom-webservice = callTest ./custom-webservice.nix;
   dbshell = callTest ./dbshell.nix;

@@ -1,7 +1,7 @@
-{ system, pkgs, ... }@args: test:
+{ system, pkgs, nixpkgs ? <nixpkgs>, ... }@args: test:
 
 let
-  testLib = import <nixpkgs/nixos/lib/testing.nix> { inherit system; };
+  testLib = import "${nixpkgs}/nixos/lib/testing.nix" { inherit system; };
   inherit (pkgs) lib;
 
   getRelativePathStr = path: let
@@ -12,7 +12,7 @@ let
     name = "unit-test-${testArgs.name}";
     buildInputs = [ pkgs.nix pkgs.jq ];
 
-    NIX_PATH = "nixpkgs=${pkgs.path}:root=${lib.cleanSource ./..}";
+    NIX_PATH = "nixpkgs=${nixpkgs}:root=${lib.cleanSource ./..}";
 
     testExpr = let
       testPath = "<root/${getRelativePathStr test}>";

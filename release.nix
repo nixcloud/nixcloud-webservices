@@ -14,7 +14,7 @@ in {
   });
 
   manual = let
-    modules = import "${pkgs.path}/nixos/lib/eval-config.nix" {
+    modules = import "${nixpkgs}/nixos/lib/eval-config.nix" {
       modules = [ ./modules ];
       check = false;
       inherit system;
