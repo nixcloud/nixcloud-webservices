@@ -1,11 +1,7 @@
-{ pkgs, lib, config, ... }:
+{ lib, config, ... }:
 
-let
-  optionsPath = ../../core/directories/options.nix;
-  mkservicesPath = ../../core/directories/mkservices.nix;
-
-in {
-  options.directories = import optionsPath {
+{
+  options.directories = import ../../core/directories/options.nix {
     inherit config lib;
     isWebServices = true;
   };
