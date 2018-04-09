@@ -9,7 +9,7 @@ in {
     mkJob = lib.const lib.hydraJob;
     mapHydra = lib.mapAttrsRecursiveCond (t: !(t ? test)) mkJob;
   in mapHydra (import ./tests {
-    inherit system;
+    inherit system nixpkgs;
     pkgs = import nixpkgs {};
   });
 
