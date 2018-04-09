@@ -63,6 +63,8 @@ let
       [ "$test_output" = '[]' ]
       touch $out
     '';
+
+    passthru.test = unitTest;
   };
 
   vmTest = testLib.makeTest (removeAttrs testArgsWithCommon [ "type" ]);
