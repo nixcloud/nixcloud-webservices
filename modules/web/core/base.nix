@@ -50,11 +50,15 @@ let
   # whenever the length exceeds 31 characters. The reason for that is that
   # glibc imposes a restriction of maximum 31 characters on user and group
   # names.
-  mkUniqueUserGroup = suffix: let
+  mkUniqueUserGroup = prefix: suffix: let
     uniqueName = mkUnique suffix;
     uniqueHash = builtins.hashString "sha256" uniqueName;
-    hashed = "user-${builtins.substring 0 26 uniqueHash}";
+    hashLen = 30 - lib.stringLength prefix;
+    hashed = "${prefix}-${builtins.substring 0 hashLen uniqueHash}";
   in if builtins.stringLength uniqueName > 31 then hashed else uniqueName;
+
+  # Check if the given string is a hashed user created by 'mkUniqueUserGroup'.
+  isHashed = val: builtins.match "(user|group)-[a-f0-9]+" val != null;
 
 in {
   imports = [ ./webserver.nix ./meta.nix ./directories.nix ../database ];
@@ -159,11 +163,12 @@ in {
   config = lib.mkMerge [
     { _module.args.mkUnique = suffix:
         if lib.hasPrefix config.uniqueName suffix then suffix
+        else if isHashed suffix then suffix
         else if suffix == wsName then config.uniqueName
         else "${config.uniqueName}-${suffix}";
 
-      _module.args.mkUniqueUser = mkUniqueUserGroup;
-      _module.args.mkUniqueGroup = mkUniqueUserGroup;
+      _module.args.mkUniqueUser = mkUniqueUserGroup "user";
+      _module.args.mkUniqueGroup = mkUniqueUserGroup "group";
     }
     (lib.mkIf config.enable {
       systemd.mounts = lib.singleton {
