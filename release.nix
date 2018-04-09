@@ -32,6 +32,10 @@ in {
 
     nativeBuildInputs = [ pkgs.libxslt ];
 
+    styleSheets = [
+      "style.css" "overrides.css" "highlightjs/mono-blue.css"
+    ];
+
     buildCommand = ''
       dest="$out/share/doc/nixcloud-webservices"
       mkdir -p "$dest"
@@ -52,13 +56,18 @@ in {
       xsltproc -o "$dest/index.html" -nonet -xinclude \
         --param section.autolabel 1 \
         --param section.label.includes.component.label 1 \
-        --stringparam html.stylesheet style.css \
+        --stringparam html.stylesheet \
+          'style.css overrides.css highlightjs/mono-blue.css' \
+        --stringparam html.script \
+          'highlightjs/highlight.pack.js highlightjs/loader.js' \
         --param xref.with.number.and.title 1 \
         --stringparam admon.style "" \
         ${pkgs.docbook5_xsl}/xml/xsl/docbook/xhtml/docbook.xsl \
         manual.xml
 
-      cp "${pkgs.path}/nixos/doc/manual/style.css" "$dest/style.css"
+      cp "${nixpkgs}/doc/style.css" "$dest/style.css"
+      cp "${nixpkgs}/doc/overrides.css" "$dest/overrides.css"
+      cp -r ${pkgs.documentation-highlighter} "$dest/highlightjs"
 
       mkdir -p "$out/nix-support"
       echo "doc manual $dest" > "$out/nix-support/hydra-build-products"
