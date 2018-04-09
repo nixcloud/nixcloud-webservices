@@ -158,7 +158,7 @@ in {
 
   config = lib.mkMerge [
     { _module.args.mkUnique = suffix:
-        if suffix == config.uniqueName then suffix
+        if lib.hasPrefix config.uniqueName suffix then suffix
         else if suffix == wsName then config.uniqueName
         else "${config.uniqueName}-${suffix}";
 
