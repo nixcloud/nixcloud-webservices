@@ -118,8 +118,9 @@ specific database type.
 ``user``
 ^^^^^^^^
 
-Specifies the user which will have access to the database determined by
-SO_PEERCRED [1]_.
+Specifies the user which will have access to the database determined by the
+user who connects to the UNIX socket (under the hood it's done by looking up
+SO_PEERCRED [1]_).
 
 ``postCreate``
 ^^^^^^^^^^^^^^
