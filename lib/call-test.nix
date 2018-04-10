@@ -1,7 +1,7 @@
 { system, pkgs, nixpkgs ? <nixpkgs>, ... }@args: test:
 
 let
-  testLib = import "${nixpkgs}/nixos/lib/testing.nix" { inherit system; };
+  testLib = import "${toString nixpkgs}/nixos/lib/testing.nix" { inherit system; };
   inherit (pkgs) lib;
 
   getRelativePathStr = path: let
