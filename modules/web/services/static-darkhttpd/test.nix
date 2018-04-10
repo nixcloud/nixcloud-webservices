@@ -22,9 +22,9 @@
   testScript = ''
     $machine->waitForUnit('multi-user.target');
     $machine->waitForOpenPort(80);
-    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-darkhttpd-foo/index.html');
-    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-darkhttpd-bar/index.html');
-    $machine->succeed('test "$(curl -L http://example.com/index.html)" = works');
-    $machine->succeed('test "$(curl -L http://example.org/index.html)" = works');
+    $machine->succeed(
+      'curl -L http://example.com/ | grep -q "Nothing here yet"',
+      'curl -L http://example.org/ | grep -q "Nothing here yet"'
+    );
   '';
 }
