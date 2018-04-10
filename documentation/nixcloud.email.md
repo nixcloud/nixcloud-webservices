@@ -31,6 +31,7 @@ See [implementation](../modules/services/email)
 
 Upcoming features:
 
+* [ ] Dedicated 18.03 support (long term support)
 * [ ] DNS abstraction which shows all the required configuration(s) and if they are correct already
 * [ ] Webmail support (Roundcube)
 * [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
