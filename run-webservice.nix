@@ -1,33 +1,4 @@
-# This is a helper tool which should aid in development of new modules. It can
-# also be used to take a quick look at what a web service does and to play
-# around with it.
-#
-# To quickly run a web service you can use the following command:
-#
-#   nix-build run-webservice.nix -A leaps
-#
-# If you want to provide more options, you can pass them using --arg and
-# wsConfig:
-#
-#   nix-build run-webservice.nix \
-#     --arg wsConfig '{ defaultSkin = "nostalgia" }' \
-#     -A mediawiki
-#
-# The result is script that spawns a QEMU VM and automatically forwards ports
-# so that the web service is accessible by pointing your browser at
-# http://localhost:3000/. A SSH session is also started and automatically
-# connected to the guest VM via the root user.
-#
-# Emails sent from web services are all caught under the root user's mailbox,
-# so simply invoking "mutt" will give you access to all mails that were sent
-# out by the web service.
-#
-# Running the VM is a matter of just executing the resulting store path, which
-# by default is "./result".
-#
-# Note that a file called "nixcloud-dev.qcow2" is created when running the VM,
-# which contains the disk state for the guest system. If you want to get rid of
-# all state and start fresh, simple delete the file and run again.
+# Run run-webservice.sh --help to see an explanation on what this does.
 { system ? builtins.currentSystem, wsConfig ? {}, httpPort ? 3000 }:
 
 let
