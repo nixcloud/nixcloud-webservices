@@ -96,10 +96,13 @@ Some options useful for module developers:
 ``socketPath``
 ^^^^^^^^^^^^^^
 
-This option is read-only and the module should always use the socket to
+This option is read-only and the module should always use the UNIX socket to
 communicate with the database. The reason for this is to avoid the need of
 passwords or certificates. Use of this option definition is only for module
-developers to find out the right socket path.
+developers to find out the right socket path, not for users to expose.
+
+Depending on the application, either ``socketPath`` or ``phpHostname`` needs to
+be used in the connection string/function.
 
 ``phpHostname``
 ^^^^^^^^^^^^^^^
@@ -107,6 +110,10 @@ developers to find out the right socket path.
 Similar to `socketPath`_ but a useful helper for PHP-based web services,
 because database connections to sockets are specified differently in PHP
 dependending on the database type.
+
+The reason this is not called ``phpSocketPath`` is because for most PHP
+projects there is no easy way to specify the socket path, so this value is used
+to pass the socket path as a special host name.
 
 ``type``
 ^^^^^^^^
