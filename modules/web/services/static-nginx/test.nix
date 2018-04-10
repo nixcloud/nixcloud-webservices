@@ -22,9 +22,9 @@
   testScript = ''
     $machine->waitForUnit('multi-user.target');
     $machine->waitForOpenPort(80);
-    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-nginx-foo/index.html');
-    $machine->succeed('echo works > /var/lib/nixcloud/webservices/static-nginx-bar/index.html');
-    $machine->succeed('test "$(curl -L http://example.com/)" = works');
-    $machine->succeed('test "$(curl -L http://example.org/)" = works');
+    $machine->succeed(
+      'curl -L http://example.com/ | grep -q "Nothing here yet"',
+      'curl -L http://example.org/ | grep -q "Nothing here yet"'
+    );
   '';
 }

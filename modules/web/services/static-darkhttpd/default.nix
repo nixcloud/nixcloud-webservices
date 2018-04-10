@@ -12,6 +12,7 @@
 
   config = lib.mkMerge [
     (lib.mkIf (config.root == "${config.stateDir}/www") {
+      # XXX: Make DRY with the one in static-nginx!
       directories.www.postCreate = ''
         cat > index.html <<EOF
         <!DOCTYPE html>
