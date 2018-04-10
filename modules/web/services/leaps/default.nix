@@ -29,9 +29,18 @@
       };
     };
 
+    directories.www.postCreate = ''
+      cat > README.md <<EOF
+      # No files to edit other than this one?
+
+      You can add more files into \`${config.stateDir}/www\` to edit them
+      collaberatively via your Leaps instance.
+      EOF
+    '';
+
     users.leaps = {
       description = "Leaps server user";
-      home        = config.stateDir;
+      home        = "${config.stateDir}/www";
       createHome  = true;
       group       = "leaps";
     };
@@ -48,7 +57,7 @@
         User = "leaps";
         Group = "leaps";
         Restart = "on-failure";
-        WorkingDirectory = config.stateDir;
+        WorkingDirectory = "${config.stateDir}/www";
         PrivateTmp = true;
         ExecStart = lib.concatMapStringsSep " " lib.escapeShellArg [
           "${pkgs.leaps.bin}/bin/leaps"
