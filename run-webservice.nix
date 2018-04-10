@@ -24,6 +24,10 @@
 #
 # Running the VM is a matter of just executing the resulting store path, which
 # by default is "./result".
+#
+# Note that a file called "nixcloud-dev.qcow2" is created when running the VM,
+# which contains the disk state for the guest system. If you want to get rid of
+# all state and start fresh, simple delete the file and run again.
 { system ? builtins.currentSystem, wsConfig ? {}, httpPort ? 3000 }:
 
 let
