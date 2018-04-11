@@ -1,6 +1,6 @@
 { system ? builtins.currentSystem
-, nixpkgs ? <nixpkgs>
-, pkgs ? import nixpkgs { inherit system; }
+, pkgs ? import <nixpkgs> { inherit system; }
+, nixpkgs ? pkgs.path
 }:
 
 let

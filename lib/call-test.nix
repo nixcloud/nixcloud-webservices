@@ -1,4 +1,4 @@
-{ system, pkgs, nixpkgs ? <nixpkgs>, ... }@args: test:
+{ system, pkgs, nixpkgs ? pkgs.path, ... }@args: test:
 
 let
   testLib = import "${nixpkgs}/nixos/lib/testing.nix" { inherit system; };
