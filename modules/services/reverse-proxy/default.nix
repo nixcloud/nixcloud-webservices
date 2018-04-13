@@ -247,7 +247,6 @@ in
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
       needsHttps = fold (el: con: if ((el.https.mode != "off") || checkWebsockets el.websockets "https") then true else con) false filteredProxyOptions;
-      #ACMEcertList = filter (cert: cert.
     in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {
         ssl on;
@@ -312,21 +311,16 @@ in
       { name = "${user}";
       });
 
-    security.acme.certs = (fold (el: con: if ((ACMEsupportSet.${el}) != "ACME") then con else con // {
+    security.acme.certs = (fold (el: con: if ((ACMEsupportSet.${el}) == "ACME") then con // {
       "${el}_ncws" = {
-        # FIXME: inject nixcloud.reverse-proxy user into acme groups (or the othern way round)
-        #user = "acme";
-        #group = "acme";
         domain = "${el}";
-        # FIXME: check if allowKeysForGroup is required
-        # allowKeysForGroup = true;
         webroot = "/var/lib/acme/acme-challenges";
         postRun = ''
          systemctl reload nixcloud.reverse-proxy
         '';
-        # FIXME systemd.reload = [ "nixcloud.reverse-proxy.service" ];
       };
-    }) {} (attrNames ACMEsupportSet));
+    } else con) {} (attrNames ACMEsupportSet));
+    
     nixcloud.tests.wanted = [ ./test.nix ];
   };
 }
