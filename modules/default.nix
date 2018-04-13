@@ -16,6 +16,7 @@
     core/utils.nix
     core/version.nix
     services/reverse-proxy
+    services/TLS
     services/email/opendkim.nix
     services/email/postfix.nix
     services/email/pfix-srsd.nix
