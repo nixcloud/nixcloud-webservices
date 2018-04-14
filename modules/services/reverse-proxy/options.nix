@@ -23,24 +23,24 @@ let
     '';
   };
 
-  ssl_certificateSetModule = {
-    options = {
-      ssl_certificate = mkOption {
-        type = types.path;
-        description = ''
-          A location containg the full path and filename to `/path/to/fullchain.pem`.
-        '';
-        example = "/path/to/fullchain.pem";
-      };
-      ssl_certificate_key = mkOption {
-        type = types.path;
-        description = ''
-          A location containg the full path and filename to `/path/to/key.pem`.
-        '';
-        example = "/path/to/key.pem";
-      };
-    };
-  };
+#   ssl_certificateSetModule = {
+#     options = {
+#       ssl_certificate = mkOption {
+#         type = types.path;
+#         description = ''
+#           A location containg the full path and filename to `/path/to/fullchain.pem`.
+#         '';
+#         example = "/path/to/fullchain.pem";
+#       };
+#       ssl_certificate_key = mkOption {
+#         type = types.path;
+#         description = ''
+#           A location containg the full path and filename to `/path/to/key.pem`.
+#         '';
+#         example = "/path/to/key.pem";
+#       };
+#     };
+#   };
   
   locationWebSocketModule = { config, lib, options, toplevel }: {
     options = {
@@ -191,12 +191,15 @@ in
       '';
     };
     TLS = mkOption {
-      type = types.either (types.enum [ "ACME" "none" ]) (types.submodule ssl_certificateSetModule);
+      type = types.either (types.enum [ "none" "ACME" ]) (types.set);
       default = "ACME";
       description = ''
-        TLS backend in use. Defaults to "ACME" (let's encrypt) but one can also set "none" or pass in cert/key using ssl_certificateSetModule. You can't mix TLS modes like "ACME" and ssl_certificateSetModule for two
-        proxyOption records related to the same domain as "example.com".
-      '';
+        Use this option to set the `TLS backend` to be used:
+        
+        * "ACME" - (default) uses let's encrypt to automatically download and install TLS certificates
+        * "none" - makes sure that no `https` record, in the reverse-proxy, is is created for this `proxyOption`
+        * nixcloud.TLS."identifier" - reference a nixcloud.TLS configuration of type `types.set` for certificate/key
+      ''; #'
     };
     http = {
       mode = mkOption {
