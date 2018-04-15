@@ -320,6 +320,16 @@ in
         '';
       };
     } else con) {} (attrNames ACMEsupportSet));
+
+            
+    nixcloud.TLS.certs = {
+      "example.com" = {
+        domain = "aaaaaaaaahhhhh.b";
+        extraDomains = [ "linux.org" ];
+        email = "foo@bar.com";
+        reload = [ "dovecot2.service" ];
+      };
+    };
     
     nixcloud.tests.wanted = [ ./test.nix ];
   };

@@ -1,68 +1,48 @@
+# FIXME: blog post:
+#  - example: see the meta.nix example
+#  - check: if check for custom type fails, one should be able to get a LOC string, where that type
+#    was defined and what arguments it wants (as string for instance) and additionally one should
+#    be able to supply a custom error message
+#        error: The option value `nixcloud.TLS.certs.example.com.mode' in `/home/joachim/Desktop/projects/nixcloud/nixcloud-webservices/modules/services/TLS' is not of type `nixcloudTLSModeType'.
+#    - this error message contains a bug, as it states nixcloud.TLS.certs.example.com.mode instead of nixcloud.TLS.certs."example.com".mode
+#    - custom types should have a name close to the type definition. in this example a user seeing this error message will get confused as
+#      he does not know what is going on as he can't guess the internals
+#    - that is why i hacked the name to be: `name = "nixcloud.TLS.certs.<name?>.mode";`
+#  - check: in check one uses isString, it would be nice to also be able to use the same syntax as in
+#    type = types.string (and similar functions) becase now one has to reimplement basically what we 
+#    have in type already
+#  - merge: explain `merge = loc: defs: ` with an easy example. especially point out builtins.trace and lib.traceVal usage ...
+#  - merge: explain the bool merge vs. the string vs. the str merge (see domain/email option implications)
+#  - merge: default values for mkOption(s) don't appear in the merge function arguments
+#    - this means one can't easily add a domain name based on the 'submodule' functiosn 'name' argument as it won't appear
+#      in the merge when some other module defines it.
+#    - it also means that we can't bail out in the 'merge' function with an error: you forgot to define a meaningful value here
+#      this is why nixcloud.TLS.certs.<name?>'s apply function has assertions for that (hack!)
+#  - undefined values: in the option system produce this error:
+#    error: The option `nixcloud.TLS.certs.example.com.mode' is used but not defined.
+#    but it lacks a context where that 'usage' actually takes place
+#  - explain: `apply = ` hack to assert that at last one module set this option
+#
+# idea: test if the check function can be used with `types.string.check`
+#      || (types.string.check x && x == "ACME") 
+#       and how this can be done with submodule and similar types
+
 # https://trello.com/c/dHSQhPYx/180-nixcloudtls
-
 { config, pkgs, lib, ... } @ args:
-
 with lib;
 
 let
-
-    # A submodule (like typed attribute set). See NixOS manual.
-    submodule1 = opts:
-      let
-        opts' = toList opts;
-        inherit (lib.modules) evalModules;
-      in
-      mkOptionType rec {
-        name = "submodule";
-#        check = x: abort "barfoo";
-        check = x: isAttrs x || isFunction x;        
-#        merge = loc: defs: abort "foobar";
-        merge = loc: defs:
-          let
-            coerce = def: if isFunction def then def else { config = def; };
-            modules = opts' ++ map (def: { _file = def.file; imports = [(coerce def.value)]; }) defs;
-          in (evalModules {
-            inherit modules;
-            args.name = last loc;
-            prefix = loc;
-          }).config;
-        getSubOptions = prefix: (evalModules
-          { modules = opts'; inherit prefix;
-            # This is a work-around due to the fact that some sub-modules,
-            # such as the one included in an attribute set, expects a "args"
-            # attribute to be given to the sub-module. As the option
-            # evaluation does not have any specific attribute name, we
-            # provide a default one for the documentation.
-            #
-            # This is mandatory as some option declaration might use the
-            # "name" attribute given as argument of the submodule and use it
-            # as the default of option declarations.
-            args.name = "&lt;name&gt;";
-          }).options;
-        getSubModules = opts';
-        substSubModules = m: submodule1 m;
-        functor = (defaultFunctor name) // {
-          # Merging of submodules is done as part of mergeOptionDecls, as we have to annotate
-          # each submodule with its location.
-          payload = [];
-          binOp = lhs: rhs: [];
-        };
-      };
-
-
-
-
   cfg = config.nixcloud.TLS;
-  ssl_certificateSetModule = {
+  tls_certificateSetModule = {
     options = {
-      ssl_certificate = mkOption {
+      tls_certificate = mkOption {
         type = types.path;
         description = ''
           A location containg the full path and filename to `/path/to/fullchain.pem`.
         '';
         example = "/path/to/fullchain.pem";
       };
-      ssl_certificate_key = mkOption {
+      tls_certificate_key = mkOption {
         type = types.path;
         description = ''
           A location containg the full path and filename to `/path/to/key.pem`.
@@ -71,37 +51,57 @@ let
       };
     };
   };
-  
-#   maintainer = mkOptionType {
-#     name = "maintainer";
-#     check = email: elem email (attrValues lib.maintainers);
-#     merge = loc: defs: listToAttrs (singleton (nameValuePair (last defs).file (last defs).value));
-#   };
-# 
-#   listOfMaintainers = types.listOf maintainer // {
-#     # Returns list of
-#     #   { "module-file" = [
-#     #        "maintainer1 <first@nixos.org>"
-#     #        "maintainer2 <second@nixos.org>" ];
-#     #   }
-#     merge = loc: defs:
-#       zipAttrs
-#         (flatten (imap1 (n: def: imap1 (m: def':
-#           maintainer.merge (loc ++ ["[${toString n}-${toString m}]"])
-#             [{ inherit (def) file; value = def'; }]) def.value) defs));
-#   };
-
-
+  nixcloudTLSDomainType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name?>.domain";
+    check = x: (isString x && x != "") 
+      || (isNull x);
+    merge = mergeEqualOption;
+  };
+  nixcloudTLSEmailType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name?>.email";
+    check = x: (isString x && x != "") 
+      || (isNull x);
+    merge = mergeEqualOption;
+  };  
+  nixcloudTLSModeType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name?>.mode";
+    merge = mergeEqualOption;
+    # FIXME this check is not 100% the same as the type previously was...
+    # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
+    check = x: ((isAttrs x || isFunction x)
+        || (types.string.check x && x == "ACME") 
+        || (isString x && x == "selfsigned") 
+        || (isAttrs  x && x ? tls_certificate_key && x ? tls_certificate))
+      || (isNull x);
+  };
+  nixcloudExtraDomainsType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name?>.extraDomains";
+    check = x: ((isList x) && fold (el: c: if (builtins.typeOf el == "string") then c else false) true x) 
+      || (isNull x);
+    merge = loc: defs: unique (fold (el: c: c ++ el.value) [] defs);
+  };
+  nixcloudReloadType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name?>.reload";
+    check = x: ((isList x) && fold (el: c: if (builtins.typeOf el == "string") then c else false) true x) 
+      || (isNull x);
+    merge = loc: defs: unique (fold (el: c: c ++ el.value) [] defs);
+  };
+  nixcloudRestartType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name?>.restart";
+    check = x: ((isList x) && fold (el: c: if (builtins.typeOf el == "string") then c else false) true x) 
+      || (isNull x);
+    merge = loc: defs: unique (fold (el: c: c ++ el.value) [] defs);
+  };  
   certOpts = { name, ... } @ toplevel: {
     options = {
       domain = mkOption {
-        type = types.str;
-        default = name;
+        type = nixcloudTLSDomainType;
+        default = null;
         description = "Domain to fetch certificate for (defaults to the entry name)";
       };
       extraDomains = mkOption {
-        type = types.listOf (types.str);
-        default = {};
+        type = nixcloudExtraDomainsType;
+        default = [];
         example = literalExample ''
           [ "example.org" "mydomain.org" ];
         '';
@@ -109,65 +109,54 @@ let
           A list of extra domain names, which are included in the one certificate to be issued, with their
           own server roots if needed.
         '';
-      };      
+      };
+      reload = mkOption {
+        type = nixcloudReloadType;
+        default = [];
+        description = "List of systemd services to reload when the certificate is being updated";
+      };    
+      restart = mkOption {
+        type = nixcloudRestartType;
+        default = [];
+        description = "List of systemd services to restart when the certificate is being updated";
+      };  
       email = mkOption {
-        type = types.nullOr types.str;
+        type = nixcloudTLSEmailType;
         default = null;
         description = "Contact email address for the CA to be able to reach you.";
       };
       mode = mkOption {
-        type = types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule ssl_certificateSetModule);
-        default = "ACME";
+        type = nixcloudTLSModeType;
+        default = null;
         description = ''
          Use this option to set the `TLS mode` to be used:
         
           * "ACME" - (default) uses let's encrypt to automatically download and install TLS certificates
           * "selfsigned" - this abstraction will create self signed certificates
-          * { ssl_certificate_key = /flux/to/cert.pem; ssl_certificate = /flux/to/key.pem; }; - supply the certificates yourself
+          * { tls_certificate_key = /flux/to/cert.pem; tls_certificate = /flux/to/key.pem; }; - supply the certificates yourself
       ''; #'
-        '';
+ 
       };
-      ssl_certificate_key = mkOption {
-        type = types.path;
-        readOnly = true;
-        default = 
-          if (builtins.typeOf toplevel.config.mode == "string") then 
-            if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlscert.pem" else "/var/lib/nixcloud/TLS/${name}/tlscert.pem"
-          else 
-            toplevel.config.mode.ssl_certificate_key;
-        description = "";
-      };
-      ssl_certificate = mkOption {
+      tls_certificate_key = mkOption {
         type = types.path;
         readOnly = true;
         default = 
           if (builtins.typeOf toplevel.config.mode == "string") then 
             if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlskey.pem" else "/var/lib/nixcloud/TLS/${name}/tlskey.pem"
           else 
-            toplevel.config.mode.ssl_certificate_key;
+            toplevel.config.mode.tls_certificate_key;
         description = "";
       };
-      services = mkOption {
-        description = "associated systemd services to perform actions over";
-        default = {};
-        example = literalExample ''
-          {
-            postfix.action = "restart";
-            dovecot.action = "reload";
-          };
-        '';
-        type = types.attrsOf (types.submodule {
-          options = {
-            action = mkOption {
-              type = enum [ "restart" "reload" ];
-              default = null;
-              description = ''
-                An action to execute on systemd services after certificates are re-issues.
-              '';
-            };
-          };
-        });      
-      };
+      tls_certificate = mkOption {
+        type = types.path;
+        readOnly = true;
+        default = 
+          if (builtins.typeOf toplevel.config.mode == "string") then 
+            if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlscert.pem" else "/var/lib/nixcloud/TLS/${name}/tlscert.pem"
+          else 
+            toplevel.config.mode.tls_certificate;
+        description = "";
+      };        
     };
   };
 in
@@ -176,32 +165,20 @@ in
   options = {
     nixcloud.TLS = {
       certs = mkOption {
-        default = {
-          "example.com" = {
-            #email = "foo@example.com";
-            #mode = "selfsigned";
-            mode = {
-              ssl_certificate_key = /path/to/cert.pem;
-              ssl_certificate = /path/to/key.pem;
-            };
-            extraDomains = { "www.example.com" = null; "foo.example.com" = "/var/www/foo/"; };
-          };
-        };
-        type = with types; attrsOf (submodule1 certOpts);
-
+        default = {};
+        type = with types; attrsOf (submodule certOpts);
+        apply = x:
+          let
+            n = head (attrNames x);
+          in
+          assert (x.${n}.mode   != null) || abort "nixcloud.TLS.\"${n}\".mode is undefined (`null`)!";
+          assert (x.${n}.domain != null) || abort "nixcloud.TLS.\"${n}\".domain is undefined (`null`)!";
+          x;
         description = ''
           Attribute set of certificates to get signed and renewed.
         '';
         example = literalExample ''
-          {
-            "example.com" = {
-              email = "foo@example.com";
-              extraDomains = { "www.example.com" = null; "foo.example.com" = "/var/www/foo/"; };
-            };
-            "bar.example.com" = {
-              email = "bar@example.com";
-            };
-          }
+
         '';
       };
     };
@@ -271,10 +248,12 @@ in
 #         '';
 #       };
 #     } else con) {} (attrNames ACMEsupportSet));
-  };
+    };
   meta = {
     maintainers = with lib.maintainers; [ qknight ];
   };
+  
+  
   #nixcloud.tests.wanted = [ ./test.nix ];
 }
 
@@ -291,11 +270,10 @@ in
 # 
 # # requirements
 # 
-# * merging of certificate requirements: if several different services like nixcloud.reverse-proxy and nixcloud.email are configured for the same domain, then `reload/restart` the merged list of dependencies
 # * supported modes
 #         * "selfsigned"
 #         * "ACME"
-#         * {ssl_certificate_key = ./path/key.pem; ssl_certificate = ./path/cert.pem }
+#         * {tls_certificate_key = ./path/key.pem; tls_certificate = ./path/cert.pem }
 # * reverse-proxy / nixcloud.email must wait until targets are ready, so 
 #         nixcloud.TLS."nixcloud.io".systemd.before
 #         nixcloud.TLS."nixcloud.io".systemd.wantedBy
