@@ -1,3 +1,14 @@
+# roadmap
+#
+# 1. implement the config part, where "ACME" creates a `security.acme` entry &
+#    "selfsigned" creates a self signed tls certificate
+# 2. integrate this into nixcloud-webservices
+# 3. redo all description and examples
+# 4. write a comprehensive nixcloud test for this
+# 5. release this to be used in nixcloud-webservices and nixcloud.email
+# 6. blog about this new feature and give a short introduction into nix typing
+#
+#
 # FIXME: blog post:
 #  - example: see the meta.nix example
 #  - check: if check for custom type fails, one should be able to get a LOC string, where that type
@@ -68,10 +79,9 @@ let
     merge = mergeEqualOption;
     # FIXME this check is not 100% the same as the type previously was...
     # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
-    check = x: ((isAttrs x || isFunction x)
-        || (types.string.check x && x == "ACME") 
+    check = x: ((isString x && x == "ACME") 
         || (isString x && x == "selfsigned") 
-        || (isAttrs  x && x ? tls_certificate_key && x ? tls_certificate))
+        || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate))
       || (isNull x);
   };
   nixcloudExtraDomainsType = mkOptionType {
@@ -244,10 +254,38 @@ in
 #         domain = "${el}";
 #         webroot = "/var/lib/acme/acme-challenges";
 #         postRun = ''
-#          systemctl reload nixcloud.TLS
+#           systemctl reload nixcloud.TLS
 #         '';
 #       };
 #     } else con) {} (attrNames ACMEsupportSet));
+
+#       systemd.services."nixcloud.reverse-proxy" = let
+#         acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
+#       in {
+#         description   = "nixcloud reverse-proxy service";
+#         wantedBy      = [ "multi-user.target" ];
+#         
+#         after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ];
+#         wants =  if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [];
+#         
+#         stopIfChanged = false;
+# 
+#         preStart = ''
+#           mkdir -p ${stateDir}/nginx/logs
+#           mkdir -p ${stateDir}/nginx
+#           chmod 700 ${stateDir}
+#           chown -R ${user}:${group} ${stateDir}
+#         '';
+#         serviceConfig = {
+#           ExecStart = "${pkgs.nginx}/bin/nginx -c ${if (cfg.configFile == null) then (checkAndFormatNginxConfigfile {inherit configFile; fileName = "nixcloud.reverse-proxy.conf";}) else cfg.configFile}/nixcloud.reverse-proxy.conf -p ${stateDir}/nginx";
+#           ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+#           Restart = "always";
+#           RestartSec = "10s";
+#           StartLimitInterval = "1min";
+#         };
+#       };
+
+
     };
   meta = {
     maintainers = with lib.maintainers; [ qknight ];
