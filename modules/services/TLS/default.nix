@@ -116,6 +116,7 @@ let
         example = literalExample ''
           [ "example.org" "mydomain.org" ];
         '';
+        apply = x: unique (fold (el: c: c ++ el) [] x);
         description = ''
           A list of extra domain names, which are included in the one certificate to be issued, with their
           own server roots if needed.
@@ -123,6 +124,10 @@ let
       };
       reload = mkOption {
         type = nixcloudReloadType;
+        apply = x: let 
+          targets = unique (fold (el: c: c ++ el) [] x); 
+          in 
+          lib.subtractLists toplevel.config.restart targets;
         default = [];
         example = [ "postifx.service" ];
         description = "List of systemd services to reload when the certificate is being updated";
@@ -130,6 +135,7 @@ let
       restart = mkOption {
         type = nixcloudRestartType;
         default = [];
+        apply = x: unique (fold (el: c: c ++ el) [] x);
         example = [ "postifx.service" ];
         description = "List of systemd services to restart when the certificate is being updated";
       };  
