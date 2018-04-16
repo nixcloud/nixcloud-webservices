@@ -5,6 +5,27 @@
 # 2. integrate this into nixcloud-webservices
 # 3. redo all description and examples
 # 4. write a comprehensive nixcloud test for this
+# 
+#   nixcloud.TLS.certs = {
+#     "example.com" = {
+#       domain = "aaaaaaaaahhhhh.bb";
+#       extraDomains = [ "flux.com" "flux.com" ];
+#       mode = "ACME";
+#       email = "foo@bar.com";
+#       restart = [ "foo.service" "foo.service"];
+#       reload =  [ "foo.service" "bar" ];
+#     };
+#     nixcloud.TLS.certs = {
+#       "example.com" = {
+#         domain = "aaaaaaaaahhhhh.bb";
+#         extraDomains = [ "linux.org" ];
+#         email = "foo@bar.com";
+#         restart = [ "dovecot2.service" "foo.service" ];
+#         reload = [ "foo.service" ];
+#       };
+#     };
+#   };
+#
 # 5. release this to be used in nixcloud-webservices and nixcloud.email
 # 6. blog about this new feature and give a short introduction into nix typing
 #
@@ -37,7 +58,9 @@
 # idea: test if the check function can be used with `types.string.check`
 #      || (types.string.check x && x == "ACME") 
 #       and how this can be done with submodule and similar types
-
+#
+# wish: a hook for a custom type which is triggered once all modules have been merged so that
+#       one can verify the state of a type before it is actually used
 # https://trello.com/c/dHSQhPYx/180-nixcloudtls
 { config, pkgs, lib, ... } @ args:
 with lib;
@@ -86,7 +109,7 @@ let
       || (isNull x);
   };
   c = x: ((isList x) && fold (el: c: if (isString el) then c else false) true x);
-  m = loc: defs: unique (map (el: el.value) defs);
+  m = loc: defs: (map (el: el.value) defs);
   nixcloudExtraDomainsType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.extraDomains";
     check = c;
@@ -130,14 +153,21 @@ let
           lib.subtractLists toplevel.config.restart targets;
         default = [];
         example = [ "postifx.service" ];
-        description = "List of systemd services to reload when the certificate is being updated";
+        description = ''
+          A list of systemd services which are `reloaded` after certificates are re-issued.
+          A service is only `reloaded` once, even when mentioned serveral times in this list.
+          It is not reloaded if it is also listed in the `restart` list, then it is only restarted.
+        '';
       };    
       restart = mkOption {
         type = nixcloudRestartType;
         default = [];
         apply = x: unique (fold (el: c: c ++ el) [] x);
         example = [ "postifx.service" ];
-        description = "List of systemd services to restart when the certificate is being updated";
+        description = ''
+          A list of systemd services which are `restarted` after certificates are re-issued.
+          A service is only `restarted` once, even when mentioned serveral times in this list.
+        '';
       };  
       email = mkOption {
         type = nixcloudTLSEmailType;
@@ -146,7 +176,7 @@ let
       };
       mode = mkOption {
         type = nixcloudTLSModeType;
-        default = null;
+        #default = null;
         description = ''
          Use this option to set the `TLS mode` to be used:
         
@@ -160,20 +190,20 @@ let
         type = types.path;
         readOnly = true;
         default = 
-          if (builtins.typeOf toplevel.config.mode == "string") then 
+          if (isString toplevel.config.mode) then 
             if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlskey.pem" else "/var/lib/nixcloud/TLS/${name}/tlskey.pem"
           else 
-            toplevel.config.mode.tls_certificate_key;
+            "/";
         description = "";
       };
       tls_certificate = mkOption {
         type = types.path;
         readOnly = true;
         default = 
-          if (builtins.typeOf toplevel.config.mode == "string") then 
+          if (isString toplevel.config.mode) then 
             if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlscert.pem" else "/var/lib/nixcloud/TLS/${name}/tlscert.pem"
           else 
-            toplevel.config.mode.tls_certificate;
+            "/";
         description = "";
       };        
     };
@@ -190,12 +220,12 @@ in
           let
             n = head (attrNames x);
           in
-          # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
-          # and we have to make sure that the domain and mode is set properly so other modules can either 
-          # expect this nixcloud.TLS.certs to be empty or filled with meaningful values
-          assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".domain is undefined (`null`)!";
-          assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".mode is undefined (`null`)!";
-           x;
+            # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
+            # and we have to make sure that the domain and mode is set properly so other modules can either 
+            # expect this nixcloud.TLS.certs to be empty or filled with meaningful values
+            #assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".domain is undefined (`null`)!";
+            #assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".mode is undefined (`null`)!";
+            lib.traceValSeq x;
         description = ''
           Attribute set of certificates to get signed and renewed.
         '';
@@ -267,7 +297,10 @@ in
         #email = FIXME
         webroot = "/var/lib/acme/acme-challenges";
         postRun = ''
-          systemctl reload nixcloud.TLS
+          ${optionalString (true) ''
+            # hello
+          ''}
+        #  systemctl reload nixcloud.TLS
         '';
       };
     } else con) {} (attrNames config.nixcloud.TLS.certs));
