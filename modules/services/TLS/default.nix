@@ -15,7 +15,7 @@
 #    was defined and what arguments it wants (as string for instance) and additionally one should
 #    be able to supply a custom error message
 #        error: The option value `nixcloud.TLS.certs.example.com.mode' in `/home/joachim/Desktop/projects/nixcloud/nixcloud-webservices/modules/services/TLS' is not of type `nixcloudTLSModeType'.
-#    - this error message contains a bug, as it states nixcloud.TLS.certs.example.com.mode instead of nixcloud.TLS.certs."example.com".mode
+#    - this error message contains a BUG, as it states nixcloud.TLS.certs.example.com.mode instead of nixcloud.TLS.certs."example.com".mode
 #    - custom types should have a name close to the type definition. in this example a user seeing this error message will get confused as
 #      he does not know what is going on as he can't guess the internals
 #    - that is why i hacked the name to be: `name = "nixcloud.TLS.certs.<name?>.mode";`
@@ -76,6 +76,7 @@ let
   };  
   nixcloudTLSModeType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.mode";
+    #description = "FIXME"; # FIXME <- what is that descripton good for?
     merge = mergeEqualOption;
     # FIXME this check is not 100% the same as the type previously was...
     # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
@@ -84,29 +85,29 @@ let
         || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate))
       || (isNull x);
   };
+  c = x: ((isList x) && fold (el: c: if (isString el) then c else false) true x);
+  m = loc: defs: unique (map (el: el.value) defs);
   nixcloudExtraDomainsType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.extraDomains";
-    check = x: ((isList x) && fold (el: c: if (builtins.typeOf el == "string") then c else false) true x) 
-      || (isNull x);
-    merge = loc: defs: unique (fold (el: c: c ++ el.value) [] defs);
+    check = c;
+    merge = m;
   };
   nixcloudReloadType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.reload";
-    check = x: ((isList x) && fold (el: c: if (builtins.typeOf el == "string") then c else false) true x) 
-      || (isNull x);
-    merge = loc: defs: unique (fold (el: c: c ++ el.value) [] defs);
+    check = c;
+    merge = m;
   };
   nixcloudRestartType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.restart";
-    check = x: ((isList x) && fold (el: c: if (builtins.typeOf el == "string") then c else false) true x) 
-      || (isNull x);
-    merge = loc: defs: unique (fold (el: c: c ++ el.value) [] defs);
+    check = c;
+    merge = m;
   };  
   certOpts = { name, ... } @ toplevel: {
     options = {
       domain = mkOption {
         type = nixcloudTLSDomainType;
         default = null;
+        apply = x: x;
         description = "Domain to fetch certificate for (defaults to the entry name)";
       };
       extraDomains = mkOption {
@@ -123,17 +124,19 @@ let
       reload = mkOption {
         type = nixcloudReloadType;
         default = [];
+        example = [ "postifx.service" ];
         description = "List of systemd services to reload when the certificate is being updated";
       };    
       restart = mkOption {
         type = nixcloudRestartType;
         default = [];
+        example = [ "postifx.service" ];
         description = "List of systemd services to restart when the certificate is being updated";
       };  
       email = mkOption {
         type = nixcloudTLSEmailType;
         default = null;
-        description = "Contact email address for the CA to be able to reach you.";
+        description = "Contact email address for the CA to be able to reach you when using ACME.";
       };
       mode = mkOption {
         type = nixcloudTLSModeType;
@@ -177,13 +180,16 @@ in
       certs = mkOption {
         default = {};
         type = with types; attrsOf (submodule certOpts);
-        apply = x:
+        apply = x: 
           let
             n = head (attrNames x);
           in
-          assert (x.${n}.mode   != null) || abort "nixcloud.TLS.\"${n}\".mode is undefined (`null`)!";
-          assert (x.${n}.domain != null) || abort "nixcloud.TLS.\"${n}\".domain is undefined (`null`)!";
-          x;
+          # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
+          # and we have to make sure that the domain and mode is set properly so other modules can either 
+          # expect this nixcloud.TLS.certs to be empty or filled with meaningful values
+          assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".domain is undefined (`null`)!";
+          assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".mode is undefined (`null`)!";
+           x;
         description = ''
           Attribute set of certificates to get signed and renewed.
         '';
@@ -249,15 +255,16 @@ in
 #       ];
 #     };
   in {
-#     security.acme.certs = (fold (el: con: if ((ACMEsupportSet.${el}) == "ACME") then con // {
-#       "${el}_ncws" = {
-#         domain = "${el}";
-#         webroot = "/var/lib/acme/acme-challenges";
-#         postRun = ''
-#           systemctl reload nixcloud.TLS
-#         '';
-#       };
-#     } else con) {} (attrNames ACMEsupportSet));
+    security.acme.certs = (fold (el: con: if ((config.nixcloud.TLS.certs.${el}.mode) == "ACME") then con // {
+      "${el}" = let t = config.nixcloud.TLS.certs.${el}; in { 
+        domain = "${t.domain}";
+        #email = FIXME
+        webroot = "/var/lib/acme/acme-challenges";
+        postRun = ''
+          systemctl reload nixcloud.TLS
+        '';
+      };
+    } else con) {} (attrNames config.nixcloud.TLS.certs));
 
 #       systemd.services."nixcloud.reverse-proxy" = let
 #         acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
