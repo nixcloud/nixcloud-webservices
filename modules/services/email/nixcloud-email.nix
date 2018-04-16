@@ -251,15 +251,15 @@ in
           masterConfig = {
             smtp_inet = {
               args = [ 
-               "-o" "content_filter=spamassassin"
                "-o" "smtp_header_checks=header_checks_incomming"
-              ];
+              ] ++ optionals cfg.enableSpamassassin [ "-o" "content_filter=spamassassin" ];
             };
+          } // optionalAttrs cfg.enableSpamassassin {
             spamassassin = {
               command = "pipe";
               args = [ "user=spamd" "argv=${pkgs.spamassassin}/bin/spamc" "-f" "-e" "/run/wrappers/bin/sendmail" "-oi" "-f" ''''${sender}'' ''''${recipient}'' ];
               privileged = true;
-            };
+            }; 
           } // optionalAttrs cfg.enableSPFPolicy {
             policydspf = {
               command = "spawn";
