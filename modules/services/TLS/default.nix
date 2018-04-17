@@ -67,6 +67,68 @@ with lib;
 
 let
   cfg = config.nixcloud.TLS;
+  aftermerge = builtins.trace "foobar" lib.traceSeqVal;
+  
+  attrsOf1 = elemType: mkOptionType rec {
+    name = "attrsOf";
+    description = "attribute set of ${elemType.description}s";
+    check = isAttrs;
+    merge = loc: defs: aftermerge (
+      mapAttrs (n: v: v.value) (filterAttrs (n: v: v ? value) (zipAttrsWith (name: defs:
+          (mergeDefinitions (loc ++ [name]) elemType defs).optionalValue
+        )
+        # Push down position info.
+        (map (def: listToAttrs (mapAttrsToList (n: def':
+          { name = n; value = { inherit (def) file; value = def'; }; }) def.value)) defs))));
+    getSubOptions = prefix: elemType.getSubOptions (prefix ++ ["<name>"]);
+    getSubModules = elemType.getSubModules;
+    substSubModules = m: types.attrsOf (elemType.substSubModules m);
+    functor = (defaultFunctor name) // { wrapped = elemType; };
+  };
+
+  
+  
+  # A submodule (like typed attribute set). See NixOS manual.
+  submodule1 = opts:
+    let
+      opts' = toList opts;
+      inherit (lib.modules) evalModules;
+    in
+    mkOptionType rec {
+      name = "submodule";
+      check = x: isAttrs x || isFunction x;
+      merge = loc: defs:
+        let
+          coerce = def: if isFunction def then def else { config = def; };
+          modules = opts' ++ map (def: { _file = def.file; imports = [(coerce def.value)]; }) defs;
+        in aftermerge ((evalModules {
+          inherit modules;
+          args.name = last loc;
+          prefix = loc;
+        }).config);
+      getSubOptions = prefix: (evalModules
+        { modules = opts'; inherit prefix;
+          # This is a work-around due to the fact that some sub-modules,
+          # such as the one included in an attribute set, expects a "args"
+          # attribute to be given to the sub-module. As the option
+          # evaluation does not have any specific attribute name, we
+          # provide a default one for the documentation.
+          #
+          # This is mandatory as some option declaration might use the
+          # "name" attribute given as argument of the submodule and use it
+          # as the default of option declarations.
+          args.name = "&lt;name&gt;";
+        }).options;
+      getSubModules = opts';
+      substSubModules = m: types.submodule m;
+      functor = (defaultFunctor name) // {
+        # Merging of submodules is done as part of mergeOptionDecls, as we have to annotate
+        # each submodule with its location.
+        payload = [];
+        binOp = lhs: rhs: [];
+      };
+    };
+
   tls_certificateSetModule = {
     options = {
       tls_certificate = mkOption {
@@ -109,7 +171,7 @@ let
       || (isNull x);
   };
   c = x: ((isList x) && fold (el: c: if (isString el) then c else false) true x);
-  m = loc: defs: (map (el: el.value) defs);
+  m = loc: defs: unique (fold (el: c: el.value ++ c) [] defs);
   nixcloudExtraDomainsType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.extraDomains";
     check = c;
@@ -130,7 +192,7 @@ let
       domain = mkOption {
         type = nixcloudTLSDomainType;
         default = null;
-        apply = x: x;
+        #apply = x: x;
         description = "Domain to fetch certificate for (defaults to the entry name)";
       };
       extraDomains = mkOption {
@@ -139,7 +201,7 @@ let
         example = literalExample ''
           [ "example.org" "mydomain.org" ];
         '';
-        apply = x: unique (fold (el: c: c ++ el) [] x);
+        apply = x: unique x;
         description = ''
           A list of extra domain names, which are included in the one certificate to be issued, with their
           own server roots if needed.
@@ -147,10 +209,7 @@ let
       };
       reload = mkOption {
         type = nixcloudReloadType;
-        apply = x: let 
-          targets = unique (fold (el: c: c ++ el) [] x); 
-          in 
-          lib.subtractLists toplevel.config.restart targets;
+        apply = x: lib.subtractLists toplevel.config.restart (unique x);
         default = [];
         example = [ "postifx.service" ];
         description = ''
@@ -162,7 +221,7 @@ let
       restart = mkOption {
         type = nixcloudRestartType;
         default = [];
-        apply = x: unique (fold (el: c: c ++ el) [] x);
+        apply = x: unique x;
         example = [ "postifx.service" ];
         description = ''
           A list of systemd services which are `restarted` after certificates are re-issued.
@@ -176,7 +235,7 @@ let
       };
       mode = mkOption {
         type = nixcloudTLSModeType;
-        #default = null;
+        default = null;
         description = ''
          Use this option to set the `TLS mode` to be used:
         
@@ -215,10 +274,10 @@ in
     nixcloud.TLS = {
       certs = mkOption {
         default = {};
-        type = with types; attrsOf (submodule certOpts);
+        type = attrsOf1 (submodule1 certOpts);
         apply = x: 
           let
-            n = head (attrNames x);
+            n = head (attrNames x); # BUG: we miss the second definition
           in
             # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
             # and we have to make sure that the domain and mode is set properly so other modules can either 
