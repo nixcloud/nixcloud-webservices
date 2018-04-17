@@ -61,74 +61,13 @@
 #
 # wish: a hook for a custom type which is triggered once all modules have been merged so that
 #       one can verify the state of a type before it is actually used
+#       we could even call this assert?
 # https://trello.com/c/dHSQhPYx/180-nixcloudtls
 { config, pkgs, lib, ... } @ args:
 with lib;
 
 let
   cfg = config.nixcloud.TLS;
-  aftermerge = builtins.trace "foobar" lib.traceSeqVal;
-  
-  attrsOf1 = elemType: mkOptionType rec {
-    name = "attrsOf";
-    description = "attribute set of ${elemType.description}s";
-    check = isAttrs;
-    merge = loc: defs: aftermerge (
-      mapAttrs (n: v: v.value) (filterAttrs (n: v: v ? value) (zipAttrsWith (name: defs:
-          (mergeDefinitions (loc ++ [name]) elemType defs).optionalValue
-        )
-        # Push down position info.
-        (map (def: listToAttrs (mapAttrsToList (n: def':
-          { name = n; value = { inherit (def) file; value = def'; }; }) def.value)) defs))));
-    getSubOptions = prefix: elemType.getSubOptions (prefix ++ ["<name>"]);
-    getSubModules = elemType.getSubModules;
-    substSubModules = m: types.attrsOf (elemType.substSubModules m);
-    functor = (defaultFunctor name) // { wrapped = elemType; };
-  };
-
-  
-  
-  # A submodule (like typed attribute set). See NixOS manual.
-  submodule1 = opts:
-    let
-      opts' = toList opts;
-      inherit (lib.modules) evalModules;
-    in
-    mkOptionType rec {
-      name = "submodule";
-      check = x: isAttrs x || isFunction x;
-      merge = loc: defs:
-        let
-          coerce = def: if isFunction def then def else { config = def; };
-          modules = opts' ++ map (def: { _file = def.file; imports = [(coerce def.value)]; }) defs;
-        in aftermerge ((evalModules {
-          inherit modules;
-          args.name = last loc;
-          prefix = loc;
-        }).config);
-      getSubOptions = prefix: (evalModules
-        { modules = opts'; inherit prefix;
-          # This is a work-around due to the fact that some sub-modules,
-          # such as the one included in an attribute set, expects a "args"
-          # attribute to be given to the sub-module. As the option
-          # evaluation does not have any specific attribute name, we
-          # provide a default one for the documentation.
-          #
-          # This is mandatory as some option declaration might use the
-          # "name" attribute given as argument of the submodule and use it
-          # as the default of option declarations.
-          args.name = "&lt;name&gt;";
-        }).options;
-      getSubModules = opts';
-      substSubModules = m: types.submodule m;
-      functor = (defaultFunctor name) // {
-        # Merging of submodules is done as part of mergeOptionDecls, as we have to annotate
-        # each submodule with its location.
-        payload = [];
-        binOp = lhs: rhs: [];
-      };
-    };
-
   tls_certificateSetModule = {
     options = {
       tls_certificate = mkOption {
@@ -161,7 +100,6 @@ let
   };  
   nixcloudTLSModeType = mkOptionType {
     name = "nixcloud.TLS.certs.<name?>.mode";
-    #description = "FIXME"; # FIXME <- what is that descripton good for?
     merge = mergeEqualOption;
     # FIXME this check is not 100% the same as the type previously was...
     # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
@@ -192,7 +130,6 @@ let
       domain = mkOption {
         type = nixcloudTLSDomainType;
         default = null;
-        #apply = x: x;
         description = "Domain to fetch certificate for (defaults to the entry name)";
       };
       extraDomains = mkOption {
@@ -285,7 +222,7 @@ in
     };
   };
   
-  imports = [ ./module1.nix ./module2.nix ];
+  #imports = [ ./module1.nix ./module2.nix ];
 
   config = let
 #     selfsignedService = {
@@ -341,38 +278,31 @@ in
 #         "acme-selfsigned-certificates.target"
 #       ];
 #     };
-    mkAssertion = cert: 
+    mkAssertionMode = cert: 
       { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
         message = ''
-          Error with "${cert}"!
+          Error: nixcloud.TLS.certs.${cert}.mode is not set correctly (it was 'null')!
         '';
       };
+    mkAssertionDomain = cert: 
+      { assertion = config.nixcloud.TLS.certs.${cert}.domain != null;
+        message = ''
+          Error: nixcloud.TLS.certs.${cert}.domain is not set correctly (it was 'null')!
+        '';
+      };      
   in  {
+    # make sure that `domain` and `mode` is set properly
+    assertions = map (cert: mkAssertionMode   cert) (attrNames config.nixcloud.TLS.certs) ++
+                 map (cert: mkAssertionDomain cert) (attrNames config.nixcloud.TLS.certs);
   
-      # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
-    # and we have to make sure that the domain and mode is set properly so other modules can either 
-    # expect this nixcloud.TLS.certs to be empty or filled with meaningful values
-    #assert (x == {} || x.${n}.domain != null) || abort "nixcloud.TLS.certs.\"${n}\".domain is undefined (`null`)!";
-    #assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".mode is undefined (`null`)!";
-
-      assertions = builtins.trace (config.nixcloud.TLS.certs) map (el: mkAssertion el) (attrNames config.nixcloud.TLS.certs);
-  
-
-  
-  
-    #b = assert (1==2) || abort (builtins.trace (attrNames config.nixcloud.TLS.certs) ""); "";
-  
-  
-    security.acme.certs = (fold (el: con: if ((config.nixcloud.TLS.certs.${el}.mode) == "ACME") then con // {
-      "${el}" = let t = config.nixcloud.TLS.certs.${el}; in { 
-        domain = "${t.domain}";
-        #email = FIXME
+    security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
+      "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
+        domain = "${c.domain}";
+        email = c.email;
         webroot = "/var/lib/acme/acme-challenges";
         postRun = ''
-          ${optionalString (true) ''
-            # hello
-          ''}
-        #  systemctl reload nixcloud.TLS
+          ${lib.concatStringsSep "\n" (map (el: "systemctl restart ${el}") c.restart)}
+          ${lib.concatStringsSep "\n" (map (el: "systemctl reload ${el}") c.reload)}
         '';
       };
     } else con) {} (attrNames config.nixcloud.TLS.certs));
