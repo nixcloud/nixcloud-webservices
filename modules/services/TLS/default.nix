@@ -274,17 +274,7 @@ in
     nixcloud.TLS = {
       certs = mkOption {
         default = {};
-        type = attrsOf1 (submodule1 certOpts);
-        apply = x: 
-          let
-            n = head (attrNames x); # BUG: we miss the second definition
-          in
-            # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
-            # and we have to make sure that the domain and mode is set properly so other modules can either 
-            # expect this nixcloud.TLS.certs to be empty or filled with meaningful values
-            #assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".domain is undefined (`null`)!";
-            #assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".mode is undefined (`null`)!";
-            lib.traceValSeq x;
+        type = types.attrsOf (types.submodule certOpts);
         description = ''
           Attribute set of certificates to get signed and renewed.
         '';
@@ -294,6 +284,8 @@ in
       };
     };
   };
+  
+  imports = [ ./module1.nix ./module2.nix ];
 
   config = let
 #     selfsignedService = {
@@ -349,7 +341,28 @@ in
 #         "acme-selfsigned-certificates.target"
 #       ];
 #     };
-  in {
+    mkAssertion = cert: 
+      { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
+        message = ''
+          Error with "${cert}"!
+        '';
+      };
+  in  {
+  
+      # apply is also called with an empty set -> {} which is the default value assigned above (guess?)
+    # and we have to make sure that the domain and mode is set properly so other modules can either 
+    # expect this nixcloud.TLS.certs to be empty or filled with meaningful values
+    #assert (x == {} || x.${n}.domain != null) || abort "nixcloud.TLS.certs.\"${n}\".domain is undefined (`null`)!";
+    #assert (x == {} || x.${n}.mode != null) || abort "nixcloud.TLS.certs.\"${n}\".mode is undefined (`null`)!";
+
+      assertions = builtins.trace (config.nixcloud.TLS.certs) map (el: mkAssertion el) (attrNames config.nixcloud.TLS.certs);
+  
+
+  
+  
+    #b = assert (1==2) || abort (builtins.trace (attrNames config.nixcloud.TLS.certs) ""); "";
+  
+  
     security.acme.certs = (fold (el: con: if ((config.nixcloud.TLS.certs.${el}.mode) == "ACME") then con // {
       "${el}" = let t = config.nixcloud.TLS.certs.${el}; in { 
         domain = "${t.domain}";
