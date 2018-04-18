@@ -2,8 +2,10 @@
 #
 # 1. implement config part:
 #    - [done] where "ACME" creates a `security.acme` entry
-#    - where "selfsigned" creates a self signed tls certificate
+#    - [done] where "selfsigned" creates a self signed tls certificate
+#    - [done] create workflow for supplied certificates
 # 2. integrate this into nixcloud-webservices
+#    - create systemd / service / target dependency 
 #    - make nixcloud.TLS.certs."foo" a new option and check it properly
 #    - test it with self signed certs
 #    - test it with nixdoc.io ...
@@ -266,6 +268,10 @@ let
           * "ACME" - (default) uses let's encrypt to automatically download and install TLS certificates
           * "selfsigned" - this abstraction will create self signed certificates
           * { tls_certificate_key = /flux/to/cert.pem; tls_certificate = /flux/to/key.pem; }; - supply the certificates yourself
+          
+          Note: Certificates are copied into /var/lib/nixcloud/TLS and referenced from there since we might introduce differentiated
+                user/group permissions on certificates and that won't work with the certificate is located in /root or some other
+                place not managed by `nixcloud.TLS`.
       ''; #'
  
       };
@@ -274,20 +280,24 @@ let
         readOnly = true;
         default = 
           if (isString toplevel.config.mode) then 
-            if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlskey.pem" else "/var/lib/nixcloud/TLS/${name}/tlskey.pem"
-          else 
-            "/";
-        description = "";
+            if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/key.pem" else 
+            if (toplevel.config.mode == "selfsigned") then "/var/lib/nixcloud/TLS/${name}/selfsigned/key.pem" else
+            "/undefined1"
+          else if (isAttrs toplevel.config.mode) then "/var/lib/nixcloud/TLS/${name}/usersupplied/key.pem" else
+            "/undefined2";
+        description = "Internally set option which points to the `key.pem` file, depending on the `nixcloud.TLS.certs.<name?>.mode` setting.";
       };
       tls_certificate = mkOption {
         type = types.path;
         readOnly = true;
         default = 
           if (isString toplevel.config.mode) then 
-            if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/tlscert.pem" else "/var/lib/nixcloud/TLS/${name}/tlscert.pem"
-          else 
-            "/";
-        description = "";
+            if (toplevel.config.mode == "ACME") then "/var/lib/acme/${name}/fullchain.pem" else 
+            if (toplevel.config.mode == "selfsigned") then "/var/lib/nixcloud/TLS/${name}/selfsigned/fullchain.pem" else
+            "/undefined1"
+          else if (isAttrs toplevel.config.mode) then "/var/lib/nixcloud/TLS/${name}/usersupplied/fullchain.pem" else
+            "/undefined2";
+        description = "Internally set option which points to the `fullchain.pem` file, depending on the `nixcloud.TLS.certs.<name?>.mode` setting.";
       };        
     };
   };
@@ -310,7 +320,107 @@ in
   };
   
   config = let
-    mkAssertion-Mode = cert: 
+      usersuppliedTargets = (fold (cert: con: if (isAttrs (config.nixcloud.TLS.certs.${cert}.mode)) then con ++ [
+      (nameValuePair "nixcloud.TLS-usersupplied-${cert}" (
+        let 
+          c = config.nixcloud.TLS.certs.${cert};
+          tls_certificate =     c.mode.tls_certificate;
+          tls_certificate_key = c.mode.tls_certificate_key;
+        in {
+          description = "nixcloud.TLS: create usersupplied certificate for ${cert}";
+
+          script = ''
+            rm -Rf /var/lib/nixcloud/TLS/${cert}/usersupplied # should not be needed
+            TMPDIR=$(mktemp -d usersupplied-${cert}.XXXXXXXXXX --tmpdir)
+            mkdir $TMPDIR/usersupplied
+            
+            cp ${toString tls_certificate_key} $TMPDIR/usersupplied/key.pem
+            cp ${toString tls_certificate} $TMPDIR/usersupplied/fullchain.pem
+            
+            chmod 0700 $TMPDIR/usersupplied
+            mkdir -p ${stateDir}/${cert}/
+            mv $TMPDIR/usersupplied /var/lib/nixcloud/TLS/${cert}/
+          '';
+          serviceConfig = {
+            Type = "oneshot";
+            RuntimeDirectory = "nixcloud.TLS-acme-usersupplied-${cert}";
+          };
+          before = [
+            "nixcloud.TLS-usersupplied-certificates.target"
+          ];
+          wantedBy = [
+            "nixcloud.TLS-usersupplied-certificates.target" "multi-user.target"
+          ];
+        }))
+    ] else con) [] (attrNames config.nixcloud.TLS.certs)); 
+  
+    selfsignedTargets = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "selfsigned") then con ++ [
+      (nameValuePair "nixcloud.TLS-selfsigned-${cert}" (
+        let 
+          c = config.nixcloud.TLS.certs.${cert}; 
+        in {
+          description = "nixcloud.TLS: create preliminary self-signed certificate for ${cert}";
+
+          script = ''
+            rm -Rf /var/lib/nixcloud/TLS/${cert}/selfsigned # should not be needed
+            TMPDIR=$(mktemp -d selfsigned-${cert}.XXXXXXXXXX --tmpdir)
+            mkdir $TMPDIR/selfsigned
+            
+            # Create self-signed key
+            workdir=$(mktemp -d selfsigned-${cert}.XXXXXXXXXX --tmpdir)
+            ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
+            ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
+            ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr \
+              -subj "/C=UK/ST=Warwickshire/L=Leamington/O=OrgName/OU=IT Department/CN=example.com"
+            ${pkgs.openssl.bin}/bin/openssl x509 -req -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
+            # Move key to destination
+            mv $workdir/server.key $TMPDIR/selfsigned/key.pem
+            mv $workdir/server.crt $TMPDIR/selfsigned/fullchain.pem
+            
+            chmod 0700 $TMPDIR/selfsigned
+            mkdir -p ${stateDir}/${cert}/
+            mv $TMPDIR/selfsigned /var/lib/nixcloud/TLS/${cert}/
+          '';
+          serviceConfig = {
+            Type = "oneshot";
+            RuntimeDirectory = "nixcloud.TLS-acme-selfsigned-${cert}";
+          };
+          unitConfig = {
+            # Do not create self-signed key when key already exists
+            ConditionPathExists = "!/var/lib/nixcloud/TLS/${cert}/selfsigned";
+          };
+          before = [
+            "nixcloud.TLS-selfsigned-certificates.target"
+          ];
+          wantedBy = [
+            "nixcloud.TLS-selfsigned-certificates.target" "multi-user.target"
+          ];
+        }))
+    ] else con) [] (attrNames config.nixcloud.TLS.certs));      
+      
+    nixcloudTLSService = nameValuePair "nixcloud.TLS" (
+      let
+        certs = config.nixcloud.TLS.certs;
+        acmeIsUsed = fold (cert: con: (certs.${cert}.mode == "ACME") || con) false (attrNames certs);
+      in {
+        description   = "nixcloud.TLS service (managing TLS certificates)";
+        wantedBy      = [ "multi-user.target" ];
+        after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ] 
+                                ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+                                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];                                
+        wants = if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [] 
+                                ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+                                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
+        preStart = ''
+          mkdir -p   ${stateDir}
+          chmod 0755 ${stateDir}
+        '';
+        serviceConfig = {
+          ExecStart = "${pkgs.bash}/bin/bash -c 'exit 0;'";
+          RemainAfterExit=true;
+        };
+      });
+     mkAssertion-Mode = cert: 
       { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
         message = ''
           Error: nixcloud.TLS.certs.${cert}.mode is not set correctly (it was 'null')!
@@ -321,120 +431,33 @@ in
         message = ''
           Error: nixcloud.TLS.certs.${cert}.domain is not set correctly (it was 'null')!
         '';
-      };      
-  in  {
-    # make sure that `domain` and `mode` is set properly
-    assertions = map (cert: mkAssertion-Mode   cert) (attrNames config.nixcloud.TLS.certs) ++
-                 map (cert: mkAssertion-Domain cert) (attrNames config.nixcloud.TLS.certs);
-  
-    security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
-      "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
-        domain = "${c.domain}";
-        email = c.email;
-        webroot = "/var/lib/acme/acme-challenges";
-        postRun = ''
-          ${lib.concatStringsSep "\n" (map (el: "systemctl restart ${el}") c.restart)}
-          ${lib.concatStringsSep "\n" (map (el: "systemctl reload ${el}") c.reload)}
-        '';
-      };
-    } else con) {} (attrNames config.nixcloud.TLS.certs));
-  
-  
-    #systemd.targets."acme-selfsigned-certificates" = mkIf cfg.preliminarySelfsigned {};
-
-    systemd.services."nixcloud.TLS" = let
-        certs = config.nixcloud.TLS.certs;
-        acmeIsUsed = fold (cert: con: (certs.${cert}.mode == "ACME") || con) false (attrNames certs);
-        #     selfsignedService = {
-#       description = "Create preliminary self-signed certificate for ${cert}";
-#       preStart = ''
-#           if [ ! -d '${cpath}' ]
-#           then
-#             mkdir -p '${cpath}'
-#             chmod ${rights} '${cpath}'
-#             chown '${data.user}:${data.group}' '${cpath}'
-#           fi
-#       '';
-#       script = 
-#         ''
-#           # Create self-signed key
-#           workdir="/run/acme-selfsigned-${cert}"
-#           ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
-#           ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
-#           ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr \
-#             -subj "/C=UK/ST=Warwickshire/L=Leamington/O=OrgName/OU=IT Department/CN=example.com"
-#           ${pkgs.openssl.bin}/bin/openssl x509 -req -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
-#           # Move key to destination
-#           mv $workdir/server.key ${cpath}/key.pem
-#           mv $workdir/server.crt ${cpath}/fullchain.pem
-#           # Create full.pem for e.g. lighttpd (same format as "simp_le ... -f full.pem" creates)
-#           cat "${cpath}/key.pem" "${cpath}/fullchain.pem" > "${cpath}/full.pem"
-#           # Clean up working directory
-#           rm $workdir/server.csr
-#           rm $workdir/server.pass.key
-#           # Give key acme permissions
-#           chmod ${rights} '${cpath}/key.pem'
-#           chown '${data.user}:${data.group}' '${cpath}/key.pem'
-#           chmod ${rights} '${cpath}/fullchain.pem'
-#           chown '${data.user}:${data.group}' '${cpath}/fullchain.pem'
-#           chmod ${rights} '${cpath}/full.pem'
-#           chown '${data.user}:${data.group}' '${cpath}/full.pem'
-#         '';
-#       serviceConfig = {
-#         Type = "oneshot";
-#         RuntimeDirectory = "acme-selfsigned-${cert}";
-#         PermissionsStartOnly = true;
-#         User = data.user;
-#         Group = data.group;
-#       };
-#       unitConfig = {
-#         # Do not create self-signed key when key already exists
-#         ConditionPathExists = "!${cpath}/key.pem";
-#       };
-#       before = [
-#         "acme-selfsigned-certificates.target"
-#       ];
-#       wantedBy = [
-#         "acme-selfsigned-certificates.target"
-#       ];
-#     };
-
-#       mainScript = pkgs.writeText "main.sh" ''
-#         #!/usr/bin/env bash
-#         echo "tut";
-#         exit 0
-#       '';
-    in {
-      description   = "nixcloud.TLS service (managing TLS certificates)";
-      wantedBy      = [ "multi-user.target" ];
-      
-      after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ] 
-                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
-      wants =  if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [] 
-                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
-
-      #before = [ "nixcloud.TLS-acme-certificates.target" ];
-      #wantedBy = [ "nixcloud.TLS-acme-certificates.target" ];
+      };     
+    in  {
+      # make sure that `domain` and `mode` is set properly so that the user has not fogotten to set it
+      assertions = map (cert: mkAssertion-Mode   cert) (attrNames config.nixcloud.TLS.certs) ++
+                   map (cert: mkAssertion-Domain cert) (attrNames config.nixcloud.TLS.certs);
+    
+      security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
+        "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
+          domain = "${c.domain}";
+          email = c.email;
+          webroot = "/var/lib/acme/acme-challenges";
+          postRun = ''
+          ${lib.concatStringsSep "\n" (map (el: "  systemctl restart ${el}") c.restart)}
+          ${lib.concatStringsSep "\n" (map (el: "  systemctl reload ${el}") c.reload)}
+          '';
+        };
+      } else con) {} (attrNames config.nixcloud.TLS.certs));
+    
+      systemd.services = listToAttrs ([ nixcloudTLSService ] ++ selfsignedTargets ++ usersuppliedTargets);
         
-      preStart = ''
-        mkdir -p ${stateDir}
-        # we only need to apply this to the certifictes itself, not the top level dir, see /var/lib/acme
-        #chmod 0700 ${stateDir}
-      '';
-
-      serviceConfig = {
-        ExecStart = "${pkgs.bash}/bin/bash -c 'exit 0;'";
-        RemainAfterExit=true;
-      };
+    meta = {
+      maintainers = with lib.maintainers; [ qknight ];
     };
-  meta = {
-    maintainers = with lib.maintainers; [ qknight ];
+    
+    #nixcloud.tests.wanted = [ ./test.nix ];
   };
-  
-  #nixcloud.tests.wanted = [ ./test.nix ];
-};
 
 }
 
-
- 
+     
