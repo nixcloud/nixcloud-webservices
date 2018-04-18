@@ -90,7 +90,7 @@ let
   injectCommon = name: conf: {
     imports = [ ../modules conf ];
     services.mingetty.autologinUser = "root";
-    nixcloud.tests.enabled = false;
+    nixcloud.tests.enable = false;
   };
 
   testArgsWithCommon = removeAttrs testArgs [ "machine" ] // {

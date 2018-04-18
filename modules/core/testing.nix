@@ -4,7 +4,7 @@ let
   inherit (lib) types mkOption;
 in {
   options.nixcloud.tests = {
-    enabled = mkOption {
+    enable = mkOption {
       type = types.bool;
       default = true;
       example = false;
@@ -32,7 +32,7 @@ in {
     };
   };
 
-  config = lib.mkIf config.nixcloud.tests.enabled {
+  config = lib.mkIf config.nixcloud.tests.enable {
     system.extraDependencies = let
       inherit (config.nixpkgs) system;
       testRoot = import ../../tests { inherit pkgs system; };

@@ -65,7 +65,7 @@ let
 
     # Don't run tests during build, because we quickly want to have a
     # development environment set up.
-    nixcloud.tests.enabled = false;
+    nixcloud.tests.enable = false;
 
     environment.systemPackages = [
       pkgs.htop pkgs.vim_configurable
