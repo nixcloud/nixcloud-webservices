@@ -1,8 +1,12 @@
 # roadmap
 #
-# 1. implement the config part, where "ACME" creates a `security.acme` entry &
-#    "selfsigned" creates a self signed tls certificate
+# 1. implement config part:
+#    - [done] where "ACME" creates a `security.acme` entry
+#    - where "selfsigned" creates a self signed tls certificate
 # 2. integrate this into nixcloud-webservices
+#    - make nixcloud.TLS.certs."foo" a new option and check it properly
+#    - test it with self signed certs
+#    - test it with nixdoc.io ...
 # 3. redo all description and examples
 # 4. write a comprehensive nixcloud test for this
 # 
@@ -31,7 +35,7 @@
 #
 #
 # FIXME: blog post:
-#  - example: see the meta.nix example
+#  - example: see the https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/meta.nix example
 #  - check: if check for custom type fails, one should be able to get a LOC string, where that type
 #    was defined and what arguments it wants (as string for instance) and additionally one should
 #    be able to supply a custom error message
@@ -62,12 +66,95 @@
 # wish: a hook for a custom type which is triggered once all modules have been merged so that
 #       one can verify the state of a type before it is actually used
 #       we could even call this assert?
+
+
+
+# # motivation
+# 
+# nixcloud.TLS - an abstraction to configure TLS with ease
+# 
+# # links
+# https://github.com/NixOS/nixpkgs/pull/34388
+# 
+# https://github.com/NixOS/nixpkgs/blob/release-18.03/nixos/modules/security/acme.nix
+# 
+# # requirements
+# 
+# * supported modes
+#         * "selfsigned"
+#         * "ACME"
+#         * {tls_certificate_key = ./path/key.pem; tls_certificate = ./path/cert.pem }
+# * reverse-proxy / nixcloud.email must wait until targets are ready, so 
+#         nixcloud.TLS."nixcloud.io".systemd.before
+#         nixcloud.TLS."nixcloud.io".systemd.wantedBy
+# 
+# # usage examples
+
+## von irgendwo:
+
+# nixcloud.TLS."example.com123" = {
+#   domain = "example.com";
+#   mode = "selfsigned";
+# };
+# 
+# nixcloud.TLS."example.org" = {
+#   mode = {
+#     ssl_certificate_key = /path/to/cert.pem;
+#     ssl_certificate = /path/to/key.pem;
+#   };
+# };
+# 
+# nixcloud.TLS."nixcloud.io".services =
+#   {
+#     postfix.action = "restart";
+#     dovecot.action = "reload";
+#   };
+#   
+# # später dann (um den merge zu zeigen):
+# 
+# nixcloud.TLS."nixcloud.io".services =
+#   {
+#     "nixcloud.reverse-proxy".action = "reload";
+#   };
+#   
+# # when using the cert location:
+# 
+# config.nixcloud.TLS."nixcloud.io".ssl_certificate -> /path/to/cert.pem
+# config.nixcloud.TLS."nixcloud.io".ssl_certificate_key -> /path/to/key.pem
+# 
+# # oder auch folgende idee:
+# 
+#   nixcloud.webservices.leaps.z2 = {
+#     enable = true;
+#     proxyOptions = {
+#       port = 3031;
+#       http.mode = "on";
+#       https.mode = "on";
+#       path = "/flubber99";
+#       domain = "foo.com";
+#       # mit eigenem cert
+#       TLS = {
+#         ssl_certificate_key = /path/to/cert.pem;
+#         ssl_certificate = /path/to/key.pem;
+#       };
+#       # klassisch
+#       TLS = "ACME"; 
+#       # paul: wir nutzen immer nixcloud.TLS und übergeben nur den identifier
+#       TLS = "example22.com"; -> ist doof weil wir zwischen "ACME" | "none" | "einer domain" unterscheiden müssen
+#       # ist das ne gute syntax?
+#       TLS = nixcloud.TLS."example22.com"; -> gewinner: wir haben entweder builtins.typeOf "string" oder "set"
+#                                              und bei set schauen wir ob ssl_certificate / ssl_certificate_key gesetzt ist
+#     };
+#   };
+# 
+
 # https://trello.com/c/dHSQhPYx/180-nixcloudtls
 { config, pkgs, lib, ... } @ args:
 with lib;
 
 let
   cfg = config.nixcloud.TLS;
+  stateDir = "/var/lib/nixcloud/TLS/";
   tls_certificateSetModule = {
     options = {
       tls_certificate = mkOption {
@@ -222,10 +309,43 @@ in
     };
   };
   
-  #imports = [ ./module1.nix ./module2.nix ];
-
   config = let
-#     selfsignedService = {
+    mkAssertion-Mode = cert: 
+      { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
+        message = ''
+          Error: nixcloud.TLS.certs.${cert}.mode is not set correctly (it was 'null')!
+        '';
+      };
+    mkAssertion-Domain = cert: 
+      { assertion = config.nixcloud.TLS.certs.${cert}.domain != null;
+        message = ''
+          Error: nixcloud.TLS.certs.${cert}.domain is not set correctly (it was 'null')!
+        '';
+      };      
+  in  {
+    # make sure that `domain` and `mode` is set properly
+    assertions = map (cert: mkAssertion-Mode   cert) (attrNames config.nixcloud.TLS.certs) ++
+                 map (cert: mkAssertion-Domain cert) (attrNames config.nixcloud.TLS.certs);
+  
+    security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
+      "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
+        domain = "${c.domain}";
+        email = c.email;
+        webroot = "/var/lib/acme/acme-challenges";
+        postRun = ''
+          ${lib.concatStringsSep "\n" (map (el: "systemctl restart ${el}") c.restart)}
+          ${lib.concatStringsSep "\n" (map (el: "systemctl reload ${el}") c.reload)}
+        '';
+      };
+    } else con) {} (attrNames config.nixcloud.TLS.certs));
+  
+  
+    #systemd.targets."acme-selfsigned-certificates" = mkIf cfg.preliminarySelfsigned {};
+
+    systemd.services."nixcloud.TLS" = let
+        certs = config.nixcloud.TLS.certs;
+        acmeIsUsed = fold (cert: con: (certs.${cert}.mode == "ACME") || con) false (attrNames certs);
+        #     selfsignedService = {
 #       description = "Create preliminary self-signed certificate for ${cert}";
 #       preStart = ''
 #           if [ ! -d '${cpath}' ]
@@ -278,148 +398,43 @@ in
 #         "acme-selfsigned-certificates.target"
 #       ];
 #     };
-    mkAssertionMode = cert: 
-      { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
-        message = ''
-          Error: nixcloud.TLS.certs.${cert}.mode is not set correctly (it was 'null')!
-        '';
+
+#       mainScript = pkgs.writeText "main.sh" ''
+#         #!/usr/bin/env bash
+#         echo "tut";
+#         exit 0
+#       '';
+    in {
+      description   = "nixcloud.TLS service (managing TLS certificates)";
+      wantedBy      = [ "multi-user.target" ];
+      
+      after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ] 
+                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
+      wants =  if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [] 
+                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
+
+      #before = [ "nixcloud.TLS-acme-certificates.target" ];
+      #wantedBy = [ "nixcloud.TLS-acme-certificates.target" ];
+        
+      preStart = ''
+        mkdir -p ${stateDir}
+        # we only need to apply this to the certifictes itself, not the top level dir, see /var/lib/acme
+        #chmod 0700 ${stateDir}
+      '';
+
+      serviceConfig = {
+        ExecStart = "${pkgs.bash}/bin/bash -c 'exit 0;'";
+        RemainAfterExit=true;
       };
-    mkAssertionDomain = cert: 
-      { assertion = config.nixcloud.TLS.certs.${cert}.domain != null;
-        message = ''
-          Error: nixcloud.TLS.certs.${cert}.domain is not set correctly (it was 'null')!
-        '';
-      };      
-  in  {
-    # make sure that `domain` and `mode` is set properly
-    assertions = map (cert: mkAssertionMode   cert) (attrNames config.nixcloud.TLS.certs) ++
-                 map (cert: mkAssertionDomain cert) (attrNames config.nixcloud.TLS.certs);
-  
-    security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
-      "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
-        domain = "${c.domain}";
-        email = c.email;
-        webroot = "/var/lib/acme/acme-challenges";
-        postRun = ''
-          ${lib.concatStringsSep "\n" (map (el: "systemctl restart ${el}") c.restart)}
-          ${lib.concatStringsSep "\n" (map (el: "systemctl reload ${el}") c.reload)}
-        '';
-      };
-    } else con) {} (attrNames config.nixcloud.TLS.certs));
-
-#       systemd.services."nixcloud.reverse-proxy" = let
-#         acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
-#       in {
-#         description   = "nixcloud reverse-proxy service";
-#         wantedBy      = [ "multi-user.target" ];
-#         
-#         after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ];
-#         wants =  if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [];
-#         
-#         stopIfChanged = false;
-# 
-#         preStart = ''
-#           mkdir -p ${stateDir}/nginx/logs
-#           mkdir -p ${stateDir}/nginx
-#           chmod 700 ${stateDir}
-#           chown -R ${user}:${group} ${stateDir}
-#         '';
-#         serviceConfig = {
-#           ExecStart = "${pkgs.nginx}/bin/nginx -c ${if (cfg.configFile == null) then (checkAndFormatNginxConfigfile {inherit configFile; fileName = "nixcloud.reverse-proxy.conf";}) else cfg.configFile}/nixcloud.reverse-proxy.conf -p ${stateDir}/nginx";
-#           ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
-#           Restart = "always";
-#           RestartSec = "10s";
-#           StartLimitInterval = "1min";
-#         };
-#       };
-
-
     };
   meta = {
     maintainers = with lib.maintainers; [ qknight ];
   };
   
-  
   #nixcloud.tests.wanted = [ ./test.nix ];
+};
+
 }
 
 
  
-# # motivation
-# 
-# nixcloud.TLS - an abstraction to configure TLS with ease
-# 
-# # links
-# https://github.com/NixOS/nixpkgs/pull/34388
-# 
-# https://github.com/NixOS/nixpkgs/blob/release-18.03/nixos/modules/security/acme.nix
-# 
-# # requirements
-# 
-# * supported modes
-#         * "selfsigned"
-#         * "ACME"
-#         * {tls_certificate_key = ./path/key.pem; tls_certificate = ./path/cert.pem }
-# * reverse-proxy / nixcloud.email must wait until targets are ready, so 
-#         nixcloud.TLS."nixcloud.io".systemd.before
-#         nixcloud.TLS."nixcloud.io".systemd.wantedBy
-# 
-# # usage examples
-
-## von irgendwo:
-
-# nixcloud.TLS."example.com123" = {
-#   domain = "example.com";
-#   mode = "selfsigned";
-# };
-# 
-# nixcloud.TLS."example.org" = {
-#   mode = {
-#     ssl_certificate_key = /path/to/cert.pem;
-#     ssl_certificate = /path/to/key.pem;
-#   };
-# };
-# 
-# nixcloud.TLS."nixcloud.io".services =
-#   {
-#     postfix.action = "restart";
-#     dovecot.action = "reload";
-#   };
-#   
-# # später dann (um den merge zu zeigen):
-# 
-# nixcloud.TLS."nixcloud.io".services =
-#   {
-#     "nixcloud.reverse-proxy".action = "reload";
-#   };
-#   
-# # when using the cert location:
-# 
-# config.nixcloud.TLS."nixcloud.io".ssl_certificate -> /path/to/cert.pem
-# config.nixcloud.TLS."nixcloud.io".ssl_certificate_key -> /path/to/key.pem
-# 
-# # oder auch folgende idee:
-# 
-#   nixcloud.webservices.leaps.z2 = {
-#     enable = true;
-#     proxyOptions = {
-#       port = 3031;
-#       http.mode = "on";
-#       https.mode = "on";
-#       path = "/flubber99";
-#       domain = "foo.com";
-#       # mit eigenem cert
-#       TLS = {
-#         ssl_certificate_key = /path/to/cert.pem;
-#         ssl_certificate = /path/to/key.pem;
-#       };
-#       # klassisch
-#       TLS = "ACME"; 
-#       # paul: wir nutzen immer nixcloud.TLS und übergeben nur den identifier
-#       TLS = "example22.com"; -> ist doof weil wir zwischen "ACME" | "none" | "einer domain" unterscheiden müssen
-#       # ist das ne gute syntax?
-#       TLS = nixcloud.TLS."example22.com"; -> gewinner: wir haben entweder builtins.typeOf "string" oder "set"
-#                                              und bei set schauen wir ob ssl_certificate / ssl_certificate_key gesetzt ist
-#     };
-#   };
-# 
