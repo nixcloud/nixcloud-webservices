@@ -139,6 +139,16 @@ let
     assert (builtins.substring 0 1 path == "/") || abort "'${path}' lacks leading '/'!";
     assert (!(containsSpace path)) || abort "path: '${path}' contains space(es)!";
     path;
+  nixcloudTLSModeType = mkOptionType {
+    name = "proxyOption.<name?>.TLS";
+    merge = mergeEqualOption;
+    # FIXME this check is not 100% the same as the type previously was...
+    # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
+    check = x: ((isString x && x == "ACME") 
+        || (isString x && x == "selfsigned") 
+        || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate))
+      || (isNull x);
+  };    
 in
 
 {
@@ -191,7 +201,9 @@ in
       '';
     };
     TLS = mkOption {
-      type = types.either (types.enum [ "none" "ACME" ]) (types.set);
+      # FIXME: types.set should have an assertion to check if the nixcloud.TLS.certs.<name?> is existent and valid
+      #type = types.either (types.enum [ "none" "ACME" ]) (types.set);
+      type = nixcloudTLSModeType;
       default = "ACME";
       description = ''
         Use this option to set the `TLS backend` to be used:

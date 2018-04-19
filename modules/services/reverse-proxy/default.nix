@@ -256,8 +256,8 @@ in
         server_name ${domain};
 
         ${optionalString (ACMEsupportSet.${domain} == "ACME") ''
-        ssl_certificate /var/lib/acme/${domain}_ncws/fullchain.pem;
-        ssl_certificate_key /var/lib/acme/${domain}_ncws/key.pem;
+        ssl_certificate /var/lib/acme/${domain}/fullchain.pem;
+        ssl_certificate_key /var/lib/acme/${domain}/key.pem;
         ''}
         ${createLocationRecords "https" filteredProxyOptions}
         ${createWsPaths "https" filteredProxyOptions}
@@ -280,11 +280,11 @@ in
       acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
     in {
       description   = "nixcloud reverse-proxy service";
-      wantedBy      = [ "multi-user.target" ];
       
-      after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ];
-      wants =  if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [];
-      
+      wantedBy = [ "multi-user.target" ];
+      after    = [ "nixcloud.TLS-certificates.target" ];
+      wants    = [ "nixcloud.TLS-certificates.target" ];
+
       stopIfChanged = false;
 
       preStart = ''
@@ -311,28 +311,14 @@ in
       { name = "${user}";
       });
 
-    security.acme.certs = (fold (el: con: if ((ACMEsupportSet.${el}) == "ACME") then con // {
-      "${el}_ncws" = {
+    nixcloud.TLS.certs = (fold (el: con: if ((ACMEsupportSet.${el}) == "ACME") then con // {
+      "${el}" = {
         domain = "${el}";
-        webroot = "/var/lib/acme/acme-challenges";
-        postRun = ''
-         systemctl reload nixcloud.reverse-proxy
-        '';
+        mode = "ACME";
+        reload = [ "nixcloud.reverse-proxy.service" ];
       };
-    } else con) {} (attrNames ACMEsupportSet));
-
-            
-    nixcloud.TLS.certs = {
-      "example.com" = {
-        domain = "aaaaaaaaahhhhh.bb";
-        #mode = "ACME";
-        extraDomains = [ "linux.org" ];
-        email = "foo@bar.com";
-        restart = [ "dovecot2.service" "foo.service" ];
-        reload = [ "foo.service" ];
-      };
-    };
+    } else con) {} (attrNames ACMEsupportSet));      
     
-    nixcloud.tests.wanted = [ ./test.nix ];
+    #nixcloud.tests.wanted = [ ./test.nix ];
   };
 }

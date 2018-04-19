@@ -1,14 +1,23 @@
+# debugging:      
+#     systemctl list-units --type=target
+#     systemctl status nixcloud.TLS-usersupplied-certificates.target
+#     systemctl status nixcloud.TLS-selfsigned-certificates.target
+#     systemctl status nixcloud.TLS
+        
+
+
 # roadmap
 #
 # 1. implement config part:
 #    - [done] where "ACME" creates a `security.acme` entry
 #    - [done] where "selfsigned" creates a self signed tls certificate
 #    - [done] create workflow for supplied certificates
-# 2. integrate this into nixcloud-webservices
-#    - create systemd / service / target dependency 
-#    - make nixcloud.TLS.certs."foo" a new option and check it properly
-#    - test it with self signed certs
-#    - test it with nixdoc.io ...
+# 2. integrate this into nixcloud-webservices / nixcloud.email
+#    - [done] create systemd / service / target dependency 
+#    - [] make nixcloud.TLS.certs."foo" a new option and check it properly / nixcloud.TLS.certs.<name?>.mode defaults to "ACME" 
+#    - [] integrate this into nixcloud.email
+#    - [] test it with self signed certs
+#    - [] test it with nixdoc.io ...
 # 3. redo all description and examples
 # 4. write a comprehensive nixcloud test for this
 # 
@@ -34,7 +43,6 @@
 #
 # 5. release this to be used in nixcloud-webservices and nixcloud.email
 # 6. blog about this new feature and give a short introduction into nix typing
-#
 #
 # FIXME: blog post:
 #  - example: see the https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/meta.nix example
@@ -247,7 +255,7 @@ let
       restart = mkOption {
         type = nixcloudRestartType;
         default = [];
-        apply = x: unique x;
+        apply = x: unique x; # FIXME: is this really required?
         example = [ "postifx.service" ];
         description = ''
           A list of systemd services which are `restarted` after certificates are re-issued.
@@ -400,17 +408,15 @@ in
       
     nixcloudTLSService = nameValuePair "nixcloud.TLS" (
       let
-        certs = config.nixcloud.TLS.certs;
-        acmeIsUsed = fold (cert: con: (certs.${cert}.mode == "ACME") || con) false (attrNames certs);
+#         certs = config.nixcloud.TLS.certs;
+#         acmeIsUsed = fold (cert: con: (certs.${cert}.mode == "ACME") || con) false (attrNames certs);
       in {
         description   = "nixcloud.TLS service (managing TLS certificates)";
-        wantedBy      = [ "multi-user.target" ];
-        after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ] 
-                                ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
-                                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];                                
-        wants = if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [] 
-                                ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
-                                ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
+        
+        wantedBy = [ "multi-user.target" ];
+        after    = [ "network.target" ] ;
+        wants    = [];
+        
         preStart = ''
           mkdir -p   ${stateDir}
           chmod 0755 ${stateDir}
@@ -450,7 +456,21 @@ in
       } else con) {} (attrNames config.nixcloud.TLS.certs));
     
       systemd.services = listToAttrs ([ nixcloudTLSService ] ++ selfsignedTargets ++ usersuppliedTargets);
+      
+      systemd.targets."nixcloud.TLS-usersupplied-certificates" = {
+        description   = "If reached, all certificates which were supplied by the user were copied in place to be used";
+      };
+      systemd.targets."nixcloud.TLS-selfsigned-certificates" = {
+        description   = "If reached, all fake selfsigned certificates have been created and were copied in place to be used";
+      };
+      systemd.targets."nixcloud.TLS-certificates" = {
+        description   = "If reached, all certificates managed via nixcloud.TLS have been put into place to be used";
         
+        after = [ "acme-selfsigned-certificates.target" ] # security.acme
+             ++ [ "acme-certificates.target" ]            # security.acme
+             ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+             ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];                                
+      };
     meta = {
       maintainers = with lib.maintainers; [ qknight ];
     };
