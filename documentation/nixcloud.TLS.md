@@ -13,6 +13,8 @@ The motivation for creating `nixcloud.TLS` was:
 
 We've seen the identifier, i.e. "example.com-ACME" in the example below, in `security.acme` and at first it seemd stupid but it is actually a great concept to manage different certificates for the same domain so we copied it!
 
+A simple example configuration for `nixcloud.TLS` would be:
+
     nixcloud.TLS.certs = {
       "example.com-ACME" = {
         domain = "example.com";
