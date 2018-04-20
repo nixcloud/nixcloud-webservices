@@ -13,8 +13,12 @@
 # 3. documentation
 #    - [done] write documentation
 #    - [done] redo all description and examples
+#    - [] make sure that the user understands that the explicit declaration of nixcluod.TLS.certs.<idtenfier> is only needed when the defaults 
+#         are not sufficient
 # 4. merge this into nixcloud-webservices for nixcloud-webservices and nixcloud.email
+#    - [] remove module1.nix and module2.nix
 #    - [] verify that all scenarious produce correct certificates & systemd dependencies are working and merges are actually working as intended
+#      eventually add a sleep 1 into the cert creation to see race conditions
 #    - [] verify that no TLS certificate ends up in the /nix/store
 #    - [] merge it
 # 5. blog about this new feature and give a short introduction into nix typing
