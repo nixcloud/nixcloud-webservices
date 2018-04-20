@@ -11,7 +11,7 @@ The motivation for creating `nixcloud.TLS` was:
 
 ## The identifier
 
-We've seen the identifier in `security.acme` and at first it seemd stupid but it is actually a great concept to manage different certificates for the same domain so we copied it!
+We've seen the identifier, i.e. "example.com-ACME" in the example below, in `security.acme` and at first it seemd stupid but it is actually a great concept to manage different certificates for the same domain so we copied it!
 
     nixcloud.TLS.certs = {
       "example.com-ACME" = {
@@ -31,14 +31,17 @@ We've seen the identifier in `security.acme` and at first it seemd stupid but it
           tls_certificate_key="/tmp/key.pem";
         };
         email = "foo@example.com";
+      "example.org" = {};        
       };
     };
     
+Note: The default value for `domain` is the `identifier` which makes sense if you use `nixcloud.TLS` with default values. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
+    
 The example above creates three certificates for the same domain. The certificates can be found in:
 
-* /var/lib/acme/example.com-ACME/
-* /var/lib/nixcloud/TLS/example.com-selfsigned/selfsigned
-* /var/lib/nixcloud/TLS/example.com-usersupplied/usersupplied
+* `/var/lib/acme/example.com-ACME/`
+* `/var/lib/nixcloud/TLS/example.com-selfsigned/selfsigned`
+* `/var/lib/nixcloud/TLS/example.com-usersupplied/usersupplied`
 
 But they should be referenced using:
 
@@ -102,7 +105,7 @@ handle ID (string) with the `config` variable:
     
 Note: Most often "yourHandle" is the domain you want to have a certificate for.
 
-### SystemD dependencies
+### Systemd dependencies injection
 
 You also need to inject the systemd dependencies so that both `nixcloud.TLS` or `security.acme` has enough time to allocate the 
 certificates before they are used from a daemon.
@@ -112,4 +115,11 @@ Here is an example how one would extend `postfix`:
     systemd.services.postfix.after = [ "nixcloud.TLS-certificates.target" ];
     systemd.services.postfix.wants = [ "nixcloud.TLS-certificates.target" ];
 
+The "nixcloud.TLS-certificates.target" waits for these targets:
+
+* `acme-selfsigned-certificates.target` (security.acme)
+* `acme-certificates.target` (security.acme)
+* `nixcloud.TLS-selfsigned.target` (nixcloud.TLS)
+* `nixcloud.TLS-usersupplied.target` (nixcloud.TLS)
+    
 Note: This code was copied from `nixcloud.email`.
