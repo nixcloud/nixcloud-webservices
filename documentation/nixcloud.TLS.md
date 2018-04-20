@@ -12,6 +12,8 @@ The motivation for creating `nixcloud.TLS` was:
 * Meaningful defaults: 
 
     We encourage let's encrypt based ACME and `security.acme`
+    
+* Because of the [ACME rate limits](https://letsencrypt.org/docs/rate-limits/) we try to minimize the amount of requests
 
 ## How to use nixcloud.TLS
 
@@ -41,6 +43,8 @@ A simple example configuration for `nixcloud.TLS` would be:
       "example.org" = {};    
       };
     };
+    
+**Note:** The above example makes 3 separate ACME requests so watch your ACME rate limits usage!
     
 **Note:** The default value for `domain` is the `identifier` which makes sense if you use `nixcloud.TLS` with default values. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
     
