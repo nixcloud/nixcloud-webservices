@@ -13,7 +13,7 @@ The motivation for creating `nixcloud.TLS` was:
 
     We encourage let's encrypt based ACME and `security.acme`
 
-## The identifier
+## How to use nixcloud.TLS
 
 We've seen the identifier, i.e. "example.com-ACME" in the example below, in `security.acme` and at first it seemd stupid but it is actually a great concept to manage different certificates for the same domain so we copied it!
 
