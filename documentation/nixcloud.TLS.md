@@ -78,6 +78,9 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
         mode = "selfsigned";
       };
     };
+    
+Note: `security.acme` also creates a self-signed certificate but if your testing environment can't successfully use ACME to replace it with a valid
+      certificate it will always report `simp_le` errors on `nixos-rebuild switch` updates and this is the reason we created a self-signed implementation.
 
 ## Extending your service
 

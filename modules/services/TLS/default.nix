@@ -18,31 +18,11 @@
 #    - [done] test it with self signed certs
 #    - [done] test with usersupplied certs
 #    - [done] integrate this into nixcloud.email
-# 3. redo all description and examples
-# 4. write a comprehensive nixcloud test for this
-# 
-#   nixcloud.TLS.certs = {
-#     "example.com" = {
-#       domain = "aaaaaaaaahhhhh.bb";
-#       extraDomains = [ "flux.com" "flux.com" ];
-#       mode = "ACME";
-#       email = "foo@bar.com";
-#       restart = [ "foo.service" "foo.service"];
-#       reload =  [ "foo.service" "bar" ];
-#     };
-#     nixcloud.TLS.certs = {
-#       "example.com" = {
-#         domain = "aaaaaaaaahhhhh.bb";
-#         extraDomains = [ "linux.org" ];
-#         email = "foo@bar.com";
-#         restart = [ "dovecot2.service" "foo.service" ];
-#         reload = [ "foo.service" ];
-#       };
-#     };
-#   };
-#
-# 5. release this to be used in nixcloud-webservices and nixcloud.email
-# 6. blog about this new feature and give a short introduction into nix typing
+# 3. documentation
+#    - [done] write documentation
+#    - [] redo all description and examples
+# 4. release this to be used in nixcloud-webservices and nixcloud.email
+# 5. blog about this new feature and give a short introduction into nix typing
 #
 # FIXME: blog post:
 #  - example: see the https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/meta.nix example
