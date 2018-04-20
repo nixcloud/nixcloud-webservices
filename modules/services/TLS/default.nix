@@ -1,11 +1,3 @@
-# debugging:      
-#     systemctl list-units --type=target
-#     systemctl status nixcloud.TLS-usersupplied-certificates.target
-#     systemctl status nixcloud.TLS-selfsigned-certificates.target
-#     systemctl status nixcloud.TLS
-#
-#
-#
 # roadmap
 #
 # 1. implement config part:
@@ -59,86 +51,7 @@
 
 
 
-# # motivation
-# 
-# nixcloud.TLS - an abstraction to configure TLS with ease
-# 
-# # links
-# https://github.com/NixOS/nixpkgs/pull/34388
-# 
-# https://github.com/NixOS/nixpkgs/blob/release-18.03/nixos/modules/security/acme.nix
-# 
-# # requirements
-# 
-# * supported modes
-#         * "selfsigned"
-#         * "ACME"
-#         * {tls_certificate_key = ./path/key.pem; tls_certificate = ./path/cert.pem }
-# * reverse-proxy / nixcloud.email must wait until targets are ready, so 
-#         nixcloud.TLS."nixcloud.io".systemd.before
-#         nixcloud.TLS."nixcloud.io".systemd.wantedBy
-# 
-# # usage examples
 
-## von irgendwo:
-
-# nixcloud.TLS."example.com123" = {
-#   domain = "example.com";
-#   mode = "selfsigned";
-# };
-# 
-# nixcloud.TLS."example.org" = {
-#   mode = {
-#     ssl_certificate_key = /path/to/cert.pem;
-#     ssl_certificate = /path/to/key.pem;
-#   };
-# };
-# 
-# nixcloud.TLS."nixcloud.io".services =
-#   {
-#     postfix.action = "restart";
-#     dovecot.action = "reload";
-#   };
-#   
-# # später dann (um den merge zu zeigen):
-# 
-# nixcloud.TLS."nixcloud.io".services =
-#   {
-#     "nixcloud.reverse-proxy".action = "reload";
-#   };
-#   
-# # when using the cert location:
-# 
-# config.nixcloud.TLS."nixcloud.io".ssl_certificate -> /path/to/cert.pem
-# config.nixcloud.TLS."nixcloud.io".ssl_certificate_key -> /path/to/key.pem
-# 
-# # oder auch folgende idee:
-# 
-#   nixcloud.webservices.leaps.z2 = {
-#     enable = true;
-#     proxyOptions = {
-#       port = 3031;
-#       http.mode = "on";
-#       https.mode = "on";
-#       path = "/flubber99";
-#       domain = "foo.com";
-#       # mit eigenem cert
-#       TLS = {
-#         ssl_certificate_key = /path/to/cert.pem;
-#         ssl_certificate = /path/to/key.pem;
-#       };
-#       # klassisch
-#       TLS = "ACME"; 
-#       # paul: wir nutzen immer nixcloud.TLS und übergeben nur den identifier
-#       TLS = "example22.com"; -> ist doof weil wir zwischen "ACME" | "none" | "einer domain" unterscheiden müssen
-#       # ist das ne gute syntax?
-#       TLS = nixcloud.TLS."example22.com"; -> gewinner: wir haben entweder builtins.typeOf "string" oder "set"
-#                                              und bei set schauen wir ob ssl_certificate / ssl_certificate_key gesetzt ist
-#     };
-#   };
-# 
-
-# https://trello.com/c/dHSQhPYx/180-nixcloudtls
 { config, pkgs, lib, ... } @ args:
 with lib;
 
@@ -234,7 +147,7 @@ let
       restart = mkOption {
         type = nixcloudRestartType;
         default = [];
-        apply = x: unique x; # FIXME: is this really required?
+        apply = x: unique x;
         example = [ "postifx.service" ];
         description = ''
           A list of systemd services which are `restarted` after certificates are re-issued.

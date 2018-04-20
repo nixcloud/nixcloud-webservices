@@ -18,6 +18,7 @@ We've seen the identifier, i.e. "example.com-ACME" in the example below, in `sec
         domain = "example.com";
         mode = "ACME";
         email = "foo@example.com";
+        reload = [ "postifx.service" "myservice.service" ];
       };
       "example.com-selfsigned" = {
         domain = "example.com";
@@ -31,11 +32,13 @@ We've seen the identifier, i.e. "example.com-ACME" in the example below, in `sec
           tls_certificate_key="/tmp/key.pem";
         };
         email = "foo@example.com";
-      "example.org" = {};        
+      "example.org" = {};    
       };
     };
     
 Note: The default value for `domain` is the `identifier` which makes sense if you use `nixcloud.TLS` with default values. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
+    
+Note: The `reload` example for "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to the [postrun](https://nixos.org/nixos/options.html#security.acme.certs.%3Cname%3E.postrun) hook. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
     
 The example above creates three certificates for the same domain. The certificates can be found in:
 
@@ -123,3 +126,12 @@ The "nixcloud.TLS-certificates.target" waits for these targets:
 * `nixcloud.TLS-usersupplied.target` (nixcloud.TLS)
     
 Note: This code was copied from `nixcloud.email`.
+
+## Debugging
+
+These commands might come in handy:
+
+    systemctl list-units --type=target
+    systemctl status nixcloud.TLS-usersupplied-certificates.target
+    systemctl status nixcloud.TLS-selfsigned-certificates.target
+    systemctl status nixcloud.TLS
