@@ -1,6 +1,6 @@
 # nixcloud.TLS
 
-![nixcloud.TLS](https://github.com/nixcloud/nixcloud-webservices/blob/master/documentation/logo/nixcloud.TLS.png)
+![nixcloud.TLS](logo/nixcloud.TLS.png)
 
 `nixcloud.TLS` unifies TLS certificate management in NixOS.
 
