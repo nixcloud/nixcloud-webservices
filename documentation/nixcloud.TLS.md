@@ -1,13 +1,13 @@
 # nixcloud.TLS
 
-`nixcloud.TLS` unifies TLS certificate management. 
+`nixcloud.TLS` unifies TLS certificate management in NixOS.
 
 The motivation for creating `nixcloud.TLS` was:
 
 * It makes it easy to switch between 'ACME', 'selfsigned' or 'usersupplied' usage. This makes it easy for testing (using selfsigned TLS certificates) and in production (using "ACME" or you own certificates)
+* `security.acme` was a major inspiraten but we wanted to have a more modular approach to certificate management
 * Meaningful defaults: We encourage let's encrypt based ACME and `security.acme`
 * Using the nixpkgs typing system we can merge different definitions of the service, thus making it easy to switch between different usage scenarios
-* We build on top of `security.acme` but wanted to have a more modular approach to certificate management
 
 ## The identifier
 
