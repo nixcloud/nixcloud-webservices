@@ -4,10 +4,12 @@
 
 The motivation for creating `nixcloud.TLS` was:
 
-* It makes it easy to switch between 'ACME', 'selfsigned' or 'usersupplied' usage. This makes it easy for testing (using selfsigned TLS certificates) and in production (using "ACME" or you own certificates)
-* `security.acme` was a major inspiraten but we wanted to have a more modular approach to certificate management
-* Meaningful defaults: We encourage let's encrypt based ACME and `security.acme`
-* Using the nixpkgs typing system we can merge different definitions of the service, thus making it easy to switch between different usage scenarios
+* Easily switch between 'ACME', 'selfsigned' or 'usersupplied' scenarious:
+    This makes it easy for testing (using selfsigned TLS certificates) and in production (using "ACME" or you own certificates)
+
+* `security.acme` was a major inspiraten for this implementation but we needed a more modular approach to certificate management
+* Meaningful defaults: 
+    We encourage let's encrypt based ACME and `security.acme`
 
 ## The identifier
 
@@ -38,9 +40,9 @@ A simple example configuration for `nixcloud.TLS` would be:
       };
     };
     
-Note: The default value for `domain` is the `identifier` which makes sense if you use `nixcloud.TLS` with default values. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
+**Note:** The default value for `domain` is the `identifier` which makes sense if you use `nixcloud.TLS` with default values. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
     
-Note: The `reload` example for "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to the [postrun](https://nixos.org/nixos/options.html#security.acme.certs.%3Cname%3E.postrun) hook. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
+**Note:** The `reload` example for "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to the [postrun](https://nixos.org/nixos/options.html#security.acme.certs.%3Cname%3E.postrun) hook. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
     
 The example above creates three certificates for the same domain. The certificates can be found in:
 
@@ -87,7 +89,7 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
       };
     };
     
-Note: `security.acme` also creates a self-signed certificate but if your testing environment can't successfully use ACME to replace it with a valid
+**Note:** `security.acme` also creates a self-signed certificate but if your testing environment can't successfully use ACME to replace it with a valid
       certificate it will always report `simp_le` errors on `nixos-rebuild switch` updates and this is the reason we created a self-signed implementation.
 
 ## Extending your service
@@ -108,7 +110,7 @@ handle ID (string) with the `config` variable:
     sslServerCert = config.nixcloud.TLS.certs."yourHandle".tls_certificate;
     sslServerKey  = config.nixcloud.TLS.certs."yourHandle".tls_certificate_key;
     
-Note: Most often "yourHandle" is the domain you want to have a certificate for.
+**Note:** Most often "yourHandle" is the domain you want to have a certificate for.
 
 ### Systemd dependencies injection
 
@@ -127,7 +129,7 @@ The "nixcloud.TLS-certificates.target" waits for these targets:
 * `nixcloud.TLS-selfsigned.target` (nixcloud.TLS)
 * `nixcloud.TLS-usersupplied.target` (nixcloud.TLS)
     
-Note: This code was copied from `nixcloud.email`.
+**Note:** This code was copied from `nixcloud.email`.
 
 ## Debugging
 
