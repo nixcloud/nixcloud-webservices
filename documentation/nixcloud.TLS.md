@@ -132,6 +132,7 @@ Note: This code was copied from `nixcloud.email`.
 These commands might come in handy:
 
     systemctl list-units --type=target
+    systemctl status nixcloud.TLS-certificates.target
     systemctl status nixcloud.TLS-usersupplied-certificates.target
     systemctl status nixcloud.TLS-selfsigned-certificates.target
     systemctl status nixcloud.TLS
