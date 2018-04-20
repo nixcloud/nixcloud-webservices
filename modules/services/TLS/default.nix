@@ -14,10 +14,10 @@
 #    - [done] create workflow for supplied certificates
 # 2. integrate this into nixcloud-webservices / nixcloud.email
 #    - [done] create systemd / service / target dependency 
-#    - [] make nixcloud.TLS.certs."foo" a new option and check it properly / nixcloud.TLS.certs.<name?>.mode defaults to "ACME" 
+#    - [done] make nixcloud.TLS.certs."foo" a new option and check it properly / nixcloud.TLS.certs.<name?>.mode defaults to "ACME" 
+#    - [done] test it with self signed certs
+#    - [done] test with usersupplied certs
 #    - [] integrate this into nixcloud.email
-#    - [] test it with self signed certs
-#    - [] test it with nixdoc.io ...
 # 3. redo all description and examples
 # 4. write a comprehensive nixcloud test for this
 # 
@@ -202,8 +202,7 @@ let
     # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
     check = x: ((isString x && x == "ACME") 
         || (isString x && x == "selfsigned") 
-        || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate))
-      || (isNull x);
+        || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate));
   };
   c = x: ((isList x) && fold (el: c: if (isString el) then c else false) true x);
   m = loc: defs: unique (fold (el: c: el.value ++ c) [] defs);
@@ -226,7 +225,7 @@ let
     options = {
       domain = mkOption {
         type = nixcloudTLSDomainType;
-        default = null;
+        default = name;
         description = "Domain to fetch certificate for (defaults to the entry name)";
       };
       extraDomains = mkOption {
@@ -269,7 +268,7 @@ let
       };
       mode = mkOption {
         type = nixcloudTLSModeType;
-        default = null;
+        default = "ACME";
         description = ''
          Use this option to set the `TLS mode` to be used:
         
@@ -439,9 +438,10 @@ in
         '';
       };     
     in  {
+      # FIXME: these don't make sense ATM since both are not null by default anymore
       # make sure that `domain` and `mode` is set properly so that the user has not fogotten to set it
-      assertions = map (cert: mkAssertion-Mode   cert) (attrNames config.nixcloud.TLS.certs) ++
-                   map (cert: mkAssertion-Domain cert) (attrNames config.nixcloud.TLS.certs);
+      #assertions = map (cert: mkAssertion-Mode   cert) (attrNames config.nixcloud.TLS.certs) ++
+      #             map (cert: mkAssertion-Domain cert) (attrNames config.nixcloud.TLS.certs);
     
       security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
         "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {

@@ -139,16 +139,6 @@ let
     assert (builtins.substring 0 1 path == "/") || abort "'${path}' lacks leading '/'!";
     assert (!(containsSpace path)) || abort "path: '${path}' contains space(es)!";
     path;
-  nixcloudTLSModeType = mkOptionType {
-    name = "proxyOption.<name?>.TLS";
-    merge = mergeEqualOption;
-    # FIXME this check is not 100% the same as the type previously was...
-    # -> types.either (types.enum [ "ACME" "selfsigned" ]) (types.submodule tls_certificateSetModule);
-    check = x: ((isString x && x == "ACME") 
-        || (isString x && x == "selfsigned") 
-        || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate))
-      || (isNull x);
-  };    
 in
 
 {
@@ -201,16 +191,16 @@ in
       '';
     };
     TLS = mkOption {
-      # FIXME: types.set should have an assertion to check if the nixcloud.TLS.certs.<name?> is existent and valid
-      #type = types.either (types.enum [ "none" "ACME" ]) (types.set);
-      type = nixcloudTLSModeType;
-      default = "ACME";
+      type = types.string;
+      default = toplevel.config.domain;
       description = ''
-        Use this option to set the `TLS backend` to be used:
+        Points to an identifier "myconfig", which is later used to query `nixcloud.TLS.certs."myconfig"` (proxyOptions.domain) is the default identifier.
         
-        * "ACME" - (default) uses let's encrypt to automatically download and install TLS certificates
-        * "none" - makes sure that no `https` record, in the reverse-proxy, is is created for this `proxyOption`
-        * nixcloud.TLS."identifier" - reference a nixcloud.TLS configuration of type `types.set` for certificate/key
+        TLS adjustments can be made from nixcloud.TLS.certs."myconfig" later one like this:
+        
+        nixcloud.TLS.certs."myconfig" = {
+          mode = "selfsigned";
+        };
       ''; #'
     };
     http = {
