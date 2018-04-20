@@ -23,24 +23,24 @@ let
     '';
   };
 
-  ssl_certificateSetModule = {
-    options = {
-      ssl_certificate = mkOption {
-        type = types.path;
-        description = ''
-          A location containg the full path and filename to `/path/to/fullchain.pem`.
-        '';
-        example = "/path/to/fullchain.pem";
-      };
-      ssl_certificate_key = mkOption {
-        type = types.path;
-        description = ''
-          A location containg the full path and filename to `/path/to/key.pem`.
-        '';
-        example = "/path/to/key.pem";
-      };
-    };
-  };
+#   ssl_certificateSetModule = {
+#     options = {
+#       ssl_certificate = mkOption {
+#         type = types.path;
+#         description = ''
+#           A location containg the full path and filename to `/path/to/fullchain.pem`.
+#         '';
+#         example = "/path/to/fullchain.pem";
+#       };
+#       ssl_certificate_key = mkOption {
+#         type = types.path;
+#         description = ''
+#           A location containg the full path and filename to `/path/to/key.pem`.
+#         '';
+#         example = "/path/to/key.pem";
+#       };
+#     };
+#   };
   
   locationWebSocketModule = { config, lib, options, toplevel }: {
     options = {
@@ -191,12 +191,17 @@ in
       '';
     };
     TLS = mkOption {
-      type = types.either (types.enum [ "ACME" "none" ]) (types.submodule ssl_certificateSetModule);
-      default = "ACME";
+      type = types.string;
+      default = toplevel.config.domain;
       description = ''
-        TLS backend in use. Defaults to "ACME" (let's encrypt) but one can also set "none" or pass in cert/key using ssl_certificateSetModule. You can't mix TLS modes like "ACME" and ssl_certificateSetModule for two
-        proxyOption records related to the same domain as "example.com".
-      '';
+        Points to an identifier "myconfig", which is later used to query `nixcloud.TLS.certs."myconfig"` (proxyOptions.domain) is the default identifier.
+        
+        TLS adjustments can be made from nixcloud.TLS.certs."myconfig" later one like this:
+        
+        nixcloud.TLS.certs."myconfig" = {
+          mode = "selfsigned";
+        };
+      ''; #'
     };
     http = {
       mode = mkOption {

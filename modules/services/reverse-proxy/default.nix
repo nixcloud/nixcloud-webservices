@@ -117,6 +117,7 @@ in
     allHttpOnlyProxyOptions = filter (el: (el.http.mode != "off") || (checkWebsockets el.websockets "http") ) allProxyOptions;
     allHttpNCDomains = unique (map (el: el.domain) allHttpOnlyProxyOptions);
 
+    # simp_le requires a webserver with http to serve challenge/response requests for let's encrypt ACME to work
     ACMEImpliedDomains = unique (mapAttrsToList (name: value: if (value.domain != null) then value.domain else name) config.security.acme.certs);
     ACMEImpliedDomains_ = unique (mapAttrsToList (name: value: 
       { name = if (value.domain != null) then value.domain else name; value = value.webroot; }) config.security.acme.certs);
@@ -124,17 +125,14 @@ in
     allAcmeDomains = builtins.listToAttrs ACMEImpliedDomains_;
     allHttpDomains = unique (ACMEImpliedDomains ++ allHttpNCDomains);
         
-    # ACME/TLS details
-    #   example value: { "lastlog.de" = "ACME"; "nixcloud.io = "ACME"; }
-    #
-    # it returns either:
-    # - "ACME" if all locations per domain (in proxyOption) have set TLS="ACME" (default)
-    # - an assertion on contradicting proxyOptions records
-    ACMEsupportSet = fold (el: c:
-      if (el.https.mode != "off" && el.TLS != "ACME" && c ? "${el.domain}") then
+    # nixcloud.TLS details
+    #   example value: { "lastlog.de" = "lastlog.de-identifier"; "nixcloud.io" = "nixcloud.io"; }
+    #                  { domain (string) = nixcloud.TLS idenfier (string) };
+    nixcloudTLSHandles = fold (el: c:
+      if (c ? "${el.domain}") then
         let
-          a=c.${el.domain};
-          b="${el.TLS}";
+          a=c.${el.domain};  # the saved nixcloud.TLS identifier
+          b="${el.TLS}";     # the newly found nixcloud.TLS identifier for a different proxyOptions record
         in
           if (a == b) then
             c else abort "error: `${a}` != `${b}`! A conflict in `proxyOptions` for for domain ${el.domain}:${toString el.port}${el.path} with a record for the same domain added previously."
@@ -247,7 +245,6 @@ in
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
       needsHttps = fold (el: con: if ((el.https.mode != "off") || checkWebsockets el.websockets "https") then true else con) false filteredProxyOptions;
-      #ACMEcertList = filter (cert: cert.
     in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {
         ssl on;
@@ -256,10 +253,9 @@ in
 
         server_name ${domain};
 
-        ${optionalString (ACMEsupportSet.${domain} == "ACME") ''
-        ssl_certificate /var/lib/acme/${domain}_ncws/fullchain.pem;
-        ssl_certificate_key /var/lib/acme/${domain}_ncws/key.pem;
-        ''}
+        ssl_certificate ${config.nixcloud.TLS.certs.${nixcloudTLSHandles.${domain}}.tls_certificate};
+        ssl_certificate_key ${config.nixcloud.TLS.certs.${nixcloudTLSHandles.${domain}}.tls_certificate_key};
+
         ${createLocationRecords "https" filteredProxyOptions}
         ${createWsPaths "https" filteredProxyOptions}
       }
@@ -277,15 +273,13 @@ in
         ];
       };
     };
-    systemd.services."nixcloud.reverse-proxy" = let
-      acmeIsUsed = fold (el: con: (el == "ACME") || con) false (attrValues ACMEsupportSet);
-    in {
-      description   = "nixcloud reverse-proxy service";
-      wantedBy      = [ "multi-user.target" ];
+    systemd.services."nixcloud.reverse-proxy" = {
+      description   = "Connects several webservers together and manages TLS and makes hosting easy!";
       
-      after = if acmeIsUsed then [ "acme-selfsigned-certificates.target" ] else [ "network.target" ];
-      wants =  if acmeIsUsed then [ "acme-selfsigned-certificates.target" "acme-certificates.target" ] else [];
-      
+      wantedBy = [ "multi-user.target" ];
+      after    = [ "nixcloud.TLS-certificates.target" ];
+      wants    = [ "nixcloud.TLS-certificates.target" ];
+
       stopIfChanged = false;
 
       preStart = ''
@@ -312,21 +306,16 @@ in
       { name = "${user}";
       });
 
-    security.acme.certs = (fold (el: con: if ((ACMEsupportSet.${el}) != "ACME") then con else con // {
-      "${el}_ncws" = {
-        # FIXME: inject nixcloud.reverse-proxy user into acme groups (or the othern way round)
-        #user = "acme";
-        #group = "acme";
-        domain = "${el}";
-        # FIXME: check if allowKeysForGroup is required
-        # allowKeysForGroup = true;
-        webroot = "/var/lib/acme/acme-challenges";
-        postRun = ''
-         systemctl reload nixcloud.reverse-proxy
-        '';
-        # FIXME systemd.reload = [ "nixcloud.reverse-proxy.service" ];
+    # start nixcloud.TLS with it's default ACME
+    # if you want to have selfsigned, or usersupplied just create a
+    #    nixcloud.TLS.certs."identifier".mode = 'selfsigned';
+    # in configuration.nix
+    nixcloud.TLS.certs = (fold (el: con: con // {
+      "${el}" = {
+        reload = [ "nixcloud.reverse-proxy.service" ];
       };
-    }) {} (attrNames ACMEsupportSet));
+    }) {} (attrNames nixcloudTLSHandles));
+    
     nixcloud.tests.wanted = [ ./test.nix ];
   };
 }

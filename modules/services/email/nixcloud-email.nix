@@ -79,12 +79,33 @@ in
               A community effort to develop and maintain a C library for producing DKIM-aware applications and an open source milter for providing DKIM servicei (http://opendkim.org/). 
             '';
           };
-          enableACME = mkOption {
+          enableTLS = mkOption {
             type = types.bool;
             default = true;
             description = ''
-              Let’s Encrypt uses the ACME protocol to verify that you control a given domain name and to issue you a certificate.
-            '';
+              If you want to use TLS (aka. SSL) for your server you can configure this using `nixcloud.TLS` witht the `hostname` identifier.
+
+              The default `nixcloud.TLS` setting is to use let's encrypt ACME. If you want to use your own certificates (usersupplied), use: 
+
+                  nixcloud.TLS.certs = {
+                    "example.com" = {
+                      mode = {
+                        tls_certificate="/tmp/fullchain.pem";
+                        tls_certificate_key="/tmp/key.pem";
+                      };
+                      email = "foo@example.com";
+                    };
+                  };
+
+              For testing you can use (selfsigned), like this:
+
+                nixcloud.TLS.certs = {
+                  "example.com" = {
+                    mode = "selfsigned";
+                  };
+                };
+
+            ''; #'
           };
           enableSPFPolicy = mkOption {
             type = types.bool;
@@ -192,27 +213,21 @@ in
         };
       })
 
-      (mkIf cfg.enableACME { 
-        networking = {
-          firewall = {
-            allowedTCPPorts = [
-              80
-            ];
-          };
-        };
-
+      (mkIf cfg.enableTLS {
         nixcloud.reverse-proxy.enable = true;
 
-        security.acme.certs = {
-          "${cfg.hostname}_email" = {
-            webroot = "/var/lib/acme/acme-challenges";
-            domain = "${cfg.hostname}";
+        systemd.services.postfix.after = [ "nixcloud.TLS-certificates.target" ];
+        systemd.services.postfix.wants = [ "nixcloud.TLS-certificates.target" ];
+        
+        systemd.services.dovecot2.after = [ "nixcloud.TLS-certificates.target" ];
+        systemd.services.dovecot2.wants = [ "nixcloud.TLS-certificates.target" ];
+        
+        nixcloud.TLS.certs = {
+          "${cfg.hostname}" = {
+            # FIXME: we could add this later if someone wants it
             #extraDomains = builtins.listToAttrs (fold (el: c: c ++ [ { name = "${el}"; value = null; } ] ) [] cfg.domains);
             email = null;
-            postRun = ''
-              systemctl restart postfix.service;
-              systemctl restart dovecot2.service;
-            '';
+            reload = [ "postfix.service" "dovecot2.service" ];
           };
         };
       })
@@ -342,9 +357,9 @@ in
             smtp_sasl_tls_security_options = [ "noanonymous" ];
             smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
           };
-        } // optionalAttrs (cfg.enableACME) {
-          sslCert = "/var/lib/acme/${cfg.hostname}_email/fullchain.pem";
-          sslKey = "/var/lib/acme/${cfg.hostname}_email/key.pem";
+        } // optionalAttrs (cfg.enableTLS) {
+          sslCert = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate;
+          sslKey  = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate_key;
         } // optionalAttrs (cfg.relay.host != null) {
           relayHost = cfg.relay.host;
           relayPort = cfg.relay.port;
@@ -443,9 +458,9 @@ in
             service managesieve {
             }
           '';
-        } // optionalAttrs (cfg.enableACME) { 
-            sslServerCert = "/var/lib/acme/${cfg.hostname}_email/fullchain.pem";
-            sslServerKey = "/var/lib/acme/${cfg.hostname}_email/key.pem";
+        } // optionalAttrs (cfg.enableTLS) { 
+            sslServerCert = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate;
+            sslServerKey  = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate_key;
         }; 
       }
     ]);
