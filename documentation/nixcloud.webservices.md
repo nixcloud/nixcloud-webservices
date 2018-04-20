@@ -1,6 +1,6 @@
 # nixcloud.webservices
 
-![nixcloud.webservices](https://github.com/nixcloud/nixcloud-webservices/blob/master/documentation/logo/nixcloud.webservices.png)
+![nixcloud.webservices](logo/nixcloud.webservices.png)
 
 `nixcloud.webservices` is a part of [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices) and focuses on automated deployment of traditional webservices as wordpress, owncloud, [mediawiki](../modules/web/services/mediawiki/default.nix) or [leaps](../modules/web/services/leaps/default.nix) (leaps is implemented in GO and comes with its own webserver implementation).
 
