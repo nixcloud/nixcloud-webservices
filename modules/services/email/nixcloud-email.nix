@@ -87,19 +87,23 @@ in
 
               The default `nixcloud.TLS` setting is to use let's encrypt ACME. If you want to use your own certificates (usersupplied), use: 
 
-                  "example.com" = {
-                    mode = {
-                      tls_certificate="/tmp/fullchain.pem";
-                      tls_certificate_key="/tmp/key.pem";
+                  nixcloud.TLS.certs = {
+                    "example.com" = {
+                      mode = {
+                        tls_certificate="/tmp/fullchain.pem";
+                        tls_certificate_key="/tmp/key.pem";
+                      };
+                      email = "foo@example.com";
                     };
-                    email = "foo@example.com";
                   };
 
               For testing you can use (selfsigned), like this:
 
+                nixcloud.TLS.certs = {
                   "example.com" = {
                     mode = "selfsigned";
                   };
+                };
 
             ''; #'
           };
@@ -212,6 +216,12 @@ in
       (mkIf cfg.enableTLS {
         nixcloud.reverse-proxy.enable = true;
 
+        systemd.services.postfix.after = [ "nixcloud.TLS-certificates.target" ];
+        systemd.services.postfix.wants = [ "nixcloud.TLS-certificates.target" ];
+        
+        systemd.services.dovecot2.after = [ "nixcloud.TLS-certificates.target" ];
+        systemd.services.dovecot2.wants = [ "nixcloud.TLS-certificates.target" ];
+        
         nixcloud.TLS.certs = {
           "${cfg.hostname}" = {
             # FIXME: we could add this later if someone wants it

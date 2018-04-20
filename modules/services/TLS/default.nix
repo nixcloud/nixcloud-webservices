@@ -3,9 +3,9 @@
 #     systemctl status nixcloud.TLS-usersupplied-certificates.target
 #     systemctl status nixcloud.TLS-selfsigned-certificates.target
 #     systemctl status nixcloud.TLS
-        
-
-
+#
+#
+#
 # roadmap
 #
 # 1. implement config part:
@@ -17,7 +17,7 @@
 #    - [done] make nixcloud.TLS.certs."foo" a new option and check it properly / nixcloud.TLS.certs.<name?>.mode defaults to "ACME" 
 #    - [done] test it with self signed certs
 #    - [done] test with usersupplied certs
-#    - [] integrate this into nixcloud.email
+#    - [done] integrate this into nixcloud.email
 # 3. redo all description and examples
 # 4. write a comprehensive nixcloud test for this
 # 
@@ -425,18 +425,18 @@ in
           RemainAfterExit=true;
         };
       });
-     mkAssertion-Mode = cert: 
-      { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
-        message = ''
-          Error: nixcloud.TLS.certs.${cert}.mode is not set correctly (it was 'null')!
-        '';
-      };
-    mkAssertion-Domain = cert: 
-      { assertion = config.nixcloud.TLS.certs.${cert}.domain != null;
-        message = ''
-          Error: nixcloud.TLS.certs.${cert}.domain is not set correctly (it was 'null')!
-        '';
-      };     
+#      mkAssertion-Mode = cert: 
+#       { assertion = config.nixcloud.TLS.certs.${cert}.mode != null;
+#         message = ''
+#           Error: nixcloud.TLS.certs.${cert}.mode is not set correctly (it was 'null')!
+#         '';
+#       };
+#     mkAssertion-Domain = cert: 
+#       { assertion = config.nixcloud.TLS.certs.${cert}.domain != null;
+#         message = ''
+#           Error: nixcloud.TLS.certs.${cert}.domain is not set correctly (it was 'null')!
+#         '';
+#       };     
     in  {
       # FIXME: these don't make sense ATM since both are not null by default anymore
       # make sure that `domain` and `mode` is set properly so that the user has not fogotten to set it
@@ -463,6 +463,7 @@ in
       systemd.targets."nixcloud.TLS-selfsigned-certificates" = {
         description   = "If reached, all fake selfsigned certificates have been created and were copied in place to be used";
       };
+ 
       systemd.targets."nixcloud.TLS-certificates" = {
         description   = "If reached, all certificates managed via nixcloud.TLS have been put into place to be used";
         
