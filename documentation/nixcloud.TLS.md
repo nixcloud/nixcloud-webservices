@@ -44,8 +44,8 @@ A more complex example configuration for `nixcloud.TLS` would be:
       "example.com-usersupplied" = {
         domain = "example.com";
         mode = {
-          tls_certificate="/tmp/fullchain.pem";
-          tls_certificate_key="/tmp/key.pem";
+          tls_certificate="/root/.tls/fullchain.pem";
+          tls_certificate_key="/root/.tls/key.pem";
         };
         email = "foo@example.com";
       };
@@ -85,8 +85,8 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
     nixcloud.TLS.certs = {
       "example.com" = {
         mode = {
-          tls_certificate="/tmp/fullchain.pem";
-          tls_certificate_key="/tmp/key.pem";
+          tls_certificate="/root/.tls/fullchain.pem";
+          tls_certificate_key="/root/.tls/key.pem";
         };
         email = "foo@example.com";
       };
