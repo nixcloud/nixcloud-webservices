@@ -19,9 +19,15 @@ The motivation for creating `nixcloud.TLS` was:
 
 ## How to use nixcloud.TLS
 
-We've seen the identifier, i.e. "example.com-ACME" in the example below, in `security.acme` and at first it seemd stupid but it is actually a great concept to manage different certificates for the same domain so we copied it!
+The simplest configuration would be this:
 
-A simple example configuration for `nixcloud.TLS` would be:
+    nixcloud.TLS.certs = {
+      "nixcloud.io" = {};
+    };
+
+Here the identifier is the left hand string, "nixcloud.io" and the attribute set on the right is basically empty. As a result the configuration will be using default values where `domain` will be set to the identifier and `mode` will be "ACME".
+
+A more complex example configuration for `nixcloud.TLS` would be:
 
     nixcloud.TLS.certs = {
       "example.com-ACME" = {
@@ -42,15 +48,12 @@ A simple example configuration for `nixcloud.TLS` would be:
           tls_certificate_key="/tmp/key.pem";
         };
         email = "foo@example.com";
-      "example.org" = {};    
       };
     };
     
-**Note:** The above example makes 3 separate ACME requests so watch your ACME rate limits usage!
+As said, the default value for `domain` is the `identifier`. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
     
-**Note:** The default value for `domain` is the `identifier` which makes sense if you use `nixcloud.TLS` with default values. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."example.org" the domain is set to "example.org" which is a correct domain and an intended default.
-    
-**Note:** The `reload` example for "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to the [postrun](https://nixos.org/nixos/options.html#security.acme.certs.%3Cname%3E.postrun) hook. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
+The `reload` example for "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to the [postrun](https://nixos.org/nixos/options.html#security.acme.certs.%3Cname%3E.postrun) hook. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
     
 The example above creates three certificates for the same domain. The certificates can be found in:
 
@@ -60,11 +63,11 @@ The example above creates three certificates for the same domain. The certificat
 
 But they should be referenced using:
 
-* `config.nixcloud.TLS.certs."yourHandle".tls_certificate` 
+* `config.nixcloud.TLS.certs."identifier".tls_certificate` 
 
 Since the `nixcloud.TLS` abstraction will return the correct location according to the `mode` of operation.
 
-## How to use it?
+## Different usage modes in detail
 
 If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `nixcloud.TLS` without knowing it as we use it as a default from now on.
 
@@ -100,15 +103,15 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
 **Note:** `security.acme` also creates a self-signed certificate but if your testing environment can't successfully use ACME to replace it with a valid
       certificate it will always report `simp_le` errors on `nixos-rebuild switch` updates and this is the reason we created a self-signed implementation.
 
-## Extending your service
+## Using nixcloud.TLS with any service using TLS in NixOS
 
 Say you want to use `nixcloud.TLS` to manage TLS certificates for you, then this example will help you to do the setup.
 
-You need to do three things:
+In a nutshell, you need to do three things:
 
-1. create a nixcloud.TLS.certs."handle" record and pick your operation `mode`
-2. reference the `tls_certificate` and `tls_certificate_key` from the global `config`
-3. inject systemd service dependencies 
+1. Create a nixcloud.TLS.certs."handle" record and pick your `mode` of operation
+2. In the service, reference the `tls_certificate` and `tls_certificate_key` from the global `config`
+3. Inject systemd service dependencies 
 
 ### Referencing certificate/key
 
@@ -148,3 +151,9 @@ These commands might come in handy:
     systemctl status nixcloud.TLS-usersupplied-certificates.target
     systemctl status nixcloud.TLS-selfsigned-certificates.target
     systemctl status nixcloud.TLS
+
+# Thanks
+
+Thanks to the `security.acme` authors for their inspiration and example code & uwap!
+
+    
