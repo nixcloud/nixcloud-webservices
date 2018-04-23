@@ -1,4 +1,5 @@
-{ config, pkgs, lib, options, ... } @ toplevel:
+{ config, pkgs, lib, options, ... }:
+
 with lib;
 
 let
@@ -9,170 +10,160 @@ let
 in
 {
   imports = [ ./virtual-mail-users.nix ];
-  options = {
-    nixcloud.email = mkOption {
-      default = {};
+
+  options.nixcloud.email = {
+    enable = mkOption {
+      default = false;
       description = ''
-        nixcloud.email simplifies mailserver hosting by providing a minimal abstraction with useful defaults.
+        nixcloud.io email abstraction, optimized for simple usage yet supporting complex features.
       '';
-      type = types.submodule ({ config, ... } : {
-        config._module.args.toplevel = toplevel;
-        options = {
-          enable = mkOption {
-            default = false;
-            description = ''
-              nixcloud.io email abstraction, optimized for simple usage yet supporting complex features.
-            '';
-          };
-          ipAddress = mkOption {
-            example = "1.2.3.4";
-            description = ''
-              The IPv4 address used for the email service.
-            '';
-          };
-          ip6Address = mkOption {
-            example = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
-            description = ''
-              The IPv6 address used for the email service. Note: You need to set the reverse PTR correctly or you can't send emails to gmail.com for instance.
-            ''; #'
-          };
-          domains = mkOption {
-            type = types.listOf (types.str);
-            example = [ "example.com" ];
-            description = ''
-              The domains for which the mailserver is responsible.
-            '';
-          };
-          hostname = mkOption {
-            type = types.str;
-            example = "mail.example.com";
-            default = toplevel.config.networking.hostName;
-            description = ''
-              The domain the MX record points to and hostname needs not be listed in domains. Used by Postfix and ACME.
-            '';
-          };
-          enableSpamassassin = mkOption {
-            type = types.bool;
-            default = true;
-            description = ''
-              SpamAssassin is the #1 Open Source anti-spam platform giving system administrators a filter to classify email and block spam (unsolicited bulk email).
-            '';
-          };
-          enableGreylisting = mkOption {
-            type = types.bool;
-            default = true;
-            description = ''
-              Enable the Postfix policy server implementing greylisting developed by David Schweikert.
-            '';
-          };
-          enableMailQuota = mkOption {
-            type = types.bool;
-            default = true;
-            description = ''
-              Dovecot2 mail quotas - https://wiki2.dovecot.org/Quota
-            '';
-          };
-          enableDKIM = mkOption {
-            type = types.bool;
-            default = true;
-            description = ''
-              A community effort to develop and maintain a C library for producing DKIM-aware applications and an open source milter for providing DKIM servicei (http://opendkim.org/). 
-            '';
-          };
-          enableTLS = mkOption {
-            type = types.bool;
-            default = true;
-            description = ''
-              If you want to use TLS (aka. SSL) for your server you can configure this using `nixcloud.TLS` witht the `hostname` identifier.
+    };
+    ipAddress = mkOption {
+      example = "1.2.3.4";
+      description = ''
+        The IPv4 address used for the email service.
+      '';
+    };
+    ip6Address = mkOption {
+      example = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+      description = ''
+        The IPv6 address used for the email service. Note: You need to set the reverse PTR correctly or you can't send emails to gmail.com for instance.
+      ''; #'
+    };
+    domains = mkOption {
+      type = types.listOf (types.str);
+      example = [ "example.com" ];
+      description = ''
+        The domains for which the mailserver is responsible.
+      '';
+    };
+    hostname = mkOption {
+      type = types.str;
+      example = "mail.example.com";
+      default = config.networking.hostName;
+      description = ''
+        The domain the MX record points to and hostname needs not be listed in domains. Used by Postfix and ACME.
+      '';
+    };
+    enableSpamassassin = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        SpamAssassin is the #1 Open Source anti-spam platform giving system administrators a filter to classify email and block spam (unsolicited bulk email).
+      '';
+    };
+    enableGreylisting = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Enable the Postfix policy server implementing greylisting developed by David Schweikert.
+      '';
+    };
+    enableMailQuota = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Dovecot2 mail quotas - https://wiki2.dovecot.org/Quota
+      '';
+    };
+    enableDKIM = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        A community effort to develop and maintain a C library for producing DKIM-aware applications and an open source milter for providing DKIM servicei (http://opendkim.org/).
+      '';
+    };
+    enableTLS = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        If you want to use TLS (aka. SSL) for your server you can configure this using `nixcloud.TLS` witht the `hostname` identifier.
 
-              The default `nixcloud.TLS` setting is to use let's encrypt ACME. If you want to use your own certificates (usersupplied), use: 
+        The default `nixcloud.TLS` setting is to use let's encrypt ACME. If you want to use your own certificates (usersupplied), use:
 
-                  nixcloud.TLS.certs = {
-                    "example.com" = {
-                      mode = {
-                        tls_certificate="/tmp/fullchain.pem";
-                        tls_certificate_key="/tmp/key.pem";
-                      };
-                      email = "foo@example.com";
-                    };
-                  };
-
-              For testing you can use (selfsigned), like this:
-
-                nixcloud.TLS.certs = {
-                  "example.com" = {
-                    mode = "selfsigned";
-                  };
+            nixcloud.TLS.certs = {
+              "example.com" = {
+                mode = {
+                  tls_certificate="/tmp/fullchain.pem";
+                  tls_certificate_key="/tmp/key.pem";
                 };
-
-            ''; #'
-          };
-          enableSPFPolicy = mkOption {
-            type = types.bool;
-            default = false;
-            description = ''
-              Whether to enforce the Sender Policy Framework.
-            '';
-          };
-          users = mkOption {
-            type = types.listOf (types.submodule (import ./virtual-mail-submodule.nix));
-            example = [ { name = "js"; domain = "nixcloud.io"; password="qwertz"; } ];
-            default = [];
-            description = "A list of virtual mail users for which the password is managed via this abstraction";
-          };
-          relay = {
-            host = mkOption {
-              type = types.nullOr types.str;
-              example = "mail.mydomain.tld";
-              default = null;
-              description = "The mail host which should be configured as relay";
-            };
-            port = mkOption {
-              type = types.int;
-              example = 25;
-              default = 587;
-              description = "The port of the relay host";
-            };
-            passwords = mkOption {
-              type = types.attrsOf types.str;
-              example = {
-                "alice@foo.tld" = "supersafepassword123";
-                "bob@bar.tld" = "iAmB0b!";
+                email = "foo@example.com";
               };
-              default = {};
-              description = "An attribute set where the keys are the mail users and the values are the passwords of those users";
+            };
+
+        For testing you can use (selfsigned), like this:
+
+          nixcloud.TLS.certs = {
+            "example.com" = {
+              mode = "selfsigned";
             };
           };
-          headerChecks = mkOption {
-            type = types.listOf (types.submodule ({ ... }:
-              {
-                options = {
-                  pattern = mkOption {
-                    type = types.str;
-                    default = "/^.*/";
-                    example = "/^X-Mailer:/";
-                    description = "A regexp pattern matching the header";
-                  };
-                  action = mkOption {
-                    type = types.str;
-                    default = "DUNNO";
-                    example = "BCC mail@example.com";
-                    description = "The action to be executed when the pattern is matched";
-                  };
-                  direction = mkOption {
-                    type = types.enum ["incomming" "outgoing" "both"];
-                    default = "both";
-                    example = "incoming";
-                    description = "Whether to filter on incomming smtp port (submission) or on outgoing smtp port (25) or both.";
-                  };
-                };
-              }));
-            default = [];
-            description = "Header Checks on incomming and outgoing smtp port";
-            example = [ { pattern = "/^X-Spam(.*)/"; action = "IGNORE"; direction = "incomming"; } ];
-          };
+
+      ''; #'
+    };
+    enableSPFPolicy = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether to enforce the Sender Policy Framework.
+      '';
+    };
+    users = mkOption {
+      type = types.listOf (types.submodule (import ./virtual-mail-submodule.nix));
+      example = [ { name = "js"; domain = "nixcloud.io"; password="qwertz"; } ];
+      default = [];
+      description = "A list of virtual mail users for which the password is managed via this abstraction";
+    };
+    relay = {
+      host = mkOption {
+        type = types.nullOr types.str;
+        example = "mail.mydomain.tld";
+        default = null;
+        description = "The mail host which should be configured as relay";
+      };
+      port = mkOption {
+        type = types.int;
+        example = 25;
+        default = 587;
+        description = "The port of the relay host";
+      };
+      passwords = mkOption {
+        type = types.attrsOf types.str;
+        example = {
+          "alice@foo.tld" = "supersafepassword123";
+          "bob@bar.tld" = "iAmB0b!";
         };
-      });
+        default = {};
+        description = "An attribute set where the keys are the mail users and the values are the passwords of those users";
+      };
+    };
+    headerChecks = mkOption {
+      type = types.listOf (types.submodule ({ ... }:
+        {
+          options = {
+            pattern = mkOption {
+              type = types.str;
+              default = "/^.*/";
+              example = "/^X-Mailer:/";
+              description = "A regexp pattern matching the header";
+            };
+            action = mkOption {
+              type = types.str;
+              default = "DUNNO";
+              example = "BCC mail@example.com";
+              description = "The action to be executed when the pattern is matched";
+            };
+            direction = mkOption {
+              type = types.enum ["incomming" "outgoing" "both"];
+              default = "both";
+              example = "incoming";
+              description = "Whether to filter on incomming smtp port (submission) or on outgoing smtp port (25) or both.";
+            };
+          };
+        }));
+      default = [];
+      description = "Header Checks on incomming and outgoing smtp port";
+      example = [ { pattern = "/^X-Spam(.*)/"; action = "IGNORE"; direction = "incomming"; } ];
     };
   };
 
