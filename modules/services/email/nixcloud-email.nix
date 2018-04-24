@@ -276,6 +276,8 @@ in {
 
       services.mailUsers.users = cfg.users;
 
+      systemd.services.dovecot2.after = [ "postfix.service" ];
+
       services.postfix = {
         enable = true;
         enableHeaderChecks = true;
