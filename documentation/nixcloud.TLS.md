@@ -8,7 +8,7 @@ The motivation for creating `nixcloud.TLS` was:
 
 * Easily switch between 'ACME', 'selfsigned' or 'usersupplied' scenarious:
 
-    This makes it easy for testing (using selfsigned TLS certificates) and in production (using "ACME" or you own certificates)
+    This makes it easy for testing (using selfsigned TLS certificates) and production (using "ACME" or you own certificates) configurations
 
 * `security.acme` was a major inspiraten for this implementation but we needed a more modular approach to certificate management
 * Meaningful defaults: 
@@ -103,25 +103,39 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
 **Note:** `security.acme` also creates a self-signed certificate but if your testing environment can't successfully use ACME to replace it with a valid
       certificate it will always report `simp_le` errors on `nixos-rebuild switch` updates and this is the reason we created a self-signed implementation.
 
-## Using nixcloud.TLS with any service using TLS in NixOS
+## Using nixcloud.TLS with any NixOS service
 
-Say you want to use `nixcloud.TLS` to manage TLS certificates for you, then this example will help you to do the setup.
+This section is for users who have a service as murmur (mumble backend) which is in nixpkgs and won't be tunneled trough `nixcloud.reverse-proxy`. Generally a servic e like https://nixos.org/nixos/options.html#ssl+cert, so basically a custom TLS configuration. 
+
+This brief guide shows how to manage your certificates using `nixcloud.TLS` in that case.
 
 In a nutshell, you need to do three things:
 
-1. Create a nixcloud.TLS.certs."handle" record and pick your `mode` of operation
+1. Create a nixcloud.TLS.certs."identifier" record and pick your `mode` of operation
 2. In the service, reference the `tls_certificate` and `tls_certificate_key` from the global `config`
 3. Inject systemd service dependencies 
+
+### nixcloud.TLS configuration
+
+    nixcloud.TLS.certs = {
+      "example.org" = {
+        mode = "ACME";
+        reload  = [ "myservice1.service" ];
+        restart = [ "myservice2.service" ];
+      };
+    };
+
+**Note:** It is important that you list your systemd services in `reload` or `restart` so they get reloaded or restarted once a new certificate arrives.
 
 ### Referencing certificate/key
 
 If you want to reference a `tls_certificate` or a `tls_certificate_key` you can use the `nixcloud.TLS` 
-handle ID (string) with the `config` variable:
+identifier (string) with the `config` variable:
     
-    sslServerCert = config.nixcloud.TLS.certs."yourHandle".tls_certificate;
-    sslServerKey  = config.nixcloud.TLS.certs."yourHandle".tls_certificate_key;
+    sslServerCert = config.nixcloud.TLS.certs."example.org".tls_certificate;
+    sslServerKey  = config.nixcloud.TLS.certs."example.org".tls_certificate_key;
     
-**Note:** Most often "yourHandle" is the domain you want to have a certificate for.
+**Note:** Most often the identifier "example.org" is the same as the the domain you want to have a certificate for. However, using such identifier you can easily issue several different certificates for the same domain. You must use the quotes, so that "example.org" is a single attribute in the Nix attribute path!
 
 ### Systemd dependencies injection
 

@@ -192,12 +192,9 @@ in
             Type = "oneshot";
             RuntimeDirectory = "nixcloud.TLS-acme-usersupplied-${cert}";
           };
-          before = [
-            "nixcloud.TLS-usersupplied-certificates.target"
-          ];
-          wantedBy = [
-            "nixcloud.TLS-usersupplied-certificates.target" "multi-user.target"
-          ];
+          after = [ "nixcloud.TLS.service" ];
+          before = [ "nixcloud.TLS-usersupplied-certificates.target" ];
+          wantedBy = [ "nixcloud.TLS-usersupplied-certificates.target" ];
         }))
       ] else con) [] (attrNames config.nixcloud.TLS.certs)); 
   
@@ -236,12 +233,9 @@ in
               # Do not create self-signed key when key already exists
               ConditionPathExists = "!/var/lib/nixcloud/TLS/${cert}/selfsigned";
             };
-            before = [
-              "nixcloud.TLS-selfsigned-certificates.target"
-            ];
-            wantedBy = [
-              "nixcloud.TLS-selfsigned-certificates.target" "multi-user.target"
-            ];
+            after = [ "nixcloud.TLS.service" ];
+            before = [ "nixcloud.TLS-selfsigned-certificates.target" ];
+            wantedBy = [ "nixcloud.TLS-selfsigned-certificates.target" ];
           }))
       ] else con) [] (attrNames config.nixcloud.TLS.certs));      
       
@@ -249,9 +243,9 @@ in
         {
           description   = "nixcloud.TLS service (managing TLS certificates)";
           
-          wantedBy = [ "multi-user.target" ];
-          after    = [ "network.target" ] ;
-          wants    = [];
+          after  = [ "network.target" ] ;
+          before = [ "nixcloud.TLS-certificates" ];
+          wants  = [ "nixcloud.TLS-certificates" ];
           
           preStart = ''
             mkdir -p   ${stateDir}
@@ -263,6 +257,7 @@ in
           };
         });
     in {
+      security.acme.preliminarySelfsigned = true;
       security.acme.certs = (fold (cert: con: if ((config.nixcloud.TLS.certs.${cert}.mode) == "ACME") then con // {
         "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
           domain = "${c.domain}";
@@ -275,7 +270,7 @@ in
         };
       } else con) {} (attrNames config.nixcloud.TLS.certs));
     
-      systemd.services = listToAttrs ([ nixcloudTLSService ] ++ selfsignedTargets ++ usersuppliedTargets);
+      systemd.services = listToAttrs (selfsignedTargets ++ usersuppliedTargets);
       
       systemd.targets."nixcloud.TLS-usersupplied-certificates" = {
         description   = "If reached, all certificates, which were supplied by the user, were already copied in place to be used";
@@ -287,10 +282,23 @@ in
       systemd.targets."nixcloud.TLS-certificates" = {
         description   = "If reached, all certificates managed via nixcloud.TLS have been put into place to be used";
         
-        after = [ "acme-selfsigned-certificates.target" ] # security.acme
-             ++ [ "acme-certificates.target" ]            # security.acme
-             ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
-             ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];                                
+        wantedBy = [ "multi-user.target" ];
+
+        after =
+          # security.acme
+             [ "acme-selfsigned-certificates.target" ]
+          ++ [ "acme-certificates.target" ]
+          # nixcloud.TLS
+          ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+          ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
+
+        wants =
+          # security.acme
+             [ "acme-selfsigned-certificates.target" ]
+          ++ [ "acme-certificates.target" ]
+          # nixcloud.TLS
+          ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+          ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
       };
     meta = {
       maintainers = with lib.maintainers; [ qknight ];

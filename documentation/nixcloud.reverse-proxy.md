@@ -30,6 +30,32 @@ To enable the reverse-proxy simply put this into your configuration.nix:
     
 The reverse-proxy can be used explicitly using `extraMappings` or implicitly by using `nixcloud.webservices`.
 
+
+The `TLS` field in the following example has a special meaning:
+    
+    nixcloud.webservices.mediawiki.test1 = {
+      enable = true;
+      proxyOptions = {
+        TLS = "myidentifier";
+        https.mode = "on";
+        port   = 40001;
+        path   = "/wiki";
+        domain = "example.org";
+      };
+    };
+    
+The `TLS` field was set to the identifier "myidentifier" for which you need a:
+
+    nixcloud.TLS.certs."myidentifier" = {
+      domain = "example.org";
+      mode = "selfsigned";
+      reload = [ "postifx.service" "myservice.service" ];
+    };
+
+By default the `proxyOptions.TLS` option is set to the `proxyOptions.domain` and `nixcloud.TLS` will then have "ACME" as the default so it will use `security.acme` as backend. 
+
+See [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
+
 ## extraMappings example(s)
 
 Motivations to use `nixcloud.reverse-proxy.extraMappings:
@@ -163,7 +189,6 @@ This example disables all http/https mappings but adds two websocket mappings:
       extraMappings = [
         {
           domain     = "example.com";
-          TLS        = "ACME";
           port       = 3003;
           path       = "/backend";
           http.mode  = "off";
@@ -194,7 +219,6 @@ From the internet one could connect to: wss://example.com/backend/ or wss://exam
     nixcloud.webservices.mediawiki.test1 = {
       enable = true;
       proxyOptions = {
-        TLS = "ACME";
         http.mode = "on";
         https.mode = "on";
         port   = 40001;
