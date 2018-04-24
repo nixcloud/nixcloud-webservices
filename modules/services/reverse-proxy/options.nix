@@ -192,16 +192,24 @@ in
     };
     TLS = mkOption {
       type = types.string;
-      default = toplevel.config.domain;
       description = ''
-        Points to an identifier "myconfig", which is later used to query `nixcloud.TLS.certs."myconfig"` (proxyOptions.domain) is the default identifier.
-        
-        TLS adjustments can be made from nixcloud.TLS.certs."myconfig" later one like this:
-        
+        Points to an identifier <replaceable>myconfig</replaceable>, which is
+        later used to query
+        <option>nixcloud.TLS.certs.<replaceable>myconfig</replaceable></option>
+        (<option>proxyOptions.domain</option>) is the default identifier.
+
+        TLS adjustments can be made from
+        <option>nixcloud.TLS.certs.<replaceable>myconfig</replaceable></option>
+        later one like this:
+
+        <programlisting>
         nixcloud.TLS.certs."myconfig" = {
           mode = "selfsigned";
         };
+        </programlisting>
       ''; #'
+    } // lib.optionalAttrs toplevel.options.domain.isDefined { # XXX!
+      default = toplevel.config.domain;
     };
     http = {
       mode = mkOption {
