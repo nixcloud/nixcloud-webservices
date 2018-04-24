@@ -15,6 +15,7 @@ in {
 
   # XXX: These tests should be automatically gathered by the module system!
   reverse-proxy = callTest ../modules/services/reverse-proxy/test.nix;
+  email = callTest ../modules/services/email/test;
   webservices.mediawiki = callTest ../modules/web/services/mediawiki/test.nix;
   webservices.leaps = callTest ../modules/web/services/leaps/test.nix;
   webservices.static-darkhttpd = callTest

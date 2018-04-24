@@ -276,6 +276,8 @@ in {
 
       services.mailUsers.users = cfg.users;
 
+      nixcloud.tests.wanted = [ ./test ];
+
       systemd.services.dovecot2.after = [ "postfix.service" ];
 
       services.postfix = {
