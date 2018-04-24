@@ -244,17 +244,19 @@ in {
     #                  |                |                |
     #                  |               \|/               |
     #                  |--------- database.target -------|
-    #                  |                                 |
-    #                 \|/                               \|/
-    #          database-abc.target              database-xyz.target
-    #                  |                                 |
-    #                  `---------------------------------'
+    #                  |                |                |
+    #                 \|/               |               \|/
+    #          database-abc.target      |       database-xyz.target
+    #                  |                |                |
+    #                  `----------------|----------------'
+    #                                   |
+    #                                  \|/
+    #                           multi-user.target
     #
-    # So this means, that every service that pulls in database.target will get
-    # all the databases necessary. Note that mysql.service/postgresql.service
-    # are NOT ordered before database.target, so that we can ensure parallel
-    # creation of these databases. For example if PostgreSQL is still starting
-    # up, MariaDB databases will still be created in the meantime.
+    # Note that mysql.service/postgresql.service are NOT ordered before
+    # database.target, so that we can ensure parallel creation of these
+    # databases. For example if PostgreSQL is still starting up, MariaDB
+    # databases will still be created in the meantime.
     systemd.targets = {
       db-server = {
         description = "Database Management Systems For ${config.uniqueName}";
