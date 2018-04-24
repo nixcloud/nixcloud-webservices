@@ -316,6 +316,6 @@ in
       };
     }) {} (attrNames nixcloudTLSHandles));
     
-    nixcloud.tests.wanted = [ ./test.nix ];
+    #nixcloud.tests.wanted = [ ./test.nix ];
   };
 }
