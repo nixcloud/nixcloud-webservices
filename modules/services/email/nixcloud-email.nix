@@ -308,7 +308,8 @@ in {
         ];
         enableSubmission = true;
         submissionOptions = {
-          smtpd_tls_security_level = "encrypt";
+          smtpd_tls_auth_only = if cfg.enableTLS then "yes" else "no";
+          smtpd_tls_security_level = if cfg.enableTLS then "encrypt" else "may";
           smtpd_sasl_auth_enable = "yes";
           smtpd_client_restrictions = "permit_sasl_authenticated,reject";
           smtpd_sasl_type = "dovecot";
@@ -320,7 +321,7 @@ in {
         mapFiles."header_checks_incoming" = pkgs.writeText "header_checks_incoming" checksIncoming;
 
         config = {
-          smtpd_tls_auth_only = true;
+          smtpd_tls_auth_only = cfg.enableTLS;
           message_size_limit = "100480000";
           mailbox_size_limit = "1004800000";
           virtual_mailbox_domains = cfg.domains;
