@@ -42,10 +42,10 @@
     $machine->succeed('curl http://example.com/ | grep -qF leaps_logo.png');
     $machine->succeed('curl http://example.org/ | grep -qF leaps_logo.png');
 
-    ensureOwner "/var/lib/nixcloud/webservices/leaps-foo", "leaps-foo";
-    ensureGroup "/var/lib/nixcloud/webservices/leaps-foo", "leaps-foo";
+    ensureOwner "/var/lib/nixcloud/webservices/leaps-foo/www", "leaps-foo";
+    ensureGroup "/var/lib/nixcloud/webservices/leaps-foo/www", "leaps-foo";
 
-    ensureOwner "/var/lib/nixcloud/webservices/leaps-bar", "leaps-bar";
-    ensureGroup "/var/lib/nixcloud/webservices/leaps-bar", "leaps-bar";
+    ensureOwner "/var/lib/nixcloud/webservices/leaps-bar/www", "leaps-bar";
+    ensureGroup "/var/lib/nixcloud/webservices/leaps-bar/www", "leaps-bar";
   '';
 }
