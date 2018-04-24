@@ -113,6 +113,15 @@ in
   machine = { pkgs, lib, ... }: {
     nix.nixPath = [ "nixpkgs=${nixpkgs}" "nixos-config=/etc/nixos/configuration.nix" ];
     nix.binaryCaches = lib.mkForce [];
+
+    nixcloud.TLS.certs."stupid.io".mode = "selfsigned";
+    nixcloud.TLS.certs."exclusive.ws1".mode = "selfsigned";
+    nixcloud.TLS.certs."exclusive.ws2".mode = "selfsigned";
+    nixcloud.TLS.certs."flags.io".mode = "selfsigned";
+    nixcloud.TLS.certs."example.com".mode = "selfsigned";
+    nixcloud.TLS.certs."example.ws".mode = "selfsigned";
+    nixcloud.TLS.certs."flubb.com".mode = "selfsigned";
+
     nixcloud.reverse-proxy = {
       enable = true;
       extendEtcHosts = true;
@@ -120,7 +129,6 @@ in
         {
          domain = "stupid.io";
          path = "/";
-         TLS = "none";
          port = 8383;
          http.mode = "off";
          https.mode = "off";
@@ -164,7 +172,6 @@ in
         {
           domain = "flags.io";
           path = "/";
-          TLS = "ACME";
           port = 60000;
           http.mode = "on";
           http.flags = ''

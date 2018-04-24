@@ -1,5 +1,4 @@
 [ { 
-  TLS = "ACME"; 
   domain = "example.ws"; 
   http = { mode = "on"; }; 
   https = { mode = "on"; };

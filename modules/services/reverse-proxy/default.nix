@@ -315,7 +315,7 @@ in
         reload = [ "nixcloud.reverse-proxy.service" ];
       };
     }) {} (attrNames nixcloudTLSHandles));
-    
-    #nixcloud.tests.wanted = [ ./test.nix ];
+
+    nixcloud.tests.wanted = [ ./test.nix ];
   };
 }
