@@ -265,6 +265,7 @@ in {
       database = {
         description = "Databases For ${config.uniqueName}";
         after = [ "network.target" ];
+        wantedBy = [ "multi-user.target" ];
         instance.after = [ "db-server.target" ];
         instance.requires = [ "db-server.target" ];
       };
