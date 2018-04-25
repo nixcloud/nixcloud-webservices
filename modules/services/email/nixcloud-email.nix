@@ -235,6 +235,13 @@ in {
         email = null;
         reload = [ "postfix.service" "dovecot2.service" ];
       };
+      # https://github.com/nixcloud/nixcloud-webservices/issues/21
+      security.dhparams = {
+        enable = true;
+        params = {
+          dovecot2 = 4096;
+        };
+      };
     })
 
     # FIXME: when using nixcloud DNS we want the pubkey during nix evaluation time to generate
@@ -437,6 +444,8 @@ in {
         ];
 
         extraConfig = ''
+          # https://github.com/nixcloud/nixcloud-webservices/issues/21
+          ssl_dh = </var/lib/dhparams/dovecot2.pem
           mail_home = /var/lib/virtualMail/%d/users/%n/
 
           passdb {
