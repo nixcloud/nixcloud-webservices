@@ -6,16 +6,23 @@
 
 The motivation for creating `nixcloud.TLS` was:
 
+* Easy to use, no longer manual certificate management
+
 * Easily switch between 'ACME', 'selfsigned' or 'usersupplied' scenarious:
 
     This makes it easy for testing (using selfsigned TLS certificates) and production (using "ACME" or you own certificates) configurations
 
 * `security.acme` was a major inspiraten for this implementation but we needed a more modular approach to certificate management
+
 * Meaningful defaults: 
 
     We encourage let's encrypt based ACME and `security.acme`
     
 * Because of the [ACME rate limits](https://letsencrypt.org/docs/rate-limits/) we try to minimize the amount of requests
+
+**Note:** We might fully replace `security.acme` from nixpkgs but we want to be backward compatible so one can use nixcloud-webservices along with services which use `security.acme`. The primary conflict is that `nixcloud.reverse-proxy` must interact with `simp_le` and the `.well-known` directory is a hardcoded requirement in the let's encrypt ACME challenge/response pattern.
+
+**Note:** `nixcloud.TLS` was meant to be used with `nixcloud.reverse-proxy` running on port 80. if you are running `services.nginx` on port 80 a lot of assumptions won't work and this isn't tested on the other hand. See [issue 23](https://github.com/nixcloud/nixcloud-webservices/issues/23) on that matter.
 
 ## How to use nixcloud.TLS
 
@@ -147,14 +154,21 @@ Here is an example how one would extend `postfix`:
     systemd.services.postfix.after = [ "nixcloud.TLS-certificates.target" ];
     systemd.services.postfix.wants = [ "nixcloud.TLS-certificates.target" ];
 
-The "nixcloud.TLS-certificates.target" waits for these targets:
-
-* `acme-selfsigned-certificates.target` (security.acme)
-* `acme-certificates.target` (security.acme)
-* `nixcloud.TLS-selfsigned.target` (nixcloud.TLS)
-* `nixcloud.TLS-usersupplied.target` (nixcloud.TLS)
-
 **Note:** This code was copied from `nixcloud.email`.
+    
+The "nixcloud.TLS-certificates.target" waits for these 4 targets to finish:
+
+* security.acme:
+
+    * `acme-selfsigned-certificates.target` 
+    * `acme-certificates.target`
+
+* nixcloud.TLS:
+
+    * `nixcloud.TLS-selfsigned.target`
+    * `nixcloud.TLS-usersupplied.target`
+
+**Note:** Most services in nixpkgs using `security.acme` lack the former two target dependencies and if you deploy a server for the first time the services might and probably will fail to start since there won't be any certificates in place for the configured cert/key pair yet. This is a race condition we'd like to fix in the future.
 
 ## Debugging
 
@@ -169,5 +183,3 @@ These commands might come in handy:
 # Thanks
 
 Thanks to the `security.acme` authors for their inspiration and example code & uwap!
-
-    
