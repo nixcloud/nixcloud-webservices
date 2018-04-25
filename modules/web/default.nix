@@ -1,4 +1,4 @@
-{ config, options, mapWebServiceConfigToList, lib, ... }:
+{ config, options, lib, nclib, ... }:
 
 {
   imports = lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
@@ -24,7 +24,7 @@
     # option inside nixcloud.webservices that should be passed to the top-level
     # option.
     passSubOption = outer: inner: let
-      cfgList = mapWebServiceConfigToList (lib.getAttrFromPath inner);
+      cfgList = nclib.mapWSConfigToList (lib.getAttrFromPath inner);
     in lib.setAttrByPath outer (lib.mkMerge cfgList);
 
     tests = passSubOption [ "nixcloud" "tests" "wanted" ] [ "tests" "wanted" ];
@@ -36,7 +36,7 @@
       modifyConfig = cfg: let
         removeInstance = lib.flip removeAttrs [ "instance" ];
       in lib.mapAttrs (lib.const removeInstance) cfg.directories;
-    in lib.mkMerge (mapWebServiceConfigToList modifyConfig);
+    in lib.mkMerge (nclib.mapWSConfigToList modifyConfig);
 
   in lib.mkMerge [ toplevel tests dirs ];
 }

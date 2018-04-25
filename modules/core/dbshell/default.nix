@@ -1,4 +1,4 @@
-{ config, pkgs, lib, mapWebServiceConfigToList, ... }:
+{ config, pkgs, lib, nclib, ... }:
 
 let
   toPython = value: let
@@ -16,7 +16,7 @@ let
      else if lib.isList value then mkTuple value
      else throw "Can't convert '${value}' into a Python value.";
 
-  dbshellConfig = mapWebServiceConfigToList (cfg: lib.optional cfg.enable {
+  dbshellConfig = nclib.mapWSConfigToList (cfg: lib.optional cfg.enable {
     name = cfg.uniqueName;
     value = lib.mapAttrs' (lib.const (dbcfg: {
       inherit (dbcfg) name;

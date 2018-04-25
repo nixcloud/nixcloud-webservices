@@ -13,12 +13,12 @@
   #   nixcloud.webservices.foo2.bar1.someOption = "ccc";
   # }
   #
-  # ... and using mapWebServiceConfigToList like this:
+  # ... and using mapWSConfigToList like this:
   #
-  # mapWebServiceConfigToList (x: someOption)
+  # mapWSConfigToList (x: someOption)
   #
   # Will result in the list: [ "aaa" "bbb" "ccc" ]
-  _module.args.mapWebServiceConfigToList = fun: let
+  _module.args.nclib.mapWSConfigToList = fun: let
     inherit (config.nixcloud) webservices;
     getConfig = lib.mapAttrsToList (lib.const fun);
   in lib.concatLists (lib.mapAttrsToList (lib.const getConfig) webservices);
