@@ -9,9 +9,10 @@
 * [x] POP3 support (optional)
 * [x] Greylisting (optional)
 * [x] Spamassassin (optional)
-* [x] TLS
-     * ACME TLS certificates (optional)
-     * manual certificates (optional)
+* [x] supports [nixcloud.TLS.md](nixcloud.TLS.md) (optional)
+     * ACME TLS certificates
+     * usersupplied certificates
+     * selfsigned certifictes
 * [x] Automatically extend `networking.firewall` with required ports
 * [x] virtualMail user abstraction
      * define users/passwords declaratively using Nix
@@ -201,22 +202,22 @@ This is implemented by starting `nixcloud.reverse-proxy`  on port 80.
 
 See [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md) if you need to connect legacy webservices based on `services.nginx` or `services.httpd` and [nixcloud.webservices.md](nixcloud.webservices.md) if you want to use the nixcloud-webservices infrastructure.
 
-## Providing your own TLS certificate
+## Configuring TLS using nixcloud.TLS
 
-Use
+This section helps you to configure which TLS certificates are used. If you have `nixcloud.email.enableTLS = true;` (which is the default) then `nixcloud.TLS` is used (with ACME as a default).
 
-    nixcloud.email.enableACME = false;
+Say you want to use selfsigned certificates for testing purposes:
 
-to disable ACME. To provide your own certificate you should set the following options:
+Assuming your `hostname` is set as in the example to "mail.lastlog.de" then you can simply add this to configuration.nix
 
-    services.postfix = {
-      sslCert = "/path/to/your/certificate.pem";
-      sslKey = "/path/to/your/key.pem";
+    nixcloud.TLS.certs = {
+      "mail.lastlog.de" = {
+        mode = "selfsigned";
+      };
     };
-    services.dovecot2 = {
-      sslServerCert = "/path/to/your/certificate.pem";
-      sslServerKey = "/path/to/your/key.pem";
-    };
+
+If you have valid certificates and you want to use them instead of ACME or selfsigned ones, then read the documentation [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
+    
 
 ## IMAP setup (thunderbird)
 

@@ -14,7 +14,7 @@ The motivation for creating `nixcloud.TLS` was:
 
 * `security.acme` was a major inspiraten for this implementation but we needed a more modular approach to certificate management
 
-* Meaningful defaults: 
+* Meaningful defaults:
 
     We encourage let's encrypt based ACME and `security.acme`
     
