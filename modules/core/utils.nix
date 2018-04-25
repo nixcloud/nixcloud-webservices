@@ -1,25 +1,33 @@
 { config, lib, ... }:
 
 {
-  # Runs the specified function on the configuration of
-  # all defined web service and returns the results as a
-  # list.
-  #
-  # Let's say the following web services are defined:
-  #
-  # {
-  #   nixcloud.webservices.foo1.bar1.someOption = "aaa";
-  #   nixcloud.webservices.foo1.bar2.someOption = "bbb";
-  #   nixcloud.webservices.foo2.bar1.someOption = "ccc";
-  # }
-  #
-  # ... and using mapWSConfigToList like this:
-  #
-  # mapWSConfigToList (x: someOption)
-  #
-  # Will result in the list: [ "aaa" "bbb" "ccc" ]
-  _module.args.nclib.mapWSConfigToList = fun: let
-    inherit (config.nixcloud) webservices;
-    getConfig = lib.mapAttrsToList (lib.const fun);
-  in lib.concatLists (lib.mapAttrsToList (lib.const getConfig) webservices);
+  _module.args.nclib = rec {
+    # Runs the specified function on the configuration of all defined web
+    # service and returns the results as a list.
+    #
+    # Let's say the following web services are defined:
+    #
+    # {
+    #   nixcloud.webservices.foo1.bar1.someOption = "aaa";
+    #   nixcloud.webservices.foo1.bar2.someOption = "bbb";
+    #   nixcloud.webservices.foo2.bar1.someOption = "ccc";
+    # }
+    #
+    # ... and using mapWSConfigToList like this:
+    #
+    # mapWSConfigToList (x: someOption)
+    #
+    # Will result in the list: [ "aaa" "bbb" "ccc" ]
+    mapWSConfigToList = mapWSConfigToListCond (x: true);
+
+    # Same as mapWSConfigToList but allows to specify a filter function which
+    # is given the actual web service config and should return true for configs
+    # to include or falso for configs to discard.
+    mapWSConfigToListCond = cond: fun: let
+      inherit (config.nixcloud) webservices;
+      applyCond = cfg: lib.optional (cond cfg) (fun cfg);
+      getConfig = lib.mapAttrsToList (lib.const applyCond);
+      getFlatCfg = wscfg: lib.concatLists (getConfig wscfg);
+    in lib.concatLists (lib.mapAttrsToList (lib.const getFlatCfg) webservices);
+  };
 }

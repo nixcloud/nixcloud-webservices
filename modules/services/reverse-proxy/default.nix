@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... } @ args:
+{ config, pkgs, lib, nclib, ... } @ args:
 
 with lib;
 
@@ -103,28 +103,26 @@ in
 
     # walk through all `nixcloud.webservices` services, collect proxyOptions from enabled services
     # { house = { ... }; music = { ... }; test = { ... }; test1 = { ... }; }
-    allNixcloudServicesSet = s: fold (el: con: con // s.${el} ) {} (attrNames s);
-    collectedConfigs = allNixcloudServicesSet config.nixcloud.webservices;
-    filteredCollectedConfigs = filterAttrs (n: v: v.enable == true) collectedConfigs;
-    filteredCollectedConfigsList = fold (el: c: c ++ [ filteredCollectedConfigs.${el}.proxyOptions ]) [] (attrNames filteredCollectedConfigs);
+    inherit (nclib) mapWSConfigToListCond;
+    wsProxyOptions = mapWSConfigToListCond (x: x.enable) (x: x.proxyOptions);
 
-    allProxyOptions = filteredCollectedConfigsList ++ cfg.extraMappings;
+    allProxyOptions = wsProxyOptions ++ cfg.extraMappings;
 
     # create a unique list of all domains from nixcloud.reverse-proxy
     allNCWDomains = unique (map (el: el.domain) allProxyOptions);
-    
+
     # a list of unique domains gained from nixcloud.webservices.proxyOption(s) which require a http server record in nginx.conf
     allHttpOnlyProxyOptions = filter (el: (el.http.mode != "off") || (checkWebsockets el.websockets "http") ) allProxyOptions;
     allHttpNCDomains = unique (map (el: el.domain) allHttpOnlyProxyOptions);
 
     # simp_le requires a webserver with http to serve challenge/response requests for let's encrypt ACME to work
     ACMEImpliedDomains = unique (mapAttrsToList (name: value: if (value.domain != null) then value.domain else name) config.security.acme.certs);
-    ACMEImpliedDomains_ = unique (mapAttrsToList (name: value: 
+    ACMEImpliedDomains_ = unique (mapAttrsToList (name: value:
       { name = if (value.domain != null) then value.domain else name; value = value.webroot; }) config.security.acme.certs);
-  
+
     allAcmeDomains = builtins.listToAttrs ACMEImpliedDomains_;
     allHttpDomains = unique (ACMEImpliedDomains ++ allHttpNCDomains);
-        
+
     # nixcloud.TLS details
     #   example value: { "lastlog.de" = "lastlog.de-identifier"; "nixcloud.io" = "nixcloud.io"; }
     #                  { domain (string) = nixcloud.TLS idenfier (string) };
