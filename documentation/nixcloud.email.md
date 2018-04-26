@@ -217,7 +217,14 @@ Assuming your `hostname` is set as in the example to "mail.lastlog.de" then you 
     };
 
 If you have valid certificates and you want to use them instead of ACME or selfsigned ones, then read the documentation [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
-    
+
+Say you wanted to use a certificate with extraDomains based on the used nixcloud.email.domains:
+
+    nixcloud.TLS.certs = {
+      "mail.lastlog.de" = {
+        extraDomains = builtins.listToAttrs (fold (el: c: c ++ [ { name = "${el}"; value = null; } ] ) [] config.nixcloud.email.domains);
+      };
+    };
 
 ## IMAP setup (thunderbird)
 

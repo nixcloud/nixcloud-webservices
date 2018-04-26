@@ -230,9 +230,6 @@ in {
       systemd.services.dovecot2.wants = [ "nixcloud.TLS-certificates.target" ];
 
       nixcloud.TLS.certs."${cfg.hostname}" = {
-        # FIXME: we could add this later if someone wants it
-        #extraDomains = builtins.listToAttrs (fold (el: c: c ++ [ { name = "${el}"; value = null; } ] ) [] cfg.domains);
-        email = null;
         reload = [ "postfix.service" "dovecot2.service" ];
       };
       # https://github.com/nixcloud/nixcloud-webservices/issues/21
