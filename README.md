@@ -8,6 +8,8 @@ You should continue to read one of these documentations:
 * [nixcloud.reverse-proxy](documentation/nixcloud.reverse-proxy.md)
 * [nixcloud.email](documentation/nixcloud.email.md)
 * [nixcloud.TLS](documentation/nixcloud.TLS.md)
+* [nixcloud.container](https://github.com/nixcloud/nixcloud-container)
+
 
 It features the development stack we use at [https://nixcloud.io](https://nixcloud.io)
 
