@@ -37,7 +37,7 @@ fun: cfgval: let
   # Put in all values of environment.* except checkConfigurationOptions.
   safePaths = let
     reEval = import <nixpkgs/nixos/lib/eval-config.nix> {
-      inherit (config.nixpkgs) system;
+      inherit (config.nixpkgs.localSystem) system;
       modules = [];
       check = false;
     };

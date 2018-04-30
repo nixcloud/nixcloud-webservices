@@ -34,7 +34,7 @@ in {
 
   config = lib.mkIf config.nixcloud.tests.enable {
     system.extraDependencies = let
-      inherit (config.nixpkgs) system;
+      inherit (config.nixpkgs.localSystem) system;
       testRoot = import ../../tests { inherit pkgs system; };
       mkErr = path: let
         pathStr = lib.concatStringsSep "." path;
