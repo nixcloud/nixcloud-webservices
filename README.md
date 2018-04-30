@@ -11,7 +11,9 @@ You should continue to read one of these documentations:
 * [nixcloud.container](https://github.com/nixcloud/nixcloud-container)
 
 
-It features the development stack we use at [https://nixcloud.io](https://nixcloud.io)
+It features the development stack we use at [https://nixcloud.io](https://nixcloud.io). 
+
+Continuous integration at <https://hydra.nixcloud.io/project/nixcloud-webservices>
 
 # Get the source
 
