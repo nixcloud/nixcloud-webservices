@@ -207,6 +207,8 @@ This example disables all http/https mappings but adds two websocket mappings:
 
 From the internet one could connect to: wss://example.com/backend/ or wss://example.com/backend/leaps/ws
 
+The implementation is [options.nix](https://github.com/nixcloud/nixcloud-webservices/blob/master/modules/services/reverse-proxy/options.nix) and the option is called *websockets = mkOption*.
+
 ## nixcloud.webservices example(s)
 
 
