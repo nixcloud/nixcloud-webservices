@@ -61,12 +61,12 @@ let
   }'';
 
   containerPreBuild = [
-    (import ./bin/helper/lxc-container.nix {
+    (import "${pkgs.nixcloud.container}/bin/helper/lxc-container.nix" {
       name="test";
       ip="10.101.0.2";
       container = import containerConfig;
     })
-    (import ./bin/helper/lxc-container.nix {
+    (import "${pkgs.nixcloud.container}/bin/helper/lxc-container.nix" {
       name="empty";
       ip="10.101.0.2";
       container = import containerTestTwo;

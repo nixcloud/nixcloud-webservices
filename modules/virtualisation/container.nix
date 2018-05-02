@@ -19,7 +19,7 @@ with lib;
           description = ''
             The network interface used by LXC to access the internet:
 
-            * used for masquerading with the brNC-internet interface so containers can access the internet. 
+            * used for masquerading with the brNC-internet interface so containers can access the internet.
             * used for IPv6 internet access (if configured in nixcloud.container.ipv6)
 
             See also: https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames
@@ -34,7 +34,7 @@ with lib;
 
             This provides full dynamic IPv6 support for our monitoring backend which uses `nixcloud.container`.
 
-            NOTE: The IPv6 addresses are not permanent, persistent or static! Support for such setups will be implemented 
+            NOTE: The IPv6 addresses are not permanent, persistent or static! Support for such setups will be implemented
                   but after the initial release of `nixcloud.container`.
           '';
           example = {
@@ -111,7 +111,7 @@ with lib;
       };
       dhcpcd.denyInterfaces = [ "veth" ];
       localCommands = mkIf (config.nixcloud.container.ipv6.enable) ''
-        ip r replace ${config.nixcloud.container.ipv6.ipv6Prefix}/${toString config.nixcloud.container.ipv6.ipv6PrefixLength} dev brNC-internet  
+        ip r replace ${config.nixcloud.container.ipv6.ipv6Prefix}/${toString config.nixcloud.container.ipv6.ipv6PrefixLength} dev brNC-internet
       '';
 
       firewall = {
@@ -136,7 +136,7 @@ with lib;
 
     # Enable IPv6 forwarding (container ipv6 traffic)
     # FIXME, not all interfaces need forwarding, probably only `internet`
-    boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = config.nixcloud.container.ipv6.enable; 
+    boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = config.nixcloud.container.ipv6.enable;
 
     services.dnsmasq.enable = true;
 
@@ -165,14 +165,14 @@ with lib;
         default-lease-time 86400;
         preferred-lifetime 80000;
         allow leasequery;
-  
+
         subnet6 ${config.nixcloud.container.ipv6.ipv6Prefix}/${toString config.nixcloud.container.ipv6.ipv6PrefixLength} {
           range6 ${config.nixcloud.container.ipv6.ipv6Prefix}/${toString config.nixcloud.container.ipv6.ipv6PrefixLength};
           option dhcp6.name-servers ${lib.concatMapStringsSep ", " (x: x) config.nixcloud.container.ipv6.ipv6NameServers};
         }
       '';
-    };    
-  
+    };
+
     # https://serverfault.com/questions/905332/getting-ipv6-via-radvd-dhcpd6-in-an-lxc-guest-working
     services.radvd = mkIf (config.nixcloud.container.ipv6.enable) {
       enable = true;
@@ -186,7 +186,7 @@ with lib;
     };
 
     environment.systemPackages = [ pkgs.nixcloud.container pkgs.libuuid ];
-    #nixcloud.tests.wanted = [ ../../pkgs/nixcloud/container/test.nix ];
+    nixcloud.tests.wanted = [ ../../tests/container.nix ];
 
     systemd.services."lxc-autostart" = {
       description = "LXC autostart and autostop daemon";
