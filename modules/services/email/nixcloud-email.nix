@@ -233,10 +233,11 @@ in {
         reload = [ "postfix.service" "dovecot2.service" ];
       };
       # https://github.com/nixcloud/nixcloud-webservices/issues/21
+      # https://github.com/NixOS/nixpkgs/pull/39507
       security.dhparams = {
         enable = true;
         params = {
-          dovecot2 = 4096;
+          dovecot2 = 2048;
         };
       };
     })
@@ -440,9 +441,13 @@ in {
           }
         ];
 
-        extraConfig = ''
+        extraConfig = lib.optionalString (cfg.enableTLS) ''
           # https://github.com/nixcloud/nixcloud-webservices/issues/21
-          ssl_dh = </var/lib/dhparams/dovecot2.pem
+          # https://github.com/NixOS/nixpkgs/pull/39507
+          ssl_dh = <${config.security.dhparams.path}/dovecot2.pem
+          ''
+          +
+          ''
           mail_home = /var/lib/virtualMail/%d/users/%n/
 
           passdb {
