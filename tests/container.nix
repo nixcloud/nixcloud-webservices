@@ -4,7 +4,7 @@ let
   #servicescript that creates a file
   makeScript = scriptName: pkgs.writeText "serviceScript" ''
     #!${pkgs.bash}/bin/bash
-    while true; do touch /${scriptName}; sleep 1; done
+    while true; do touch /home/testUser/${scriptName}; sleep 1; done
   '';
   #derviation for aboves script
   makeScriptDerivation = script: (pkgs.stdenv.mkDerivation {
@@ -18,22 +18,30 @@ let
   });
   #container configuration with that script
   makeConfig = scriptName: pkgs.writeText "testScript" ''{
-    autostart = true;
-    configuration = {
-      networking.firewall.allowPing = true;
-      systemd.services.bar = {
-        description = "YesItWorks ${scriptName} Daemon";
+      autostart = true;
+      configuration = {
 
+        users.groups  = { testUser = {}; };
+        users.extraUsers.testUser = {
+          description  = "User that runs the systemd tests.";
+          group        = "testUser";
+          createHome   = true;
+          isNormalUser = true;
+        };
+
+        networking.firewall.allowPing = true;
+        systemd.services.bar = {
+          description = "YesItWorks ${scriptName} Daemon";
           wantedBy = [ "multi-user.target" ];
           after = [ "network.target" ];
           serviceConfig = {
             ExecStart = "${makeScriptDerivation (makeScript scriptName)}/bin/yesscript";
-            Restart = "always";
-            Type="simple";
+            Restart   = "always";
+            Type      = "simple";
+            User      = "testUser";
           };
         };
       };
-
     } '';
 
   containerConfig = makeConfig "yesitworks";
@@ -128,8 +136,15 @@ in {
     });
 
     $machine->nest('start the container', sub {
+      #starts the container
       $machine->succeed('nixcloud-container start test >&2');
-      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/yesitworks');
+      #waits until the container reaches the network target
+      $machine->waitUntilSucceeds('lxc-attach -n test -- systemctl --no-pager status "network.target" >&2');
+      #waits until the container reaches the multi user target
+      $machine->waitUntilSucceeds('lxc-attach -n test -- systemctl --no-pager status "multi-user.target" >&2');
+      #check if a systemd service touched the file '/home/testUser/yesitworks'
+      #if this failed something is wrong with non root users inside the container 
+      $machine->succeed('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitworks');
     });
 
     $machine->nest('ping the container', sub{
@@ -180,7 +195,7 @@ in {
 
     $machine->nest('restart the container', sub {
       $machine->succeed('nixcloud-container start test');
-      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/yesitupdates');
+      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitupdates');
     });
 
     $machine->nest('switch to previous profile', sub{
@@ -189,7 +204,7 @@ in {
       # successfully switched because it does not manage to remount some directorys
       # once this bug is fixed this test should be changed back to 'succeed'
       $machine->fail('nixcloud-container rollback test >&2');
-      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/yesitrollsback');
+      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitrollsback');
       $machine->succeed('nixcloud-container list-generations test >&2');
     });
 
@@ -214,7 +229,7 @@ in {
       ');
     });
 
-    $machine->succeed('rm /var/lib/lxc/test/rootfs/yesitrollsback');
+    $machine->succeed('rm /var/lib/lxc/test/rootfs/home/testUser/yesitrollsback');
 
 
     #restart the lxc-autostart service this must restart the test container
@@ -223,7 +238,7 @@ in {
       $machine->waitUntilSucceeds('
         nixcloud-container state test | grep "RUNNING"
       ');
-      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/yesitrollsback');
+      $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitrollsback');
     });
 
     $machine->nest('terminate a machine that does exist', sub {
