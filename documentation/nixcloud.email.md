@@ -134,6 +134,12 @@ Passwords are generated using `doveadm`, details are listed at [PasswordSchemes]
 
     doveadm pw -s SHA512-CRYPT
 
+A valid entry would look like this:
+
+    nixcloud.email.users = [
+      { name = "myuser"; domain = "mydomain.tld"; password = {SHA256-CRYPT}$5$mqwiny3zLM2.a4hp$r/nWsyCrgKv31Xx4hQwsktOv4/tHKeqbDE6xvWV7TQ2"; }
+    ];
+
 You should create a user that has an alias for postmaster to follow [RFC822](https://www.ietf.org/rfc/rfc822.txt).
 
 ## Using catchall
