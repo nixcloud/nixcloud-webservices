@@ -9,6 +9,8 @@ from email.mime.text import MIMEText
 
 ACCOUNTS = json.loads(os.getenv('TEST_ACCOUNTS', '{}'))
 
+RE_DSN_FAILED = re.compile(r'could.+not.+be.+delivered', re.DOTALL)
+
 
 class EmailTest(unittest.TestCase):
     def setUp(self):
@@ -90,8 +92,7 @@ class EmailTest(unittest.TestCase):
         newmails = self.wait_for_new_emails('bob')
         self.assertEqual(len(newmails), 1)
         text = newmails[0].strip().decode()
-        overquota = re.compile(r'could.+not.+be.+delivered', re.DOTALL)
-        self.assertRegex(text, overquota)
+        self.assertRegex(text, RE_DSN_FAILED)
 
     def test_aliases(self):
         msg = 'Hi different Alice!'
@@ -101,6 +102,16 @@ class EmailTest(unittest.TestCase):
         self.assertEqual(len(newmails), 1)
         text = newmails[0].strip().decode()
         self.assertEqual(text, msg)
+
+    def test_softbounce_nonexisting_address(self):
+        msg = 'Is there anyone?'
+        self.send_email('alice', None, msg, to_addr='xxx@example.com')
+        newmails = self.wait_for_new_emails('alice')
+        self.assertEqual(len(newmails), 1)
+        text = newmails[0].strip().decode()
+        self.assertRegex(text, RE_DSN_FAILED)
+        self.assertIn("This is the mail system at host mx.example.com",
+                      text)
 
 
 if __name__ == '__main__':
