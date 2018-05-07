@@ -24,4 +24,11 @@
     plainPasswd = "testpw4";
     password = "{PLAIN}testpw4";
   };
+  spameater = {
+    domain = "catchall.example";
+    server = "mx.example.com";
+    plainPasswd = "testpw5";
+    password = "{PLAIN}testpw5";
+    catchallFor = [ "catchall.example" ];
+  };
 }

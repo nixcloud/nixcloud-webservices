@@ -155,7 +155,7 @@ in {
   ];
 
   nodes.mail2.imports = [
-    (mkMailConfig "mx.example.com" [ "example.com" ])
+    (mkMailConfig "mx.example.com" [ "example.com" "catchall.example" ])
     (mkNetworkConfig 12)
   ];
 

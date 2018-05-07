@@ -20,12 +20,12 @@ class EmailTest(unittest.TestCase):
         for attrs in self.accounts.values():
             attrs['imap'].logout()
 
-    def send_email(self, sender, recipient, body, subject=None):
+    def send_email(self, sender, recipient, body, to_addr=None, subject=None):
         from_attrs = self.accounts[sender]
-        to_attrs = self.accounts[recipient]
-
         from_addr = from_attrs['address']
-        to_addr = to_attrs['address']
+
+        if to_addr is None:
+            to_addr = self.accounts[recipient]['address']
 
         msg = MIMEText(body)
         msg['Subject'] = 'Test mail' if subject is None else subject
@@ -67,6 +67,14 @@ class EmailTest(unittest.TestCase):
         self.assertEqual(len(newmails), 1)
         text = newmails[0].strip().decode()
         self.assertEqual(text, 'Hello Bob from Foo!')
+
+    def test_send_to_catchall(self):
+        self.send_email('bar', 'spameater', 'Eat this!',
+                        to_addr='spam@catchall.example')
+        newmails = self.wait_for_new_emails()
+        self.assertEqual(len(newmails), 1)
+        text = newmails[0].strip().decode()
+        self.assertEqual(text, 'Eat this!')
 
 
 if __name__ == '__main__':
