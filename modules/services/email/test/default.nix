@@ -7,6 +7,10 @@ let
     address = "${name}@${attrs.domain}";
   }) (import ./accounts.nix);
 
+  # These are the additional attributes we support in our test accounts, which
+  # we need to remove later when generating options for the virtual users.
+  extraTestAccountAttrs = [ "plainPasswd" "server" "address" ];
+
   mkNetworkConfig = suffix: { config, lib, ... }: {
     options._test-support = let
       mkSupportOption = default: lib.mkOption {
@@ -89,8 +93,7 @@ let
         localUsers = lib.filterAttrs isLocalUser testAccounts;
       in lib.mapAttrsToList (name: attrs: {
         inherit name;
-        inherit (attrs) domain password;
-      }) localUsers;
+      } // removeAttrs attrs extraTestAccountAttrs) localUsers;
     };
   };
 
