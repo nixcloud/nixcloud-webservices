@@ -93,6 +93,15 @@ class EmailTest(unittest.TestCase):
         overquota = re.compile(r'could.+not.+be.+delivered', re.DOTALL)
         self.assertRegex(text, overquota)
 
+    def test_aliases(self):
+        msg = 'Hi different Alice!'
+        self.send_email('spameater', 'alice', msg,
+                        to_addr='anotheralice@example.net')
+        newmails = self.wait_for_new_emails('alice')
+        self.assertEqual(len(newmails), 1)
+        text = newmails[0].strip().decode()
+        self.assertEqual(text, msg)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

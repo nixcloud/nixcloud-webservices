@@ -4,6 +4,7 @@
     server = "mx.example.org";
     plainPasswd = "testpw1";
     password = "{SSHA256}LDxblDvyoK+wWl1sX+TWntbfkvQ+jATEadp0Q1yfqlNLo2SZ";
+    aliases = [ "anotheralice@example.net" ];
   };
   bob = {
     domain = "example.net";
