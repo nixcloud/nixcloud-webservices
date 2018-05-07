@@ -10,17 +10,16 @@ with lib;
 
     password = mkOption {
       type = types.str;
-      example = ''
-        #{ name = "js"; domain = "lastlog.de"; aliases = [ "joachim@lastlog.de" ]; password = "{SHA256-CRYPT}$5$/CHK3ckfRJloONnq$X/16jK2NPTiZpBZZ1XVpHhPXyxPy1p0QtUNeUFrYav5"; }
-        { name = "anton"; domain = "lastlog.de"; aliases = [ "joachim@mail.lastlog.de" ]; password = "{PLAIN}hallo"; }
-
-      '';
+      example = "{SHA256-CRYPT}$5$/CHK3ckfRJloONnq$X/16jK2NPTiZpBZZ1XVpHhPXyxPy1p0QtUNeUFrYav5";
       description = ''
         You can generate passwords like this:
-          doveadm pw -s sha256-crypt
-          Enter new password:
-          Retype new password:
-          {SHA256-CRYPT}$5$/CHK3ckfRJloONnq$X/16jK2NPTiZpBZZ1XVpHhPXyxPy1p0QtUNeUFrYav5
+
+        <screen>
+        # doveadm pw -s sha256-crypt
+        Enter new password:
+        Retype new password:
+        {SHA256-CRYPT}$5$/CHK3ckfRJloONnq$X/16jK2NPTiZpBZZ1XVpHhPXyxPy1p0QtUNeUFrYav5
+        </screen>
       '';
     };
 
