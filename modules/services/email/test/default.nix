@@ -133,6 +133,7 @@ in {
         example.org. IN MX 10 mx.example.org.
         example.net. IN MX 10 mx.example.org.
         example.com. IN MX 10 mx.example.com.
+        catchall.example. IN MX 10 mx.example.com.
 
         ; Reverse PTRs, note that the client doesn't have one and also
         ; shouldn't have one to make sure the MSA picks it up even if it's a
