@@ -112,7 +112,7 @@ in
     allNCWDomains = unique (map (el: el.domain) allProxyOptions);
 
     # a list of unique domains gained from nixcloud.webservices.proxyOption(s) which require a http server record in nginx.conf
-    allHttpOnlyProxyOptions = filter (el: (el.http.mode != "off") || (checkWebsockets el.websockets "http") ) allProxyOptions;
+    allHttpOnlyProxyOptions = filter (el: el.http.mode != "off" || checkWebsockets el.websockets "http") allProxyOptions;
     allHttpNCDomains = unique (map (el: el.domain) allHttpOnlyProxyOptions);
 
     # simp_le requires a webserver with http to serve challenge/response requests for let's encrypt ACME to work
@@ -181,9 +181,10 @@ in
     createWsPaths_ = mode: location:
       lib.concatMapStringsSep "\n" (w: createWsPath mode location location.websockets.${w}) (attrNames location.websockets);
 
-    checkWebsockets = websockets: mode:
-      fold (el: container: if (websockets.${el}).${mode}.mode != "off" then true else container) false (attrNames websockets);      
-      
+    checkWebsockets = websockets: mode: let
+      hasModeEnabled = name: websockets.${name}.${mode}.mode != "off";
+    in lib.any hasModeEnabled (lib.attrNames websockets);
+
     createWsPath = mode: location: websocket:
       let
         b = websocket.${mode}.basicAuth;
@@ -242,7 +243,7 @@ in
     createHttpsServerRecord = allProxyOptions: domain:
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
-      needsHttps = fold (el: con: if ((el.https.mode != "off") || checkWebsockets el.websockets "https") then true else con) false filteredProxyOptions;
+      needsHttps = any (el: el.https.mode != "off" || checkWebsockets el.websockets "https") filteredProxyOptions;
     in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {
         ssl on;
