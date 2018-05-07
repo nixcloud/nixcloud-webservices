@@ -30,6 +30,8 @@
 
 See [implementation](../modules/services/email)
 
+WARNING: Since [spamassassin.org is down](https://github.com/NixOS/nixpkgs/issues/39842) you won't be able to deploy with spamd. Instead disable spamfiltering for the moment or use an initial binary blog from a differnet nixcloud.email installation (file an issue here if you want to do that an don't know how).
+
 Upcoming features:
 
 * [ ] Dedicated 18.03 support (long term support)
