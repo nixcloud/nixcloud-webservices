@@ -36,10 +36,12 @@ class EmailTest(unittest.TestCase):
             smtp.login(from_addr, from_attrs['plainPasswd'])
             smtp.sendmail(from_addr, [to_addr], msg.as_string())
 
-    def wait_for_new_emails(self):
+    def wait_for_new_emails(self, user=None):
         newmails = []
         while len(newmails) == 0:
             for name, attrs in self.accounts.items():
+                if user is not None and name != user:
+                    continue
                 try:
                     attrs['imap'].select()
                 except imaplib.IMAP4.error:
@@ -54,14 +56,14 @@ class EmailTest(unittest.TestCase):
 
     def test_send_to_same_server(self):
         self.send_email('alice', 'bob', 'Hello Bob from Alice!')
-        newmails = self.wait_for_new_emails()
+        newmails = self.wait_for_new_emails('bob')
         self.assertEqual(len(newmails), 1)
         text = newmails[0].strip().decode()
         self.assertEqual(text, 'Hello Bob from Alice!')
 
     def test_send_to_different_server(self):
         self.send_email('foo', 'bob', 'Hello Bob from Foo!')
-        newmails = self.wait_for_new_emails()
+        newmails = self.wait_for_new_emails('bob')
         self.assertEqual(len(newmails), 1)
         text = newmails[0].strip().decode()
         self.assertEqual(text, 'Hello Bob from Foo!')
