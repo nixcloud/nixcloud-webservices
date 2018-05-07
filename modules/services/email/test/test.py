@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 ACCOUNTS = json.loads(os.getenv('TEST_ACCOUNTS', '{}'))
 
 RE_DSN_FAILED = re.compile(r'could.+not.+be.+delivered', re.DOTALL)
+RE_IS_SPAM = re.compile(r'original *message *before *SpamAssassin', re.DOTALL)
 
 
 class EmailTest(unittest.TestCase):
@@ -112,6 +113,15 @@ class EmailTest(unittest.TestCase):
         self.assertRegex(text, RE_DSN_FAILED)
         self.assertIn("This is the mail system at host mx.example.com",
                       text)
+
+    def test_spam_filter(self):
+        msg = 'I am a spammer'
+        self.send_email('bob', 'spameater', msg,
+                        to_addr='eatit@catchall.example')
+        newmails = self.wait_for_new_emails('spameater')
+        self.assertEqual(len(newmails), 1)
+        text = newmails[0].strip().decode()
+        self.assertRegex(text, RE_IS_SPAM)
 
 
 if __name__ == '__main__':
