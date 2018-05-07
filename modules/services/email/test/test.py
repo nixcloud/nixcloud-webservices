@@ -3,6 +3,7 @@ import imaplib
 import smtplib
 import json
 import os
+import re
 
 from email.mime.text import MIMEText
 
@@ -75,6 +76,22 @@ class EmailTest(unittest.TestCase):
         self.assertEqual(len(newmails), 1)
         text = newmails[0].strip().decode()
         self.assertEqual(text, 'Eat this!')
+
+    def test_check_quota(self):
+        msg = ("Hello, how's your quota? " * 10).strip()
+        self.send_email('alice', 'bar', msg)
+        newmails = self.wait_for_new_emails('bar')
+        self.assertEqual(len(newmails), 1)
+        text = newmails[0].strip().decode()
+        self.assertEqual(text, msg)
+
+        msg = ("Where is your quota? " * 1000).strip()
+        self.send_email('bob', 'bar', msg)
+        newmails = self.wait_for_new_emails('bob')
+        self.assertEqual(len(newmails), 1)
+        text = newmails[0].strip().decode()
+        overquota = re.compile(r'could.+not.+be.+delivered', re.DOTALL)
+        self.assertRegex(text, overquota)
 
 
 if __name__ == '__main__':

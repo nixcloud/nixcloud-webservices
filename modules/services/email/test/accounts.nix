@@ -18,11 +18,14 @@
     password = "{PBKDF2}$1$NbF7gIsr3MBE6Ice$5000$07072413c01782d9eb2e5d"
              + "919f2c402b8e924c2e";
   };
+  # NOTE: This account has a quota set, so be sure to *never* send any email to
+  #       it in tests other than the quota test.
   bar = {
     domain = "example.com";
     server = "mx.example.com";
     plainPasswd = "testpw4";
     password = "{PLAIN}testpw4";
+    quota = "10k";
   };
   spameater = {
     domain = "catchall.example";
