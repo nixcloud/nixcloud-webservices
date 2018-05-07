@@ -54,62 +54,53 @@ class EmailTest(unittest.TestCase):
                 unread_msg_ids = response[0].split()
                 for msgid in unread_msg_ids:
                     result = attrs['imap'].fetch(msgid, '(UID BODY[TEXT])')[1]
-                    newmails.append(result[0][1])
+                    newmails.append(result[0][1].strip().decode())
                 attrs['imap'].close()
         return newmails
 
+    def wait_for_one_email(self, user=None):
+        newmails = self.wait_for_new_emails(user)
+        self.assertEqual(len(newmails), 1)
+        return newmails[0]
+
     def test_send_to_same_server(self):
         self.send_email('alice', 'bob', 'Hello Bob from Alice!')
-        newmails = self.wait_for_new_emails('bob')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('bob')
         self.assertEqual(text, 'Hello Bob from Alice!')
 
     def test_send_to_different_server(self):
         self.send_email('foo', 'bob', 'Hello Bob from Foo!')
-        newmails = self.wait_for_new_emails('bob')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('bob')
         self.assertEqual(text, 'Hello Bob from Foo!')
 
     def test_send_to_catchall(self):
         self.send_email('bar', 'spameater', 'Eat this!',
                         to_addr='spam@catchall.example')
-        newmails = self.wait_for_new_emails()
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('spameater')
         self.assertEqual(text, 'Eat this!')
 
     def test_check_quota(self):
         msg = ("Hello, how's your quota? " * 10).strip()
         self.send_email('alice', 'bar', msg)
-        newmails = self.wait_for_new_emails('bar')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('bar')
         self.assertEqual(text, msg)
 
         msg = ("Where is your quota? " * 1000).strip()
         self.send_email('bob', 'bar', msg)
-        newmails = self.wait_for_new_emails('bob')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('bob')
         self.assertRegex(text, RE_DSN_FAILED)
 
     def test_aliases(self):
         msg = 'Hi different Alice!'
         self.send_email('spameater', 'alice', msg,
                         to_addr='anotheralice@example.net')
-        newmails = self.wait_for_new_emails('alice')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('alice')
         self.assertEqual(text, msg)
 
     def test_softbounce_nonexisting_address(self):
         msg = 'Is there anyone?'
         self.send_email('alice', None, msg, to_addr='xxx@example.com')
-        newmails = self.wait_for_new_emails('alice')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('alice')
         self.assertRegex(text, RE_DSN_FAILED)
         self.assertIn("This is the mail system at host mx.example.com",
                       text)
@@ -118,9 +109,7 @@ class EmailTest(unittest.TestCase):
         msg = 'I am a spammer'
         self.send_email('bob', 'spameater', msg,
                         to_addr='eatit@catchall.example')
-        newmails = self.wait_for_new_emails('spameater')
-        self.assertEqual(len(newmails), 1)
-        text = newmails[0].strip().decode()
+        text = self.wait_for_one_email('spameater')
         self.assertRegex(text, RE_IS_SPAM)
 
 
