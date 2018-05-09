@@ -228,18 +228,7 @@ with lib;
         </Directory>
       ''}
 
-      ${if config.proxyOptions.path == "/" then ''
-        #RewriteEngine On
-        #RewriteRule ^w(/.*)?$ $1 [L]
-        ${"Alias ${config.urlPrefix} ${mediawikiRoot}"}
-      '' else ''
-        # seems rewriteenginge wasn't required at all?!
-        #RewriteEngine On
-        #RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
-        #RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d
-        #RewriteRule ^/?wiki${config.proxyOptions.path}${config.urlPrefix}(/.*)?$ %{DOCUMENT_ROOT}${config.proxyOptions.path}${config.urlPrefix}/index.php [L]
-        Alias ${config.proxyOptions.path}${config.urlPrefix} ${mediawikiRoot}
-      ''}
+      Alias ${builtins.toPath "${config.proxyOptions.path}${config.urlPrefix}"} ${mediawikiRoot}
       Alias ${config.proxyOptions.path} ${mediawikiRoot}/index.php
 
       <Directory ${mediawikiRoot}>
