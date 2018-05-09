@@ -199,7 +199,7 @@ in
             ${if r == "" then ''
               ${f}
               proxy_pass http://${location.ip}:${toString location.port}${ppp};
-            '' else r #"
+            '' else r
             }
               ${if (b != {}) then mkBasicAuth b else ""}
             }

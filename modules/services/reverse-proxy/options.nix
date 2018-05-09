@@ -23,25 +23,6 @@ let
     '';
   };
 
-#   ssl_certificateSetModule = {
-#     options = {
-#       ssl_certificate = mkOption {
-#         type = types.path;
-#         description = ''
-#           A location containg the full path and filename to `/path/to/fullchain.pem`.
-#         '';
-#         example = "/path/to/fullchain.pem";
-#       };
-#       ssl_certificate_key = mkOption {
-#         type = types.path;
-#         description = ''
-#           A location containg the full path and filename to `/path/to/key.pem`.
-#         '';
-#         example = "/path/to/key.pem";
-#       };
-#     };
-#   };
-  
   locationWebSocketModule = { config, lib, options, toplevel }: {
     options = {
       subpath = mkOption {
@@ -66,13 +47,6 @@ let
             The http.location can be used to override the default location record for http websocket (ws) usage when `http.mode = "on"` is set.
           '';
           default = "";
-          example = 
-            ''
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
-              proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
-            '';
         };
         flags = mkOption {
           description = ''
@@ -83,11 +57,20 @@ let
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_read_timeout 36000s;
+            # required because of CORS
+            proxy_set_header Host $host;
           '';
           example = ''
+            # http websocket default flags
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_read_timeout 36000s;
+            # required because of CORS
+            proxy_set_header Host $host;
             add_header Strict-Transport-Security max-age=345678;
           '';
         };
@@ -108,10 +91,6 @@ let
             The https.location can be used to override the default location record for https websocket (wss) usage when `https.mode = "on"` is set.
           '';
           default = "";
-          example = 
-            ''
-              proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
-            '';
         };     
         flags = mkOption {
           description = ''
@@ -122,11 +101,20 @@ let
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_read_timeout 36000s;
+            # required because of CORS
+            proxy_set_header Host $host;
           '';
           example = ''
+            # https websocket default flags
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_read_timeout 36000s;
+            # required because of CORS
+            proxy_set_header Host $host;
             add_header Strict-Transport-Security max-age=345678;
           '';
         };        
@@ -269,7 +257,7 @@ in
         '';
         default = "";
         example = "";
-      };      
+      };
       flags = mkOption {
         description = ''
           Use `https.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.

@@ -1,13 +1,4 @@
 { config, pkgs, lib, mkUniqueUser, mkUniqueGroup, ... }:
-
-/* The leaps service:
-   You need to create files in /var/lib/nixcloud/webservices/leaps-z (or
-   similar) with the right permissions and uid/gid ownership manually.
-
-   The uid/gid can be looked up in /etc/passwd or by using ls -lathr on the
-   stateDir.
-*/
-
 {
   options = {};
 
@@ -21,8 +12,7 @@
 
   config = lib.mkIf config.enable {
 
-    # inject the leaps websocket for cooperative document opening/editing into
-    # proxyOptions
+    # inject the leaps websocket for cooperative document opening/editing into proxyOptions
     proxyOptions.websockets = {
       ws = {
         subpath = "/leaps/ws";
