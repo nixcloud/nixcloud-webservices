@@ -212,13 +212,13 @@ in
 
           chmod 0700 $TMPDIR/usersupplied
           mkdir -p ${stateDir}/${cert}/
+          chmod 0755 ${stateDir}
           mv $TMPDIR/usersupplied /var/lib/nixcloud/TLS/${cert}/
         '';
         serviceConfig = {
           Type = "oneshot";
           RuntimeDirectory = "nixcloud.TLS-acme-usersupplied-${cert}";
         };
-        after = [ "nixcloud.TLS.service" ];
         before = [ "nixcloud.TLS-usersupplied-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-usersupplied-certificates.target" ];
       }))
@@ -248,6 +248,7 @@ in
 
           chmod 0700 $TMPDIR/selfsigned
           mkdir -p ${stateDir}/${cert}/
+          chmod 0755 ${stateDir}
           mv $TMPDIR/selfsigned /var/lib/nixcloud/TLS/${cert}/
         '';
         serviceConfig = {
@@ -258,29 +259,10 @@ in
           # Do not create self-signed key when key already exists
           ConditionPathExists = "!/var/lib/nixcloud/TLS/${cert}/selfsigned";
         };
-        after = [ "nixcloud.TLS.service" ];
         before = [ "nixcloud.TLS-selfsigned-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-selfsigned-certificates.target" ];
       }))
     ] else con) [] (attrNames config.nixcloud.TLS.certs);
-
-    nixcloudTLSService = nameValuePair "nixcloud.TLS" {
-      description = "nixcloud.TLS service (managing TLS certificates)";
-
-      after  = [ "network.target" ] ;
-      before = [ "nixcloud.TLS-certificates" ];
-      wants  = [ "nixcloud.TLS-certificates" ];
-
-      preStart = ''
-        mkdir -p   ${stateDir}
-        chmod 0755 ${stateDir}
-      '';
-      serviceConfig = {
-        ExecStart = "${pkgs.bash}/bin/bash -c 'exit 0;'";
-        RemainAfterExit=true;
-      };
-    };
-
   in {
     security.acme.preliminarySelfsigned = true;
     security.acme.certs = fold (cert: con: if config.nixcloud.TLS.certs.${cert}.mode == "ACME" then con // {
