@@ -136,6 +136,7 @@ in {
       permissions.defaultDirectoryMode = "0711";
       permissions.group.noAccess = true;
       permissions.others.noAccess = true;
+      permissions.enableACLs = false;
       owner = mkUniqueUser "mysql";
       group = mkUniqueGroup "mysql";
     };
