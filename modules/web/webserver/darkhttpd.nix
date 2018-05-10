@@ -46,7 +46,7 @@ in {
         instance.after = [ "database.target" "webserver-init.service" ];
 
         serviceConfig = {
-          ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd ${toString config.root} --port ${toString config.proxyOptions.port} --addr 127.0.0.1";
+          ExecStart = "${pkgs.darkhttpd}/bin/darkhttpd ${toString config.root} --port ${toString config.proxyOptions.port} --mimetypes ${pkgs.apacheHttpd}/conf/mime.types --addr 127.0.0.1";
           KillSignal = "SIGTERM";
           Restart = "always";
           RestartSec = "10s";
