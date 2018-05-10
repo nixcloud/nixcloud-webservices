@@ -29,6 +29,14 @@
       group = "vip";
       users.alice = {};
     };
+
+    "/only/alice" = {
+      owner = "alice";
+      group = "bobs";
+      permissions.group.noAccess = true;
+      permissions.others.noAccess = true;
+      permissions.enableACLs = false;
+    };
   };
 
   machine.users.groups.vip = {};
@@ -67,6 +75,7 @@
       showPerms "/foo/bar/subdir";
       showPerms "/little/house/of/bob";
       showPerms "/super/n/e/s/t/e/d";
+      showPerms "/only/alice";
 
       ensureOwner "/foo/bar", "alice";
       ensureOwner "/foo/bar/subdir", "root";
@@ -85,6 +94,10 @@
 
       ensureOwner "/common/ancestor2", "bob";
       ensureGroup "/common/ancestor2", "vip";
+
+      ensureOwner "/only/alice", "alice";
+      ensureGroup "/only/alice", "bobs";
+      ensureMode "/only/alice", "0700";
     }
 
     $machine->waitForUnit('multi-user.target');
@@ -151,6 +164,12 @@
     $machine->nest('check whether postCreate ran on existing directory', sub {
       $machine->fail('test -e /super/n/e/s/t/e/d/owner.txt');
       $machine->fail('test -e /super/n/e/s/t/e/d/root.txt');
+    });
+
+    $machine->nest('check whether noAccess modes are applied correctly', sub {
+      ensureOwner "/only/alice", "alice";
+      ensureGroup "/only/alice", "bobs";
+      ensureMode "/only/alice", "0700";
     });
   '';
 }

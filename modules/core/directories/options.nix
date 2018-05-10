@@ -155,6 +155,31 @@ in lib.mkOption {
       };
 
       permissions = {
+        enableACLs = lib.mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Whether to enable POSIX ACLs for this directory. The default is
+            <literal>true</literal> because whenever the file system doesn't
+            support POSIX ACLs it will revert to UNIX file permissions.
+
+            It's <emphasis>only</emphasis> useful to disable this if you have a
+            service which is checking the group ID bits, because the group IDs
+            will be set to the <literal>ACL_MASK</literal> (see <citerefentry>
+              <refentrytitle>acl</refentrytitle>
+              <manvolnum>2</manvolnum>
+            </citerefentry>) value, which causes trouble with some services
+            that do not support ACL and thus can't infer the
+            <emphasis>effective</emphasis> permissions of the group.
+
+            <note><para>Under the hood, this will still use <citerefentry>
+              <refentrytitle>setfacl</refentrytitle>
+              <manvolnum>1</manvolnum>
+            </citerefentry> but in a way that it will result in ordinary UNIX
+            permissions.</para></note>
+          '';
+        };
+
         recursive = lib.mkOption {
           type = types.bool;
           default = true;

@@ -51,7 +51,8 @@ let
     mkUserGroupPerm = flag: name: perms: "${flag}:${name}:${getPerms perms}";
     userPerms = lib.mapAttrsToList (mkUserGroupPerm "u") cfg.users;
     groupPerms = lib.mapAttrsToList (mkUserGroupPerm "g") cfg.groups;
-    perms = [
+
+    perms = if cfg.permissions.enableACLs then [
       "u::${getPerms cfg.permissions.owner}"
       "u:${cfg.owner}:${getPerms cfg.permissions.owner}"
     ] ++ userPerms ++ [
@@ -60,9 +61,28 @@ let
     ] ++ groupPerms ++ [
       "o::${getPerms cfg.permissions.others}"
       "m::${permConfToRWX isDir mask}"
+    ] else [
+      "u::${getPerms cfg.permissions.owner}"
+      "g::${getPerms cfg.permissions.group}"
+      "o::${getPerms cfg.permissions.others}"
     ];
+
+    assertValidUnixPerms = x: let
+      assertUserGroups = what: attrs: passthru: let
+        csv = lib.concatMapStringsSep ", " (n: "'${n}'") (lib.attrNames attrs);
+        msg = "Directory '${absPath}' has extra ${what} (${csv}) set, but"
+            + " 'enableACLs' is set to false.";
+      in if attrs == {} then passthru else throw msg;
+
+      assertUsers = assertUserGroups "users" cfg.users;
+      assertGroups = assertUserGroups "groups" cfg.groups;
+
+    in if cfg.permissions.enableACLs then x else assertUsers (assertGroups x);
+
     defPerms = lib.optionals isDir (map (p: "d:${p}") perms);
-  in lib.concatStringsSep "," (defPerms ++ perms);
+    finalPerms = lib.optionals cfg.permissions.enableACLs defPerms ++ perms;
+
+  in assertValidUnixPerms (lib.concatStringsSep "," finalPerms);
 
   subPaths = let
     allPaths = lib.attrNames config.nixcloud.directories;
