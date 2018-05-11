@@ -15,9 +15,50 @@ It features the development stack we use at [https://nixcloud.io](https://nixclo
 
 Continuous integration at <https://hydra.nixcloud.io/project/nixcloud-webservices>
 
+# Using nixcloud-webservices
+
+Depending on which NixOS version you're on you can get different channels of
+nixcloud-webservices which are tested against different NixOS releases:
+
+## For NixOS 18.03
+
+```sh-session
+# nix-channel --add https://hydra.nixcloud.io/channel/custom/nixcloud-webservices/release-18.03/nixcloud-webservices
+# nix-channel --update
+```
+
+## For NixOS Unstable
+
+```sh-session
+# nix-channel --add https://hydra.nixcloud.io/channel/custom/nixcloud-webservices/nixos-unstable/nixcloud-webservices
+# nix-channel --update
+```
+
+## Adding nixcloud-webservices to your configuration.nix
+
+Simply append `<nixcloud-webservices>` to your `imports` list and you're ready
+to go, for example:
+
+```nix
+{
+  imports = [
+    ./hardware-configuration.nix
+    <nixcloud-webservices>
+  ];
+  # ... other options ...
+}
+```
+
+You can find nixcloud-webservices specific options in the [latest manual](https://hydra.nixcloud.io/job/nixcloud-webservices/release-18.03/manual/latest/download/1).
+
 # Get the source
 
-    git clone https://github.com/nixcloud/nixcloud-webservices
+Alternatively if you want to hack on nixcloud-webservices, you can also Git
+clone it with:
+
+```sh-session
+$ git clone https://github.com/nixcloud/nixcloud-webservices
+```
 
 # Importing
 
@@ -25,12 +66,16 @@ Continuous integration at <https://hydra.nixcloud.io/project/nixcloud-webservice
 
 You import modules into your local system by adding the path to your `configuration.nix` to the `imports` list. Like this:
 
-    imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      /path/to/nixcloud-webservices/modules
-    ];
-    
+```nix
+{
+  imports = [
+    ./hardware-configuration.nix
+    /path/to/nixcloud-webservices
+  ];
+  # ... other options ...
+}
+```
+
 ## Option B: Building a (KVM) VM
 
 If you don't want to clutter your local system you can use a VM:
