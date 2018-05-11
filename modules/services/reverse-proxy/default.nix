@@ -140,7 +140,6 @@ in
 
     createLocationRecords = mode: filteredProxyOptions:
       lib.concatMapStringsSep "\n" (location: (createLocationRecord mode location)) filteredProxyOptions;
-
     createLocationRecord = mode: location:
       let
         m = location.${mode}.mode;
@@ -148,13 +147,16 @@ in
         r = location.${mode}.record;
         l = builtins.toPath (location.path);
         f = location.${mode}.flags;
+        e = location.${mode}.extraFlags;
       in
         (if (m == "on") then
           ''
             location ${l} {
             ${if r == "" then ''
+              set $targetIP ${location.ip};
+              set $targetPort ${toString location.port};
               ${f}
-              proxy_pass http://${location.ip}:${toString location.port}${removeSuffix "/" (toString (builtins.toPath (location.path)))};
+              ${e}
             '' else r
             }
               ${if (b != {}) then mkBasicAuth b else ""}
@@ -191,14 +193,17 @@ in
         r = websocket.${mode}.record;
         m = websocket.${mode}.mode;
         f = websocket.${mode}.flags;
+        e = location.${mode}.extraFlags;
         ppp = removeSuffix "/" (toString (builtins.toPath (location.path + websocket.subpath)));
       in
         if (m == "on") then
           ''
             location ${ppp} {
             ${if r == "" then ''
+              set $targetIP ${location.ip};
+              set $targetPort ${toString location.port};
               ${f}
-              proxy_pass http://${location.ip}:${toString location.port}${ppp};
+              ${e}
             '' else r
             }
               ${if (b != {}) then mkBasicAuth b else ""}

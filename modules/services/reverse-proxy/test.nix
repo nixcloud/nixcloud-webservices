@@ -174,19 +174,11 @@ in
           path = "/";
           port = 60000;
           http.mode = "on";
-          http.flags = ''
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+          http.extraFlags = ''
             add_header Strict-Transport-Security max-age=345678;
           '';
           https.mode = "on";
-          https.flags = ''
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+          https.extraFlags = ''
             add_header Strict-Transport-Security max-age=345678;
           '';         
          websockets = {

@@ -51,6 +51,8 @@ let
         flags = mkOption {
           description = ''
             Use `http.flags` with websockets to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+            
+            $targetIP and $targetPort will be set to the respective values of your `proxyOptions` definition.
           '';
           default = ''
             # http websocket default flags
@@ -61,22 +63,20 @@ let
             proxy_read_timeout 36000s;
             # required because of CORS
             proxy_set_header Host $host;
+            proxy_pass http://$targetIP:$targetPort$request_uri;
           '';
+        };
+        extraFlags = mkOption {
+          description = ''
+            Use `http.extraFlags` with websockets to add additional headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+          '';
+          default = "";
           example = ''
-            # http websocket default flags
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header X-Forwarded-For $remote_addr;
-            proxy_read_timeout 36000s;
-            # required because of CORS
-            proxy_set_header Host $host;
             add_header Strict-Transport-Security max-age=345678;
           '';
         };
         inherit basicAuth;
       };
-
       https = {
         mode = mkOption {
           type = types.enum [ "redirect_to_http" "on" "off" ];
@@ -95,6 +95,8 @@ let
         flags = mkOption {
           description = ''
             Use `https.flags` with websockets to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+            
+            $targetIP and $targetPort will be set to the respective values of your `proxyOptions` definition.
           '';
           default = ''
             # https websocket default flags
@@ -105,16 +107,15 @@ let
             proxy_read_timeout 36000s;
             # required because of CORS
             proxy_set_header Host $host;
+            proxy_pass http://$targetIP:$targetPort$request_uri;
           '';
+        };
+        extraFlags = mkOption {
+          description = ''
+            Use `https.extraFlags` with websockets to add additional headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+          '';
+          default = "";
           example = ''
-            # https websocket default flags
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header X-Forwarded-For $remote_addr;
-            proxy_read_timeout 36000s;
-            # required because of CORS
-            proxy_set_header Host $host;
             add_header Strict-Transport-Security max-age=345678;
           '';
         };        
@@ -222,7 +223,9 @@ in
       };
       flags = mkOption {
         description = ''
-          Use `http.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver. 
+          Use `http.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+          
+          $targetIP and $targetPort will be set to the respective values of your `proxyOptions` definition.
         '';
         default = ''
           # http default flags
@@ -230,15 +233,18 @@ in
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-        '';
-        example = ''
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto $scheme;
-          add_header Strict-Transport-Security max-age=345678;
+          proxy_pass http://$targetIP:$targetPort$request_uri;
         '';
       };
+      extraFlags = mkOption {
+        description = ''
+          Use `http.extraFlags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver. 
+        '';
+        default = "";
+        example = ''
+          add_header Strict-Transport-Security max-age=345678;
+        '';
+      };      
       inherit basicAuth;
     };
     https = {
@@ -261,6 +267,8 @@ in
       flags = mkOption {
         description = ''
           Use `https.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+          
+          $targetIP and $targetPort will be set to the respective values of your `proxyOptions` definition.
         '';
         default = ''
           # https default flags
@@ -268,15 +276,18 @@ in
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
-        '';
-        example = ''
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto $scheme;
-          add_header Strict-Transport-Security max-age=345678;
+          proxy_pass http://$targetIP:$targetPort$request_uri;
         '';
       };
+      extraFlags = mkOption {
+        description = ''
+          Use `https.extraFlags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver. 
+        '';
+        default = "";
+        example = ''
+          add_header Strict-Transport-Security max-age=345678;
+        '';
+      };      
       inherit basicAuth;
     };
   };
