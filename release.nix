@@ -1,10 +1,14 @@
-{ system ? builtins.currentSystem, nixpkgs ? <nixpkgs> }:
+{ system ? builtins.currentSystem, nixpkgs ? <nixpkgs>
+
+# This is a self-reference, so be sure to call the Hydra jobset input
+# 'nixcloud-webservices', otherwise the version will be wrong.
+, nixcloud-webservices ? { outPath = ./.; revCount = 1234; rev = "abcdef"; }
+}:
 
 let
   pkgs = import nixpkgs { inherit system; };
   inherit (pkgs) lib;
 
-in {
   tests = let
     mkJob = lib.const lib.hydraJob;
     mapHydra = lib.mapAttrsRecursiveCond (t: !(t ? test)) mkJob;
@@ -71,6 +75,30 @@ in {
 
       mkdir -p "$out/nix-support"
       echo "doc manual $dest" > "$out/nix-support/hydra-build-products"
+    '';
+  };
+
+  # All the jobs excluding the channel, because they will be constituents for
+  # the channel.
+  jobs = {
+    inherit tests manual;
+  };
+
+in jobs // {
+  # This is the channel and it is called 'nixcloud-webservices' to ensure that
+  # when the channel is added without an explicit name argument, it will be
+  # available as <nixcloud-webservices>.
+  nixcloud-webservices = pkgs.releaseTools.channel {
+    name = "nixcloud-webservices";
+    constituents = lib.collect lib.isDerivation jobs;
+    src = nixcloud-webservices;
+    patchPhase = ''
+      touch .update-on-nixos-rebuild
+      cat > default.nix <<EOF
+      { imports = [ ./modules ];
+        nixcloud.version = "${nixcloud-webservices.rev}";
+      }
+      EOF
     '';
   };
 }
