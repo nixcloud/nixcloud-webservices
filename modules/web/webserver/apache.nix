@@ -34,7 +34,6 @@ with lib;
         module.
       '';
     };
-
     logPerVirtualHost = mkOption {
       type = types.bool;
       default = false;
@@ -45,7 +44,6 @@ with lib;
         <option>hostName</option> of the virtual host.
       '';
     };
-
     logFormat = mkOption {
       type = types.str;
       default = "agent";
@@ -53,13 +51,11 @@ with lib;
         Can be set to `combined`, `common`, `referer`, `agent` or `none`.
       ''; #'
     };
-
     enableMellon = mkOption {
       type = types.bool;
       default = false;
       description = "Whether to enable the mod_auth_mellon module.";
     };
-
     phpPackage = mkOption {
       type = types.package;
       default = pkgs.php;
@@ -67,6 +63,11 @@ with lib;
       description = ''
         Overridable attribute of the PHP package to use.
       '';
+    };
+    enablePHP = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to enable the PHP module.";
     };
     phpOptions = mkOption {
       type = types.lines;
@@ -200,7 +201,7 @@ with lib;
             allModules = []
               ++ map (name: {inherit name; path = "${httpd}/modules/mod_${name}.so";}) apacheModules
               ++ optional config.webserver.apache.enableMellon { name = "auth_mellon"; path = "${pkgs.apacheHttpdPackages.mod_auth_mellon}/modules/mod_auth_mellon.so"; }
-              ++ optional config.webserver.enablePHP { name = "php${phpMajorVersion}"; path = "${php}/modules/libphp${phpMajorVersion}.so"; }
+              ++ optional config.webserver.apache.enablePHP { name = "php${phpMajorVersion}"; path = "${php}/modules/libphp${phpMajorVersion}.so"; }
               ++ extraForeignModules
               ++ config.webserver.apache.extraModules;
           in concatMapStrings load allModules
@@ -380,7 +381,7 @@ with lib;
             optional toplevel.config.networking.defaultMailServer.directDelivery pkgs.ssmtp;
 
       environment =
-        optionalAttrs config.webserver.enablePHP { PHPRC = phpIni; }
+        optionalAttrs config.webserver.apache.enablePHP { PHPRC = phpIni; }
         // optionalAttrs config.webserver.apache.enableMellon { LD_LIBRARY_PATH  = "${pkgs.xmlsec}/lib"; };
 
       serviceConfig = {

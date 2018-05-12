@@ -205,10 +205,8 @@ with lib;
 
   in rec {
     webserver.variant = "apache";
-
-    documentRoot = mediawikiRoot;
-
-    extraPath = [ mediawikiScripts ];
+    webserver.systemPackages = [ mediawikiScripts ];
+    
     # BUG: need to fix /images with URL rewriting
     # BUG: need to write proper RewriteRule rule for "/" hosting -> url is borken 
     #    -> http://localhost:60000/w/index.php/Main_Page
@@ -238,7 +236,7 @@ with lib;
       </Directory>
     '';
 
-    webserver.enablePHP = true;
+    webserver.apache.enablePHP = true;
 
     database.mediawiki.user = config.webserver.user;
     database.mediawiki.postCreate = let

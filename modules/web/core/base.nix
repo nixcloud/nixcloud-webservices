@@ -215,7 +215,7 @@ in {
       toplevel = lib.mkIf config.enable {
         environment.systemPackages = lib.singleton (pkgs.buildEnv {
           name = "webservice-extra-path";
-          paths = config.extraPath;
+          paths = config.webserver.systemPackages;
         });
 
         users.users = lib.mapAttrs' (name: ucfg: {

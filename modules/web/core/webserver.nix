@@ -8,20 +8,6 @@ let
                     || config.webserver.startupScript != "";
 in {
   options = {
-    documentRoot = lib.mkOption {
-      type = lib.types.path;
-      description = "A directory which this webserver will serve.";
-    };
-
-    extraPath = lib.mkOption {
-      type = lib.types.listOf lib.types.path;
-      default = [];
-      description = ''
-        Used to add useful scripts for webservice management into the system
-        profile.
-      '';
-    };
-
     proxyOptions = lib.mkOption {
       default = {};
       type = lib.types.submodule (import ../../services/reverse-proxy/options.nix);
@@ -32,6 +18,15 @@ in {
         domain = "nixcloud.io";
         ip     = "127.0.0.1";
       };
+    };
+   
+    webserver.systemPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.path;
+      default = [];
+      description = ''
+        Used to add useful scripts for webservice management into the system
+        profile by using <option>environment.systemPackages</option>
+      '';
     };
 
     webserver.startupScript = lib.mkOption {
@@ -90,12 +85,6 @@ in {
         Additional options for the group, see <option>users.groups</option> for
         possible values.
       '';
-    };
-
-    webserver.enablePHP = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Whether to enable the PHP module.";
     };
 
     webserver.privateTmp = lib.mkOption {

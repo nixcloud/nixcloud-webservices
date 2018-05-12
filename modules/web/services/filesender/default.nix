@@ -84,7 +84,7 @@ with lib;
         cp -r * $out
       '';
     };
-        filesenderConfig = pkgs.writeText "config.php" ''
+    filesenderConfig = pkgs.writeText "config.php" ''
       <?php
 
       /*
@@ -1373,6 +1373,7 @@ with lib;
       );
 
     ''; #'
+    documentRoot = fileSenderRoot + "/www";
   in rec {
     webserver.variant = "apache";
 
@@ -1385,7 +1386,7 @@ with lib;
           ${apache.allGranted}
           Options FollowSymLinks 
           DirectoryIndex index.php
-      </Directory>   
+      </Directory>
 
       SetEnv SIMPLESAMLPHP_CONFIG_DIR ${SimpleSAMLphp}/config
 
@@ -1396,9 +1397,9 @@ with lib;
       </Directory>
     ''; 
       
-    documentRoot = fileSenderRoot + "/www"; 
+    
 
-    webserver.enablePHP = true;
+    webserver.apache.enablePHP = true;
     
     # FIXME: factor this into a config.database set which will introduce this dependency upon usage
     #extraServiceDependencies = [ "postgresq.service" ];

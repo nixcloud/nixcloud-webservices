@@ -134,9 +134,9 @@ The code below has a few properties:
                 serverAliases = [ "nixdoc.io" ];
                 enableSSL = false;
                 listen = [{port = 8081;}];
-                documentRoot = "/www";
 
                 extraConfig = ''
+                  DocumentRoot = "/www"
                   <Directory /www>
                           Options Indexes FollowSymLinks
                           AllowOverride None

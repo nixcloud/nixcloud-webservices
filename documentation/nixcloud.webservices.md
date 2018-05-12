@@ -8,9 +8,10 @@ See also [../README.md](../README.md).
 
 # Using nixcloud-webservices
 
-You basically have 3 options:
+You basically have 4 options:
 
 * [Using presets](nixcloud.webservices.md#using-presets)
+* [Hack your service](nixcloud.webservices.md#hack-your-service)
 * [Static file serving](nixcloud.webservices.md#static-file-serving)
 * [Extending nixcloud-webservices](nixcloud.webservices.md#extending-nixcloud-webservices)
 
@@ -67,6 +68,15 @@ You basically have 3 options:
     * debugging
 
             journalctl -u mediawiki-test1-apache
+
+# Hack your service
+
+Using this method you have the same interface as if you wanted to add a webservice to nixcloud-webservices but you can define it from your configuration.nix and it is pretty similar to `services.httpd` and `services.nginx`, except you will still be using `nixcloud.reverse-proxy` to access them.
+
+See:
+
+* [apache](../modules/web/services/apache/default.nix), see [test.nix](../modules/web/services/apache/test.nix) on how to use it.
+* [nginx](../modules/web/services/nginx/default.nix), see [test.nix](../modules/web/services/nginx/test.nix) on how to use it.
 
 # Static file serving
 

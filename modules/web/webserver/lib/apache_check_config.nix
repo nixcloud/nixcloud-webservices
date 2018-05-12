@@ -36,6 +36,7 @@ in rec {
       sed -i -E "s|CustomLog .*||g"  $out/${fileName}_
       sed -i -E "s|User .*||g"  $out/${fileName}_
       sed -i -E "s|Group .*||g"  $out/${fileName}_
+      sed -i -E "s|DocumentRoot .*|DocumentRoot /tmp|g"  $out/${fileName}_
       
       echo "=========== /apache config cleanup ==========="
       

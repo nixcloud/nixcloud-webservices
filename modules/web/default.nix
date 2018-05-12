@@ -2,6 +2,8 @@
 
 {
   imports = lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
+    apache            = services/apache;
+    nginx             = services/nginx;
     filesender        = services/filesender;
     leaps             = services/leaps;
     mediawiki         = services/mediawiki;

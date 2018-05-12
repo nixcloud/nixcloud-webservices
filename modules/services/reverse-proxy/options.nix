@@ -118,7 +118,7 @@ let
           example = ''
             add_header Strict-Transport-Security max-age=345678;
           '';
-        };        
+        };
         inherit basicAuth;
       };
     };
