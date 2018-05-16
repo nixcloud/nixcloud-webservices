@@ -73,10 +73,51 @@ You basically have 4 options:
 
 Using this method you have the same interface as if you wanted to add a webservice to nixcloud-webservices but you can define it from your configuration.nix and it is pretty similar to `services.httpd` and `services.nginx`, except you will still be using `nixcloud.reverse-proxy` to access them.
 
-See:
+There is an `nixcloud.webservices.apache` and `nixcloud.webservices.nginx` example.
 
-* [apache](../modules/web/services/apache/default.nix), see [test.nix](../modules/web/services/apache/test.nix) on how to use it.
-* [nginx](../modules/web/services/nginx/default.nix), see [test.nix](../modules/web/services/nginx/test.nix) on how to use it.
+## Apache
+
+    nixcloud.webservices.apache.test5 = {
+      enable = true;
+      proxyOptions = {
+        port = 5050;
+        domain = "example.org";
+      };
+      webserver.apache = {
+        enablePHP = true;
+        extraConfig = ''
+            DocumentRoot "/var/lib/nixcloud/webservices/apache-test5/www/"
+            <Directory "/var/lib/nixcloud/webservices/apache-test5/www/">
+              Options FollowSymLinks
+              AllowOverride None
+              Require all granted
+            </Directory>
+        '';
+      };
+    };
+
+* [apache implementation](../modules/web/services/apache/default.nix)
+* [test implementation](../modules/web/services/apache/test.nix)
+
+## Nginx
+
+    nixcloud.webservices.nginx.test1 = {
+      enable = true;
+      proxyOptions = {
+        port = 5050;
+        domain = "example.org";
+      };
+      webserver.nginx = {
+        extraConfig = ''
+          location / {
+            root /var/lib/nixcloud/webservices/nginx-test1/www/;
+          }
+        '';
+      };
+    };
+
+* [nginx implementation](../modules/web/services/nginx/default.nix)
+* [test implementation](../modules/web/services/nginx/test.nix)
 
 # Static file serving
 
