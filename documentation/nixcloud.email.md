@@ -30,27 +30,33 @@
 
 See [implementation](../modules/services/email)
 
-WARNING: Since [spamassassin.org is down](https://github.com/NixOS/nixpkgs/issues/39842) you won't be able to deploy with spamd. Instead disable spamfiltering for the moment or use an initial binary blog from a differnet nixcloud.email installation (file an issue here if you want to do that an don't know how).
+WARNING: Since [spamassassin.org is down](https://github.com/NixOS/nixpkgs/issues/39842) you won't be able to deploy with spamd. Instead disable spamfiltering for the moment or use an initial binary blob from a differnet nixcloud.email installation (file an issue here if you want to do that an don't know how). 
 
 Upcoming features:
 
-* [ ] Dedicated 18.03 support (long term support)
-* [ ] DNS abstraction which shows all the required configuration(s) and if they are correct already
+* [ ] Replace spamassassin by https://rspamd.com/
+* [ ] Add mailinglist support
+* [ ] Refactor `nixcloud.email.relay` into `nixcloud.email-relay`
+* [ ] DNS abstraction (generate a list of DNS entries for manual configuration)
 * [ ] Webmail support (Roundcube)
 * [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
 * [ ] Rewrite sender mail address when forwarding (SRS) correctly
 * [ ] SNI support for Nix Dovecot abstraction
 * [ ] Advanced logging
 * [ ] Adding group aliases
-* [ ] Add mailinglist support
-* [ ] Refactor `nixcloud.email.relay` into `nixcloud.email-relay`
 
 Thanks to the support of nlnet.nl!
+
+# Job offer
+
+If you are familiar with email technology and want to implement one of the above features, contact us:
+
+  info@nixcloud.io
 
 # Limitations
 
 * No support for shell users, only virtualUsers. This is by intention to reduce complexity in the backend.
-* Using `nixcloud.email.enableACME = true;` will not work with `services.nginx` out of the box, [see this](nixcloud.reverse-proxy.md#extramappings-examples).
+* Using `nixcloud.email.enableTLS = true;` will not work with `services.nginx` out of the box, [see this](nixcloud.reverse-proxy.md#extramappings-examples).
 
 # Configuration
 
@@ -204,7 +210,7 @@ But it can be extended easily!
     
 ## ACME Let's Encrypt
 
-When using `nixcloud.email.enableACME = true;`, which is a default we automatically acquires a let's encrypt TLS certificate for your mail server. 
+When using `nixcloud.email.enableTLS = true;`, which is a default we automatically acquires a let's encrypt TLS certificate for your mail server. 
 
 This is implemented by starting `nixcloud.reverse-proxy`  on port 80. 
 
