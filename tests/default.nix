@@ -23,4 +23,6 @@ in {
     ../modules/web/services/static-darkhttpd/test.nix;
   webservices.static-nginx = callTest
     ../modules/web/services/static-nginx/test.nix;
+  webservices.apache = callTest ../modules/web/services/apache/test.nix;
+  webservices.nginx  = callTest ../modules/web/services/nginx/test.nix;
 }
