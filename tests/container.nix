@@ -20,7 +20,6 @@ let
   makeConfig = scriptName: pkgs.writeText "testScript" ''{
       autostart = true;
       configuration = {
-
         users.groups  = { testUser = {}; };
         users.extraUsers.testUser = {
           description  = "User that runs the systemd tests.";
@@ -57,6 +56,7 @@ let
   #container with fixed ip
   containerTestThree = pkgs.writeText "test3" ''
   {
+    name = "fixed";
     network = {
       ip = "10.10.10.10";
     };
@@ -67,24 +67,27 @@ let
   {
     configuration = {  };
   }'';
-
-  containerPreBuild = [
-    (import "${pkgs.nixcloud.container}/bin/helper/lxc-container.nix" {
-      name="test";
-      ip="10.101.0.2";
-      container = import containerConfig;
-    })
-    (import "${pkgs.nixcloud.container}/bin/helper/lxc-container.nix" {
-      name="empty";
-      ip="10.101.0.2";
-      container = import containerTestTwo;
-    })
-  ];
-
+  #this list is needed to prebuild all containers
+  allContainer = [ containerConfig containerConfigRollback containerConfigUpdate
+      containerTestTwo containerTestThree containerTest4];
 in {
   name = "nixcloud-container";
-
-  machine = { pkgs, lib, ... }: {
+  machine = { pkgs, lib, ... }:
+    let
+      containerPreBuild = map (x:
+        let
+          config = import x;
+        in
+        (import "${pkgs.nixcloud.container}/bin/helper/lxc-container.nix"
+          {
+            name= if config ? name then config.name else "test";
+            ip= if config ? network && config.network ? ip then config.network.ip
+                else "10.101.0.2";
+            container = config;
+          })
+        ) allContainer;
+    in
+  {
     nix.nixPath = [ "nixpkgs=${pkgs.path}" ];
     nix.binaryCaches = lib.mkForce [];
     nixcloud.container.enable = true;
@@ -93,7 +96,12 @@ in {
     virtualisation.memorySize = 2048;
     # Needed so that we have all dependencies available for building the
     # container config within the VM.
-    virtualisation.pathsInNixDB = [ pkgs.stdenv ] ++ containerPreBuild;
+    virtualisation.pathsInNixDB = let
+        allContainer = [ containerTestThree ];
+      # xorg.lndir is needed for systemd since 17dd7bcd89d568596f52356624be82201ea84779
+      # there might be a better way to add this if this part would also be
+      # build with the same pkgs the container in the test are using.
+      in [ pkgs.stdenv pkgs.xorg.lndir ] ++ containerPreBuild;
   };
 
   testScript = ''
@@ -143,7 +151,7 @@ in {
       #waits until the container reaches the multi user target
       $machine->waitUntilSucceeds('lxc-attach -n test -- systemctl --no-pager status "multi-user.target" >&2');
       #check if a systemd service touched the file '/home/testUser/yesitworks'
-      #if this failed something is wrong with non root users inside the container 
+      #if this failed something is wrong with non root users inside the container
       $machine->succeed('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitworks');
     });
 
@@ -270,6 +278,7 @@ in {
         exit 1
       fi
     ');
+
     #test fixed ip
     $machine->succeed('nixcloud-container create fixed ${containerTestThree} >&2');
     $machine->succeed('
@@ -280,6 +289,7 @@ in {
         exit 1
       fi
     ');
+
     #test fixed ip
     $machine->succeed('nixcloud-container create test4 ${containerTest4} >&2');
     $machine->succeed('
@@ -290,8 +300,5 @@ in {
         exit 1
       fi
     ');
-
-
-
   '';
 }
