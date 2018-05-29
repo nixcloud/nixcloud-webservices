@@ -146,7 +146,8 @@ in
       apply = checkPath;
       description = ''
         The 'subpath' is actually a subdirectory in the URL and the `path` variable from the proxyOption is prepended.
-        A subpath must start with a leading "/" and may not have white spaces or a trailing "/" in it.
+        A subpath must start with a leading "/" and may not have white spaces in it.
+        Note that the presence of a trailing slash affects the behaviour of the route matcher.
       '';
     };
     websockets = mkOption {

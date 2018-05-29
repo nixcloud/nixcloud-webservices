@@ -145,7 +145,7 @@ in
         m = location.${mode}.mode;
         b = location.${mode}.basicAuth;
         r = location.${mode}.record;
-        l = builtins.toPath (location.path);
+        l = location.path;
         f = location.${mode}.flags;
         e = location.${mode}.extraFlags;
       in
