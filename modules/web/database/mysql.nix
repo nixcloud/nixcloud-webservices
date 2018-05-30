@@ -28,8 +28,11 @@ let
     mkStateFile = action: let
       filename = ".database-${action}-${cfg.name}";
     in "${config.stateDir}/${filename}";
-  in [
-    { name = "database-${cfg.name}";
+
+    # XXX: Make this dry, because it's also used in a similar vein in
+    #      postgresql.nix!
+    createDbService = {
+      name = "database-${cfg.name}";
       value = {
         instance.requiredBy = [ "database-${cfg.name}.target" ];
         instance.before = [ "database-${cfg.name}.target" ];
@@ -55,8 +58,12 @@ let
           Group = "mysql";
         };
       };
-    }
-    { name = "database-${cfg.name}-post-create";
+    };
+
+    # XXX: Make this dry, because it's also used in a similar vein in
+    #      postgresql.nix!
+    postCreateDbService = {
+      name = "database-${cfg.name}-post-create";
       value = {
         instance.requiredBy = [ "database-${cfg.name}.target" ];
         instance.before = [ "database-${cfg.name}.target" ];
@@ -78,8 +85,12 @@ let
           User = cfg.user;
         };
       };
-    }
-  ]) (lib.attrValues dbs));
+    };
+
+    services = lib.singleton createDbService
+            ++ lib.optional (cfg.postCreate != "") postCreateDbService;
+
+  in services) (lib.attrValues dbs));
 
   configuration = {
     basedir = package;
