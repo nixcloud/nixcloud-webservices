@@ -23,7 +23,8 @@ let
   in "${prog} " + lib.concatMapStringsSep " " lib.escapeShellArg args;
 
   dbservices = lib.listToAttrs (lib.concatMap (cfg: let
-    dbuser = mkUniqueUser cfg.user;
+    mainUser = mkUniqueUser cfg.user;
+    owners = lib.singleton mainUser ++ map mkUniqueUser cfg.owners;
     mkStateFile = action: let
       filename = ".database-${action}-${cfg.name}";
     in "${config.stateDir}/${filename}";
@@ -35,11 +36,13 @@ let
         instance.after = [ "mysql.service" ];
         script = let
           createDb = pkgs.writeText "create-${cfg.name}.sql" ''
-            CREATE USER IF NOT EXISTS ${escapeSql dbuser}@'localhost'
-              IDENTIFIED WITH ${authMethod};
             CREATE DATABASE `${assertSqlIdent cfg.name}`;
-            GRANT ALL ON `${assertSqlIdent cfg.name}`.* TO
-              ${escapeSql dbuser}@'localhost';
+            ${lib.concatMapStrings (uname: ''
+              CREATE USER IF NOT EXISTS ${escapeSql uname}@'localhost'
+                IDENTIFIED WITH ${authMethod};
+              GRANT ALL ON `${assertSqlIdent cfg.name}`.* TO
+                ${escapeSql uname}@'localhost';
+            '') owners}
           '';
         in "${mysqlShell (mkUniqueUser "mysql") "mysql"} < ${createDb}";
         postStart = "touch ${lib.escapeShellArg (mkStateFile "create")}";

@@ -9,6 +9,17 @@ let
     buildInputs = (drv.buildInputs or []) ++ [ pkgs.systemd ];
   });
 
+  mkMapName = database: "db-owners-${builtins.hashString "sha256" database}";
+
+  # This maps additional owners to the user which is the main owner of the
+  # database.
+  pgIdent = pkgs.writeText "pg_ident.conf" (lib.concatMapStrings (cfg: ''
+    ${mkMapName cfg.name} "${mkUniqueUser cfg.user}" "${mkUniqueUser cfg.user}"
+    ${lib.concatMapStrings (owner: ''
+      ${mkMapName cfg.name} "${mkUniqueUser owner}" "${mkUniqueUser cfg.user}"
+    '') cfg.owners}
+  '') (lib.attrValues dbs));
+
   dbservices = lib.listToAttrs (lib.concatMap (cfg: let
     dbuser = mkUniqueUser cfg.user;
     mkStateFile = action: let
@@ -67,13 +78,16 @@ let
   inherit (package) psqlSchema;
 
   configuration = {
-    hba_file = pkgs.writeText "pg_hba.conf" ''
+    hba_file = pkgs.writeText "pg_hba.conf" (lib.concatMapStrings (cfg: ''
+      local "${cfg.name}" all peer map=${mkMapName cfg.name}
+    '') (lib.attrValues dbs) + ''
       local all all peer
-    '';
+    '');
     unix_socket_directories = config.runtimeDir;
     log_destination = "stderr";
     port = "5432";
     listen_addresses = "";
+    ident_file = pgIdent;
   };
 
 in {

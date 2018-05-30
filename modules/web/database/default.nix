@@ -69,6 +69,15 @@ let
       '';
     };
 
+    options.owners = mkOption {
+      type = types.listOf types.str;
+      default = [];
+      description = ''
+        Additional users which should be mapped as the owner of the database
+        specified in <option>user</option>.
+      '';
+    };
+
     options.postCreate = mkOption {
       type = types.lines;
       default = "";
