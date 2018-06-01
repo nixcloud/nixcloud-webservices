@@ -73,6 +73,8 @@ You basically have 4 options:
 
 Using this method you have the same interface as if you wanted to add a webservice to nixcloud-webservices but you can define it from your configuration.nix and it is pretty similar to `services.httpd` and `services.nginx`, except you will still be using `nixcloud.reverse-proxy` to access them.
 
+A more complex example for static webpage generation with updates each 10 minutes, see [nixcloud.webservices-stateful-webservices-example.md](nixcloud.webservices-stateful-webservices-example.md).
+
 There is an `nixcloud.webservices.apache` and `nixcloud.webservices.nginx` example.
 
 ## Apache
