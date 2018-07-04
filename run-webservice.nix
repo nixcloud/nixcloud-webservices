@@ -64,6 +64,10 @@ let
       '';
     };
 
+    # Don't ever try to retrieve TLS certificates via ACME.
+    # FIXME: Disabling this should probably be an option instead.
+    nixcloud.TLS.certs = lib.mkForce {};
+
     # Don't run tests during build, because we quickly want to have a
     # development environment set up.
     nixcloud.tests.enable = false;
