@@ -44,6 +44,7 @@ let
     ];
 
     nixcloud.reverse-proxy.enable = true;
+    nixcloud.reverse-proxy.httpPort = httpPort;
 
     nixcloud.webservices.${wsName}.dev = {
       enable = true;
@@ -51,10 +52,11 @@ let
       proxyOptions.domain = "localhost";
       proxyOptions.http.mode = "on";
       proxyOptions.https.mode = "off";
-      proxyOptions.port = httpPort;
+      # Make sure we don't use the same port we use for the proxy server.
+      proxyOptions.port = if httpPort == 65000 then 65001 else 65000;
 
       # XXX: Work around the reverse-proxy module implementation.
-      proxyOptions.ip = "localhost";
+      proxyOptions.ip = "127.0.0.1";
       proxyOptions.http.flags = lib.mkForce ''
         proxy_set_header Host "localhost:${toString httpPort}";
         proxy_set_header X-Real-IP $remote_addr;
@@ -208,7 +210,7 @@ let
 
     virtualisation.qemu.networkingOptions = let
       devOpts = lib.concatStringsSep "," [
-        "hostfwd=tcp:127.0.0.1:${toString httpPort}-:80"
+        "hostfwd=tcp:127.0.0.1:${toString httpPort}-:${toString httpPort}"
         "hostfwd=tcp:127.0.0.1:3022-:22"
       ];
     in [
