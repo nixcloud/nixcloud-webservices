@@ -5,6 +5,7 @@
     apache            = services/apache;
     nginx             = services/nginx;
     filesender        = services/filesender;
+    hydra             = services/hydra;
     leaps             = services/leaps;
     mediawiki         = services/mediawiki;
     static-darkhttpd  = services/static-darkhttpd;
