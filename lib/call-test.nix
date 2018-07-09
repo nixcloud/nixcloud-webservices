@@ -95,6 +95,26 @@ let
 
   testArgsWithCommon = removeAttrs testArgs [ "machine" ] // {
     nodes = pkgs.lib.mapAttrs injectCommon nodes;
+    # This is so that we have a custom error message once one of our VM tests
+    # has failed.
+    testScript = let
+      mkPerlStr = val: "'${pkgs.lib.escape ["\\" "'"] val}'";
+    in ''
+      eval {
+        ${testArgs.testScript or ""}
+      };
+      if (my $error = $@) {
+        chomp $error;
+        print STDERR
+            "\x1b[1;31mThe nixcloud test '".${mkPerlStr testArgs.name}."' has"
+          . " failed with error '$error' but in case the machine was too slow"
+          . " (virtualized, not enough ram, too much cpu load, etc) then"
+          . " you can also disable the tests by adding 'nixcloud.tests.enable"
+          . " = false;' to your /etc/nixos/configuration.nix and still use"
+          . " our software.\x1b[m\n";
+        exit(1);
+      }
+    '';
   };
 
 in if (testArgs.type or "vm") == "unit" then unitTest else vmTest
