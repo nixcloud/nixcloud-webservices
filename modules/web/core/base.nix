@@ -152,7 +152,7 @@ in {
       # Real type checking is done from the top-level option.
       type = lib.types.unspecified;
       inherit (toplevel.options.systemd.${what}) description;
-    }) [ "automounts" "mounts" ];
+    }) [ "automounts" "mounts" "packages" ];
 
     tests.wanted = toplevel.options.nixcloud.tests.wanted;
 
@@ -259,7 +259,7 @@ in {
           }) config.systemd.${name};
           attrOpts = lib.genAttrs (lib.attrNames systemdUnitOptions) generator;
         in attrOpts // {
-          inherit (config.systemd) mounts automounts;
+          inherit (config.systemd) mounts automounts packages;
         };
       };
     })
