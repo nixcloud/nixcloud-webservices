@@ -72,6 +72,8 @@ in {
       foo.proxyOptions.https.mode = "off";
       foo.proxyOptions.port = 8080;
     };
+    # Set a time zone, because otherwise Hydra will flood us with warnings.
+    time.timeZone = "UTC";
     virtualisation.memorySize = 1024;
     environment.systemPackages = let
       runner = pkgs.python3Packages.buildPythonApplication {
