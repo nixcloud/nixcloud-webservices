@@ -55,7 +55,7 @@ let
 
   hydraEnv = {
     # XXX: Remove this!
-    HYDRA_NIX_STORE_ROOT = "unix://${config.runtimeDir}/nix-daemon.socket";
+    HYDRA_NIX_STORE_ROOT = "daemon";
 
     HYDRA_DBI = "dbi:Pg:dbname=hydra;user=${mkUniqueUser "hydra"};"
               + "host=${config.database.hydra.socketPath}";
@@ -86,6 +86,9 @@ let
     HYDRA_DATA = config.stateDir;
     IN_SYSTEMD = "1"; # To get log severity levels for the journal
   } // lib.optionalAttrs config.useSeparateStore {
+    # XXX: Remove this!
+    HYDRA_NIX_STORE_ROOT = "unix://${config.runtimeDir}/nix-daemon.socket";
+
     NIX_REMOTE = "unix://${config.runtimeDir}/nix-daemon.socket";
     NIX_STATE_DIR = "${config.stateDir}/root/nix/var/nix";
   };
