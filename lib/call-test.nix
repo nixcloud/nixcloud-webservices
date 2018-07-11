@@ -97,11 +97,14 @@ let
     nodes = pkgs.lib.mapAttrs injectCommon nodes;
     # This is so that we have a custom error message once one of our VM tests
     # has failed.
-    testScript = let
+    testScript = args: let
+      inherit (testArgs) testScript;
       mkPerlStr = val: "'${pkgs.lib.escape ["\\" "'"] val}'";
+      isTestScriptFun = builtins.isFunction testScript;
+      realScript = if isTestScriptFun then testScript args else testScript;
     in ''
       eval {
-        ${testArgs.testScript or ""}
+        ${realScript}
       };
       if (my $error = $@) {
         chomp $error;
