@@ -61,8 +61,6 @@ in {
   name = "hydra";
 
   machine = { pkgs, lib, ... }: {
-    # We don't want to wait for the timeout on https://cache.nixos.org/.
-    nix.binaryCaches = lib.mkForce [];
     nixcloud.reverse-proxy.enable = true;
     nixcloud.reverse-proxy.extendEtcHosts = true;
     nixcloud.webservices.hydra = {

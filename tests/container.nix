@@ -89,7 +89,6 @@ in {
     in
   {
     nix.nixPath = [ "nixpkgs=${pkgs.path}" ];
-    nix.binaryCaches = lib.mkForce [];
     nixcloud.container.enable = true;
     networking.firewall.enable = false;
 

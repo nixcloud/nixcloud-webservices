@@ -112,7 +112,6 @@ in
 
   machine = { pkgs, lib, ... }: {
     nix.nixPath = [ "nixpkgs=${nixpkgs}" "nixos-config=/etc/nixos/configuration.nix" ];
-    nix.binaryCaches = lib.mkForce [];
 
     nixcloud.TLS.certs = lib.mkForce {
       "stupid.io".mode = "selfsigned";

@@ -90,6 +90,8 @@ let
   injectCommon = name: conf: {
     imports = [ ../modules ../tests/common/eatmydata.nix conf ];
     services.mingetty.autologinUser = "root";
+    # We don't want to wait for the timeout on https://cache.nixos.org/.
+    nix.binaryCaches = lib.mkOverride 90 [];
     nixcloud.tests.enable = false;
     # Do not ever send out requests to letsencrypt.org.
     nixcloud.TLS.certs = lib.mkOverride 90 {};
