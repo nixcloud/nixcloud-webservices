@@ -1,7 +1,6 @@
 {
   name = "mediawiki";
 
-  machine.imports = [ ../../../../tests/common/eatmydata.nix ];
   machine.nixcloud.reverse-proxy.enable = true;
   machine.nixcloud.reverse-proxy.extendEtcHosts = true;
   machine.nixcloud.webservices.mediawiki = {

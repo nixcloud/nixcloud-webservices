@@ -61,7 +61,6 @@ in {
   name = "hydra";
 
   machine = { pkgs, lib, ... }: {
-    imports = [ ../../../../tests/common/eatmydata.nix ];
     # We don't want to wait for the timeout on https://cache.nixos.org/.
     nix.binaryCaches = lib.mkForce [];
     nixcloud.reverse-proxy.enable = true;

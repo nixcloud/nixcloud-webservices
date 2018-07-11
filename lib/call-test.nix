@@ -88,18 +88,20 @@ let
   } else {});
 
   injectCommon = name: conf: {
-    imports = [ ../modules conf ];
+    imports = [ ../modules ../tests/common/eatmydata.nix conf ];
     services.mingetty.autologinUser = "root";
     nixcloud.tests.enable = false;
+    # Do not ever send out requests to letsencrypt.org.
+    nixcloud.TLS.certs = lib.mkOverride 90 {};
   };
 
   testArgsWithCommon = removeAttrs testArgs [ "machine" ] // {
-    nodes = pkgs.lib.mapAttrs injectCommon nodes;
+    nodes = lib.mapAttrs injectCommon nodes;
     # This is so that we have a custom error message once one of our VM tests
     # has failed.
     testScript = args: let
       inherit (testArgs) testScript;
-      mkPerlStr = val: "'${pkgs.lib.escape ["\\" "'"] val}'";
+      mkPerlStr = val: "'${lib.escape ["\\" "'"] val}'";
       isTestScriptFun = builtins.isFunction testScript;
       realScript = if isTestScriptFun then testScript args else testScript;
     in ''

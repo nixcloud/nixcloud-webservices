@@ -2,7 +2,6 @@
   name = "dbshell";
 
   machine = { pkgs, ... }: {
-    imports = [ common/eatmydata.nix ];
     environment.systemPackages = [ pkgs.mariadb ];
     nixcloud.reverse-proxy.enable = true;
     nixcloud.reverse-proxy.extendEtcHosts = true;
