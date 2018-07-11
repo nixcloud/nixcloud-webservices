@@ -197,9 +197,28 @@ in {
               ${lib.escapeShellArg config.initialAdminUser} \
               --password-hash ${lib.escapeShellArg hashedPw} \
               --role admin
+
             touch ${lib.escapeShellArg config.stateDir}/.init-done
           fi
         '';
+      };
+
+      systemd.services.hydra-init-gcroots = {
+        description = "Hydra GC Roots Directory Creation";
+        instance.requiredBy = [ "hydra-init.service" ];
+        instance.before = [ "hydra-init.service" ];
+
+        serviceConfig.Type = "oneshot";
+        script = let
+          escRoots = lib.escapeShellArg gcRootsDir;
+          userGroup = "${mkUniqueUser "hydra"}:${mkUniqueGroup "hydra"}";
+        in ''
+          mkdir -p ${escRoots}
+          chown ${lib.escapeShellArg userGroup} ${escRoots}
+          chmod 2775 ${escRoots}
+        '';
+
+        unitConfig.ConditionPathExists = "!${gcRootsDir}";
       };
 
       systemd.services.hydra-server = {
@@ -393,18 +412,10 @@ in {
         description = "Initialise Nix Store For Hydra";
         instance.requiredBy = [ "hydra-init.service" ];
         instance.before = [ "hydra-init.service" ];
+        instance.after = [ "hydra-init-gcroots.service" ];
 
         serviceConfig.Type = "oneshot";
-
-        script = let
-          userGroup = "${mkUniqueUser "hydra"}:${mkUniqueGroup "hydra"}";
-          escRoots = lib.escapeShellArg gcRootsDir;
-        in ''
-          ${nix}/bin/nix-store --init
-          mkdir -p ${escRoots}
-          chown ${lib.escapeShellArg userGroup} ${escRoots}
-          chmod 2775 ${escRoots}
-        '';
+        serviceConfig.ExecStart = "${nix}/bin/nix-store --init";
 
         environment.NIX_REMOTE = "${config.stateDir}/root";
 
