@@ -100,7 +100,7 @@ in {
       # xorg.lndir is needed for systemd since 17dd7bcd89d568596f52356624be82201ea84779
       # there might be a better way to add this if this part would also be
       # build with the same pkgs the container in the test are using.
-      in [ pkgs.stdenv pkgs.xorg.lndir ] ++ containerPreBuild;
+      in [ pkgs.stdenv pkgs.stdenvNoCC pkgs.xorg.lndir ] ++ containerPreBuild;
   };
 
   testScript = ''
