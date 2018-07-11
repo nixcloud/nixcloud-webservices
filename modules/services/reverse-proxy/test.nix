@@ -114,13 +114,15 @@ in
     nix.nixPath = [ "nixpkgs=${nixpkgs}" "nixos-config=/etc/nixos/configuration.nix" ];
     nix.binaryCaches = lib.mkForce [];
 
-    nixcloud.TLS.certs."stupid.io".mode = "selfsigned";
-    nixcloud.TLS.certs."exclusive.ws1".mode = "selfsigned";
-    nixcloud.TLS.certs."exclusive.ws2".mode = "selfsigned";
-    nixcloud.TLS.certs."flags.io".mode = "selfsigned";
-    nixcloud.TLS.certs."example.com".mode = "selfsigned";
-    nixcloud.TLS.certs."example.ws".mode = "selfsigned";
-    nixcloud.TLS.certs."flubb.com".mode = "selfsigned";
+    nixcloud.TLS.certs = lib.mkForce {
+      "stupid.io".mode = "selfsigned";
+      "exclusive.ws1".mode = "selfsigned";
+      "exclusive.ws2".mode = "selfsigned";
+      "flags.io".mode = "selfsigned";
+      "example.com".mode = "selfsigned";
+      "example.ws".mode = "selfsigned";
+      "flubb.com".mode = "selfsigned";
+    };
 
     nixcloud.reverse-proxy = {
       enable = true;
