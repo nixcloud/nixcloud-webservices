@@ -2,7 +2,8 @@
 
 let
   perWS = lib.const (cfg: let
-    dbs = lib.mapAttrsToList (lib.const (db: db.type)) cfg.database;
+    enabledDbs = lib.optionalAttrs cfg.enable cfg.database;
+    dbs = lib.mapAttrsToList (lib.const (db: db.type)) enabledDbs;
     value.environment.LD_PRELOAD = "${pkgs.libeatmydata}/lib/libeatmydata.so";
   in lib.optional (lib.elem "mysql" dbs) {
     name = "${cfg.uniqueName}-mysql";
