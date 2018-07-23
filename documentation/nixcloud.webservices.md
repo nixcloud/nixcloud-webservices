@@ -137,8 +137,8 @@ Using `darkhttpd` backend:
       root = /www;
       proxyOptions = {
         port = 3032;
-        http.mode = "on";
-        https.mode = "off";
+        http.mode = "redirect_to_https";
+        https.mode = "on";
         domain = "example.com";
       };
     };
@@ -157,8 +157,8 @@ Using `nginx` backend:
       root = /www;
       proxyOptions = {
         port = 3032;
-        http.mode = "on";
-        https.mode = "off";
+        http.mode = "redirect_to_https";
+        https.mode = "on";
         domain = "example.com";
       };
     };
