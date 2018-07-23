@@ -46,6 +46,9 @@ with lib;
   };
 
   config = let
+    path = builtins.toPath "/${config.proxyOptions.domain}/${config.proxyOptions.path}";
+    siteUrl = "${if (config.proxyOptions.https.mode == "on") then "https" else "http"}:/${path}";
+
     fileSenderRoot = pkgs.stdenv.mkDerivation rec {
       name= "filesender-1.6.1";
       src = pkgs.fetchurl {
@@ -205,8 +208,8 @@ with lib;
         // site URL settings
         if ( isset($_SERVER['SERVER_NAME']) ) {
         $prot =  isset($_SERVER['HTTPS']) ? 'https://' : 'http://';
-        $config['site_url'] = $prot . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] . '${config.proxyOptions.path}/'; // URL to Filesender
-        $config['site_simplesamlurl'] =  $prot . $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] . '${config.proxyOptions.path}' . '/simplesaml/';
+        $config['site_url'] = "${siteUrl}/";
+        $config['site_simplesamlurl'] = "${siteUrl}/simplesaml/";
         $config['site_authenticationSource'] ="default-sp";
         $config['site_logouturl'] = $config['site_url'] . '?s=logout';
         }
@@ -543,7 +546,8 @@ with lib;
       * external url, no matter where you come from (direct access or via the
       * reverse proxy).
       */
-      'baseurlpath' => '${config.proxyOptions.path}/simplesaml/',
+      'baseurlpath' => '${siteUrl}/simplesaml/',
+
       'certdir' => 'cert/',
       'loggingdir' => 'log/',
       'datadir' => 'data/',
@@ -1368,12 +1372,12 @@ with lib;
       * Example:
       *   'trusted.url.domains' => array('sp.example.com', 'app.example.com'),
       */
-      'trusted.url.domains' => array('localhost','localhost:39999', '127.0.0.1'),
+      'trusted.url.domains' => array('localhost', '127.0.0.1'),
 
       );
 
     ''; #'
-    documentRoot = fileSenderRoot + "/www";
+    documentRoot = fileSenderRoot + "/www/";
   in rec {
     webserver.variant = "apache";
 
@@ -1392,7 +1396,7 @@ with lib;
 
       <Directory ${SimpleSAMLphp}/www>
           ${apache.allGranted}
-          Options FollowSymLinks 
+          Options FollowSymLinks
           DirectoryIndex index.php
       </Directory>
     ''; 
