@@ -143,6 +143,8 @@ Using `darkhttpd` backend:
       };
     };
 
+Note: See defaults for **proxyOptions.http.mode** and **proxyOptions.https.mode** at https://hydra.nixcloud.io/job/nixcloud-webservices/release-18.03/manual/latest/download/1#opt-nixcloud.webservices.apache._name_.proxyOptions.http.mode
+
 Note: If `root` is not set it falls back to serve `/var/lib/nixcloud/webservices/static-darkhttpd-example1/`. 
 This has the advantage that you don't have to manually alter directory/file permissions so that the webserver has access to it. Default user/group will be `static-darkhttpd-example1-webserver`.
     
@@ -160,6 +162,8 @@ Using `nginx` backend:
         domain = "example.com";
       };
     };
+
+Note: See defaults for **proxyOptions.http.mode** and **proxyOptions.https.mode** at https://hydra.nixcloud.io/job/nixcloud-webservices/release-18.03/manual/latest/download/1#opt-nixcloud.webservices.apache._name_.proxyOptions.http.mode
     
 Note: If `root` is not set it falls back to serve `/var/lib/nixcloud/webservices/static-nginx-example2/`. 
 This has the advantage that you don't have to manually alter directory/file permissions so that the webserver has access to it. Default user/group will be `static-nginx-example2-webserver`.
