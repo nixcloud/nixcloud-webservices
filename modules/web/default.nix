@@ -10,6 +10,7 @@
     mediawiki         = services/mediawiki;
     static-darkhttpd  = services/static-darkhttpd;
     static-nginx      = services/static-nginx;
+    mattermost        = services/mattermost;
   };
 
   config = let
