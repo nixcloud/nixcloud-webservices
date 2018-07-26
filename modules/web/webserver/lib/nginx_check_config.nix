@@ -60,7 +60,7 @@ in rec {
       
       if [ "$status" != "0" ]; then
         echo "=========== nginx syntax check fail ==========="
-        echo -e $t
+        echo -e "$t"
         echo "   -> $out/${fileName}"
         echo "=========== /nginx syntax check fail ==========="
         echo "You need to fix your nginx configuration!!1!"

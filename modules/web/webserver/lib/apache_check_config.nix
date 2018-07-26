@@ -48,7 +48,7 @@ in rec {
       
       if [ "$status" != "0" ]; then
         echo "=========== apache syntax check fail ==========="
-        echo -e $t
+        echo -e "$t"
         echo "   -> $out/${fileName}_ <- file for testing"  
         echo "   -> $out/${fileName}"
         echo "=========== /apache syntax check fail ==========="
