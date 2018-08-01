@@ -18,6 +18,7 @@ in {
   reverse-proxy = callTest ../modules/services/reverse-proxy/test.nix;
   email = callTest ../modules/services/email/test;
   webservices.mediawiki = callTest ../modules/web/services/mediawiki/test.nix;
+  webservices.mattermost = callTest ../modules/web/services/mattermost/test.nix;
   webservices.hydra = callTest ../modules/web/services/hydra/test.nix;
   webservices.leaps = callTest ../modules/web/services/leaps/test.nix;
   webservices.static-darkhttpd = callTest

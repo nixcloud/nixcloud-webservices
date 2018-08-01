@@ -203,6 +203,6 @@ with lib;
           };
         };
 
-        #tests.wanted = [ ./test.nix ];
+        tests.wanted = [ ./test.nix ];
       };
 }
