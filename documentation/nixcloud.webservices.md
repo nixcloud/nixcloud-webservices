@@ -322,6 +322,8 @@ In a nutshell you can run a test explicitly like this:
 
     cd nixcloud-webservices/tests
     nix-build -A custom-webservice
+      (or)
+    nix-build -A webservices.mediawiki
 
 To make testing easier we made them part of the evaluation: 
      
