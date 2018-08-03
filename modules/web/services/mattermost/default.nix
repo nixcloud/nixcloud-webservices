@@ -157,7 +157,7 @@ with lib;
       };
 
     in 
-      lib.mkIf config.enable {
+      lib.mkIf config.enable (assert (config.proxyOptions.path != "/") || abort "Mattermost has no support for subdirectories yet, see https://mattermost.uservoice.com/forums/306457-general/suggestions/12468372-install-mattermost-in-a-subdirectory"; {
 
         # inject the leaps websocket
         proxyOptions.websockets = {
@@ -204,5 +204,5 @@ with lib;
         };
 
         tests.wanted = [ ./test.nix ];
-      };
+      });
 }
