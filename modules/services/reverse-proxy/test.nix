@@ -215,6 +215,13 @@ in
 
   testScript = ''
     $machine->waitForUnit('multi-user.target');
+    $machine->waitForOpenPort(80);
+    $machine->waitForOpenPort(443);
+    # 8383 is actually not a webserve, we only use it to generate a reverse-proxy mapping to test the reverse-proxy
+    #$machine->waitForOpenPort(8383);
+    # 8484 is actually not a webserve, we only use it to generate a reverse-proxy mapping to test the reverse-proxy
+    #$machine->waitForOpenPort(8484);
+    $machine->waitForOpenPort(60000);
     
     # make sure both are answered by apache
     $machine->succeed('curl http://example.com/wiki | grep "<span>Apache" >&2');
@@ -250,6 +257,7 @@ in
     # test websockets
     $machine->succeed('curl http://example.ws/myapp/ws >&2');
     $machine->succeed('${ws-go-server}/bin/ws-go-server & >&2');
-    $machine->succeed('sleep 1; ${ws-go-client}/bin/ws-go-client >&2');
+    $machine->waitForOpenPort(8080);
+    $machine->succeed('${ws-go-client}/bin/ws-go-client >&2');
   '';
 }
