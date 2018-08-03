@@ -20,7 +20,7 @@ with lib;
     };
     dbName = mkOption {
       default = "filesender";
-      description = "Name of the database that holds the MediaWiki data.";
+      description = "Name of the database that holds the FileSender data.";
     };
     dbServer = mkOption {
       default = "localhost"; # "" for using a Unix domain socket
