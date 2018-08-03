@@ -26,6 +26,8 @@
   in ''
     $machine->waitForUnit('multi-user.target');
     $machine->waitForOpenPort(80);
+    $machine->waitForOpenPort(8080);
+    $machine->waitForOpenPort(8081);
     $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');
     $machine->succeed('curl -L http://example.org/ | grep -qF "${searchFor}"');
   '';
