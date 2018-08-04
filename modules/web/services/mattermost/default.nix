@@ -181,7 +181,7 @@ with lib;
         };
 
         systemd.services.mattermost = 
-          assert (config.proxyOptions.path != "/") || abort "Mattermost has no support for subdirectories yet, see https://mattermost.uservoice.com/forums/306457-general/suggestions/12468372-install-mattermost-in-a-subdirectory"; 
+          assert (config.proxyOptions.path != "/") || abort "Mattermost has no support for subdirectories yet, see 'https://mattermost.uservoice.com/forums/306457-general/suggestions/12468372-install-mattermost-in-a-subdirectory'. The path was ${config.proxyOptions.path}"; 
             {
               description = "${config.uniqueName} main service (mattermost)";
 
