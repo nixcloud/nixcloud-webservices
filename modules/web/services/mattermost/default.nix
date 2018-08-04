@@ -157,7 +157,7 @@ with lib;
       };
 
     in 
-      lib.mkIf config.enable (assert (config.proxyOptions.path != "/") || abort "Mattermost has no support for subdirectories yet, see https://mattermost.uservoice.com/forums/306457-general/suggestions/12468372-install-mattermost-in-a-subdirectory"; {
+      lib.mkIf config.enable ({
 
         # inject the leaps websocket
         proxyOptions.websockets = {
@@ -180,28 +180,30 @@ with lib;
           type = "postgresql";
         };
 
-        systemd.services.mattermost = {
-         description = "${config.uniqueName} main service (mattermost)";
+        systemd.services.mattermost = 
+          assert (config.proxyOptions.path != "/") || abort "Mattermost has no support for subdirectories yet, see https://mattermost.uservoice.com/forums/306457-general/suggestions/12468372-install-mattermost-in-a-subdirectory"; 
+            {
+              description = "${config.uniqueName} main service (mattermost)";
 
-          wantedBy      = [ "multi-user.target" ];
-          after         = [ "network.target" ];
+              wantedBy      = [ "multi-user.target" ];
+              after         = [ "network.target" ];
 
-          preStart = ''
-            mkdir -p ${config.stateDir}/www/{data,config,logs}
-            ln -sf ${pkgs.mattermost}/{bin,fonts,i18n,templates,client} ${config.stateDir}/www
-            ln -sf ${checkAndFormatMattermostConfigfile mattermostConfJSON}/mattermost-config-raw.json ${config.stateDir}/www/config/config.json
-          '';
+              preStart = ''
+                mkdir -p ${config.stateDir}/www/{data,config,logs}
+                ln -sf ${pkgs.mattermost}/{bin,fonts,i18n,templates,client} ${config.stateDir}/www
+                ln -sf ${checkAndFormatMattermostConfigfile mattermostConfJSON}/mattermost-config-raw.json ${config.stateDir}/www/config/config.json
+              '';
 
-          serviceConfig = {
-            User = "mattermost";
-            Group = "mattermost";
-            Restart = "on-failure";
-            WorkingDirectory = "${config.stateDir}/www";
-            PrivateTmp = true;
-            ExecStart = "${pkgs.mattermost}/bin/mattermost-platform";
-            LimitNOFILE = "49152";
-          };
-        };
+              serviceConfig = {
+                User = "mattermost";
+                Group = "mattermost";
+                Restart = "on-failure";
+                WorkingDirectory = "${config.stateDir}/www";
+                PrivateTmp = true;
+                ExecStart = "${pkgs.mattermost}/bin/mattermost-platform";
+                LimitNOFILE = "49152";
+              };
+            };
 
         tests.wanted = [ ./test.nix ];
       });
