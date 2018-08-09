@@ -77,6 +77,7 @@ with lib;
           events {}
 
           http {
+            include ${pkgs.nginx}/conf/mime.types;
             server {
               #listen unix:/var/run/nginx.sock;
               listen ${toString config.proxyOptions.port};
