@@ -72,7 +72,7 @@ let
       eventsUrl =             "${wsScheme}://${config.urls.events}";
       debug =                 config.enableDebug;
       publicRegisterEnabled = config.enablePublicRegistration;
-      feedbackEnabled1 =       config.enableFeedback;
+      feedbackEnabled =       config.enableFeedback;
     }
     config.extraFrontConfig
   ];
@@ -96,7 +96,7 @@ in
   options = {
     enableDebug = mkOption {
       type = types.bool;
-      default = false;
+      default = true;
       description = "Enable debugging.";
     };
 
@@ -297,7 +297,7 @@ in
         WorkingDirectory = "${config.stateDir}/www";
         PrivateTmp = false;
         ExecStart = 
-        #if config.enableWsgi == false then ''
+        #if config.enableWsgi then ''
 	#  ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
         #    --name gunicorn-taiga \
         #    --log-level ${if config.enableDebug then "debug" else "info"} \
@@ -372,6 +372,7 @@ in
     charset utf-8;
 
     root ${taiga-front}/dist;
+
     try_files $uri $uri/ /index.html;
 
     # FIXME: hardcoded port
@@ -394,22 +395,6 @@ in
       proxyPass "http://127.0.0.1:8000$request_uri";
     }
   '';
-
-  #nixcloud.reverse-proxy.extraMappings = let
-  #  djangoAdmin = if (config.enableDjangoAdmin) then [ 
-  #    {
-  #      domain = config.proxyOptions.domain;
-  #      path = config.proxyOptions.path + "/admin";
-  #      port = 3456;
-  #    } ] else [];
-  #in [ 
-  #  {
-  #    domain = config.proxyOptions.domain;
-  #    path = config.proxyOptions.path + "/api";
-  #    port = 8000;
-  #    # proxyPass = "http://127.0.0.1:8000$request_uri";
-  #  }
-  #] ++ djangoAdmin;
 
 #    tests.wanted = [ ./test.nix ];
   };

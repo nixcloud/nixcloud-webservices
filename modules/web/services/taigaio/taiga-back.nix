@@ -406,14 +406,15 @@ let
 in
 python3Packages.buildPythonApplication rec {
   pname = "taiga-back";
-  version = "3.3.14";
+  version = "3.3.13";
+  #version = "3.3.14";
   name = "${pname}-${version}";
 
   src = fetchFromGitHub {
     owner = "taigaio";
     repo = "taiga-back";
     rev = "${version}";
-    sha256 = "1csampq2g84za3fxnlfr9sffq304mz5mj9000dyk4y0720w9v1d1";
+    sha256 = "1cy5ak7mw9ia9b0d1lil0s6ck87kinrmicsw61m6vpkal1slnnf7";
   };
 
   propagatedBuildInputs = with python3Packages; with myPythonPackages; [
