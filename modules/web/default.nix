@@ -7,6 +7,7 @@
     filesender        = services/filesender;
     hydra             = services/hydra;
     leaps             = services/leaps;
+    taigaio           = services/taigaio;
     mediawiki         = services/mediawiki;
     static-darkhttpd  = services/static-darkhttpd;
     static-nginx      = services/static-nginx;
