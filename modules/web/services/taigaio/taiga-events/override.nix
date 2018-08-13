@@ -3,9 +3,9 @@
 }, system ? builtins.currentSystem}:
 
 let
-  nodePackages = pkgs.lib.traceVal (import ./default.nix {
+  nodePackages = import ./default.nix {
     inherit pkgs system;
-  });
+  };
 in
 nodePackages // {
   TaigaIO-Events = nodePackages.package.override {

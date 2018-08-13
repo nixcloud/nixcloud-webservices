@@ -214,7 +214,6 @@ in
       mkdir temp 
     '';
 
-    #database.taigaio.user = lib.traceVal config.webserver.user;
     database.taigaio.postCreate = let
       inherit (config.database.taigaio) type;
       python = pkgs.python3;
@@ -227,10 +226,9 @@ in
 	      ];
       };
 
-    # FIXME: (15:33) <betaboon> i guess you should define "python = pkgs.python3" somewhere. and then use ${taiga-back}/lib/${python.libPrefix}/site-packages/... instead
     in if type == "postgresql" then ''
       export PYTHONPATH="${taigaBackConfigPkg}:${penv}/${python.sitePackages}/"
-      cd ${taiga-back}/lib/python3.6/site-packages/ # FIXME: check if this is really needed
+      cd ${taiga-back}/${python.sitePackages}
       ${taiga-back}/bin/manage.py migrate --noinput
       ${taiga-back}/bin/manage.py loaddata initial_user
       ${taiga-back}/bin/manage.py loaddata initial_project_templates
@@ -244,8 +242,13 @@ in
       createHome  = true;
       group       = "taigaio";
     };
-
     groups.taigaio = {};
+
+    users.taigaio-events = {
+      description = "taigaio-events server user";
+      group       = "taigaio-events";
+    };
+    groups.taigaio-events = {};
 
     systemd.services.taiga-back = rec {
      description = "${config.uniqueName} main service (taigaio)";
@@ -277,8 +280,8 @@ in
 #4       /nix/store/d9i1q6xv61dv93hsv8bklkvn5nl2g7sc-taiga-back-3.3.13/lib/python3.6/site-packages/taiga/__pycache__/wsgi.cpython-36.pyc
 
       serviceConfig = {
-        User = "taigaio-t1";  # FIXME hardcoded
-        Group = "taigaio-t1"; # FIXME hardcoded
+        User = mkUniqueUser "taigaio";
+        Group = mkUniqueGroup "taigaio";
         WorkingDirectory = "${taiga-back}/lib/python3.6/site-packages/taiga";
         #WorkingDirectory = "${config.stateDir}/www";
         PrivateTmp = false;
@@ -287,21 +290,20 @@ in
 	  #${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
     #           ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga:application \
 
+	          #--pythonpath=${environment.PYTHONPATH} \
 	      #    --pythonpath=${taiga-back}/lib/python3.6/site-packages/taiga \
         ExecStart = 
          if config.enableWsgi then ''
 	        ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
             -k gevent \
-            -u taigaio-t1 \
-            -g taigaio-t1 \
-	          --pythonpath=${lib.traceVal environment.PYTHONPATH} \
+            -u ${mkUniqueUser "taigaio"} \
+            -g ${mkUniqueGroup "taigaio"} \
             --name gunicorn-taiga \
             --log-level ${if config.enableDebug then "debug" else "info"} \
             --workers ${toString config.wsgiWorkers} \
             --pid ${config.stateDir}/www/gunicorn-taiga.pid \
             --bind 127.0.0.1:8000
         '' else 
-        # FIXME: check if that works
         ''
           ${taiga-back}/bin/manage.py runserver --nostatic "127.0.0.1:8000"
         '';
@@ -328,8 +330,9 @@ in
       after = [ "network-online.target" ];
 
       serviceConfig = {
-        User  = "taigaio-t1";
-        Group = "taigaio-t1";
+        User = mkUniqueUser "taigaio-events";
+        Group = mkUniqueGroup "taigaio-events";
+        
         WorkingDirectory = "${config.stateDir}/www";
         ExecStart = ''
           ${pkgs.nodePackages.coffee-script}/lib/node_modules/coffee-script/bin/coffee \
@@ -361,20 +364,7 @@ in
 
   proxyOptions.websockets = {
     ws = {
-      https.record = ''
-        location /events {
-          set $targetIP 127.0.0.1;
-          set $targetPort 8888;
-          # https websocket default flags
-          proxy_http_version 1.1;
-          proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection "upgrade";
-          proxy_set_header X-Forwarded-For $remote_addr;
-          proxy_read_timeout 36000s;
-          # required because of CORS
-          proxy_set_header Host $host;
-          proxy_pass http://$targetIP:$targetPort$request_uri;
-        }'';
+      port = 8888;
       subpath = "/events";
     };
   };
