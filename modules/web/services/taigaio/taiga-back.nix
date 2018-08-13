@@ -399,9 +399,6 @@ let
          license = lib.licenses.mit;
        };
      };
-
-
-      
    };
 in
 python3Packages.buildPythonApplication rec {
@@ -414,8 +411,13 @@ python3Packages.buildPythonApplication rec {
     owner = "taigaio";
     repo = "taiga-back";
     rev = "${version}";
+    #sha256 = "1csampq2g84za3fxnlfr9sffq304mz5mj9000dyk4y0720w9v1d1";
     sha256 = "1cy5ak7mw9ia9b0d1lil0s6ck87kinrmicsw61m6vpkal1slnnf7";
   };
+  
+  buildInputs = with python3Packages; with myPythonPackages; [
+    celery
+  ];
 
   propagatedBuildInputs = with python3Packages; with myPythonPackages; [
     pkgs.gettext
