@@ -25,6 +25,14 @@ let
 
   locationWebSocketModule = { config, lib, options, toplevel }: {
     options = {
+      port = mkOption {
+        type = types.int;
+        example = 8080;
+        default = toplevel.config.port;
+        description = ''
+          'inet' socket port number (default: inherited from proxyOptions.port) used when creating a nginx location.
+        '';
+      };
       subpath = mkOption {
         type = types.str;
         apply = checkPath;
@@ -177,7 +185,7 @@ in
       type = types.int;
       example = 2345;
       description = ''
-        'inet' socket port number (default 80) used when creating a nginx location.
+        'inet' socket port number used when creating a nginx location.
       '';
     };
     TLS = mkOption {

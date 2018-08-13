@@ -193,6 +193,7 @@ in
         r = websocket.${mode}.record;
         m = websocket.${mode}.mode;
         f = websocket.${mode}.flags;
+        p = websocket.port;
         e = location.${mode}.extraFlags;
         ppp = removeSuffix "/" (toString (builtins.toPath (location.path + websocket.subpath)));
       in
@@ -201,7 +202,7 @@ in
             location ${ppp} {
             ${if r == "" then ''
               set $targetIP ${location.ip};
-              set $targetPort ${toString location.port};
+              set $targetPort ${toString p};
               ${f}
               ${e}
             '' else r
