@@ -11,11 +11,8 @@ with lib;
 
 let
   taiga-back = pkgs.callPackage ./taiga-back.nix {};
-  taiga-events = taiga-back;
   taiga-front = pkgs.callPackage ./taiga-front-dist.nix {};
-  #taiga-events = pkgs.nodePackages.TaigaIO-Events-undefined;
-
-  #useLocalDatabase = (config.database.host == "127.0.0.1"); 
+  taiga-events = (pkgs.callPackage ./taiga-events/override.nix {}).TaigaIO-Events;
 
   # BUG global variable port 5672, make this allocated dynamically
   amqpUrl = "amqp://${config.amqp.user}:${config.amqp.password}@localhost:5672/${config.amqp.vhost}";
@@ -90,7 +87,6 @@ let
 
   taigaEventsConfigFile = pkgs.writeText "taiga-events-config-raw.json" (builtins.toJSON taigaEventsConfig);
 
-
 in
 {
   options = {
@@ -120,48 +116,26 @@ in
 
     enableWebsockets = mkOption {
       type = types.bool;
-      default = false;
+      default = true;
       description = "Enable Websockets-Support.";
     };
 
     enableWsgi = mkOption {
       type = types.bool;
-      default = true;
+      default = false;
       description = "Enable WSGI-Support.";
     };
 
     wsgiWorkers = mkOption {
       type = types.int;
-      default = 3;
+      default = 1; # FIXME increase to 3 later
       description = "Number of WSGI workers.";
     };
 
-    # coming from nixcloud-webservice's stateDir
-    #statePath = mkOption {
-    #  type = types.str;
-    #  default = "/var/lib/taiga";
-    #  description = "Taiga working directory.";
-    #};
-
-    #user = mkOption {
-    #  type = types.str;
-    #  default = "taigauser";
-    #  description = "User which runs the Taiga service.";
-    #};
-
-    #group = mkOption {
-    #  type = types.str;
-    #  default = "taigagroup";
-    #  description = "Group which runs the Taiga service.";
-    #};
-
     # FIXME this whole url-set doesn't feel sane
+    # FIXME: (qknignht) most can be removed
     urls = {
-      #enableSSL = mkOption {
-      #  type = types.bool;
-      #  default = true;
-      #  description = "";
-      #};
+      # fixme: replace by proxyOptions.domain ...
       front = mkOption {
         type = types.string;
         default = "nix.lt";
@@ -169,7 +143,7 @@ in
       };
       api = mkOption {
         type = types.string;
-        default = "nix.lt/api/v1/";
+        default = "nix.lt/api/v1";
         description = "API URL";
       };
       events = mkOption {
@@ -199,9 +173,7 @@ in
 
     djangoSecret = mkOption {
       type = types.str;
-      # FIXME this shouldn't have a default-value
-      default = "theveryultratopsecretkey";
-      description = "Secret key for Django.";
+      description = "Secret key for Django which is actually a salt.";
     };
 
     amqp = {
@@ -225,7 +197,9 @@ in
   };
 
   meta = {
-    description = "A project management platform for agile developers & designers";
+    description = ''
+      A project management platform for agile developers & designers
+    '';
     homepage = "https://taiga.io";
     license = lib.licenses.agpl3;
     maintainers = with lib.maintainers; [ qknight ];
@@ -249,13 +223,14 @@ in
           taiga-back
           pkgs.python3Packages.gunicorn
           pkgs.python3Packages.gevent
-        ];
+          pkgs.python3Packages.psycopg2
+	      ];
       };
 
     # FIXME: (15:33) <betaboon> i guess you should define "python = pkgs.python3" somewhere. and then use ${taiga-back}/lib/${python.libPrefix}/site-packages/... instead
     in if type == "postgresql" then ''
       export PYTHONPATH="${taigaBackConfigPkg}:${penv}/${python.sitePackages}/"
-      cd ${taiga-back}/lib/python3.6/site-packages/
+      cd ${taiga-back}/lib/python3.6/site-packages/ # FIXME: check if this is really needed
       ${taiga-back}/bin/manage.py migrate --noinput
       ${taiga-back}/bin/manage.py loaddata initial_user
       ${taiga-back}/bin/manage.py loaddata initial_project_templates
@@ -285,30 +260,52 @@ in
             taiga-back
             pkgs.python3Packages.gunicorn
             pkgs.python3Packages.gevent
+            pkgs.python3Packages.celery
+            pkgs.python3Packages.django
           ];
         };
       in {
-        PYTHONPATH = "${taigaBackConfigPkg}:${penv}/${python.sitePackages}/";
+        #PYTHONPATH = "${penv}/${python.sitePackages}/:${taiga-back}/lib/python3.6/site-packages:${taigaBackConfigPkg}";
+        PYTHONPATH = "${taigaBackConfigPkg}:${penv}/${python.sitePackages}/:${taiga-back}/lib/python3.6/site-packages:${pkgs.python3Packages.django}:${pkgs.python3Packages.celery}/lib/python3.6/site-packages/";
+        DJANGO_SETTINGS_MODULE = "settings";
+	#PATH = "$PATH:${pkgs.python3}/bin";
+	#systemPackages = [ pkgs.python3 ];
       };
 
+#taiga-back-3.3.13/lib/python3.6/site-packages
+#4       /nix/store/d9i1q6xv61dv93hsv8bklkvn5nl2g7sc-taiga-back-3.3.13/lib/python3.6/site-packages/taiga/wsgi.py
+#4       /nix/store/d9i1q6xv61dv93hsv8bklkvn5nl2g7sc-taiga-back-3.3.13/lib/python3.6/site-packages/taiga/__pycache__/wsgi.cpython-36.pyc
+
       serviceConfig = {
-        User = "taigaio-t1";
-        Group = "taigaio-t1";
-        WorkingDirectory = "${config.stateDir}/www";
+        User = "taigaio-t1";  # FIXME hardcoded
+        Group = "taigaio-t1"; # FIXME hardcoded
+        WorkingDirectory = "${taiga-back}/lib/python3.6/site-packages/taiga";
+        #WorkingDirectory = "${config.stateDir}/www";
         PrivateTmp = false;
+        # FIXME: hardcoded taigaio-t1 user/group
+        # FIXME: port 8000 is hardcoded
+	  #${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
+    #           ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga:application \
+
+	      #    --pythonpath=${taiga-back}/lib/python3.6/site-packages/taiga \
         ExecStart = 
-        #if config.enableWsgi then ''
-	#  ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
-        #    --name gunicorn-taiga \
-        #    --log-level ${if config.enableDebug then "debug" else "info"} \
-        #    --workers ${toString config.wsgiWorkers} \
-        #    --pid ${config.stateDir}/www/gunicorn-taiga.pid \
-        #    --bind 127.0.0.1:8000
-        #'' else 
+         if config.enableWsgi then ''
+	        ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
+            -k gevent \
+            -u taigaio-t1 \
+            -g taigaio-t1 \
+	          --pythonpath=${lib.traceVal environment.PYTHONPATH} \
+            --name gunicorn-taiga \
+            --log-level ${if config.enableDebug then "debug" else "info"} \
+            --workers ${toString config.wsgiWorkers} \
+            --pid ${config.stateDir}/www/gunicorn-taiga.pid \
+            --bind 127.0.0.1:8000
+        '' else 
         # FIXME: check if that works
         ''
           ${taiga-back}/bin/manage.py runserver --nostatic "127.0.0.1:8000"
         '';
+# /nix/store/d9i1q6xv61dv93hsv8bklkvn5nl2g7sc-taiga-back-3.3.13/lib/python3.6/site-packages/
         Restart = "always";
         PermissionsStartOnly = true;
         PrivateDevices = true;
@@ -320,21 +317,21 @@ in
     #services.rabbitmq.enable = mkIf config.enableWebsockets true;
 
     systemd.services.taiga-events = mkIf config.enableWebsockets {
-      description = "Taiga Platform Server (Events)";
+      description = "${config.uniqueName} Taiga Platform Server (Events)";
 
       wantedBy = [ "multi-user.target" ];
+      #FIXME: correct taiga-back service name
       requires = [ "network-online.target" "rabbitmq.service" "taiga-back.service" ];
       after = [ "network-online.target" "rabbitmq.service" "taiga-back.service" ];
 
-      environment.NODE_PATH = "${taiga-events}/lib/node_modules/TaigaIO-Events/";
       serviceConfig = {
-        User = "taigaio";
-        Group = "taigaio";
+        User  = "taigaio-t1";
+        Group = "taigaio-t1";
         WorkingDirectory = "${config.stateDir}/www";
         ExecStart = ''
           ${pkgs.nodePackages.coffee-script}/lib/node_modules/coffee-script/bin/coffee \
           ${taiga-events}/lib/node_modules/TaigaIO-Events/index.coffee \
-          ${taigaEventsConfigFile}
+          --config ${taigaEventsConfigFile}
         '';
 
         Restart = "always";
@@ -344,18 +341,18 @@ in
         TimeoutSec = 180;
       };
 
-      preStart = ''
-        set -x
-        if ! [ -e ${config.stateDir}/.rabbitmq-init ]; then
-          ${pkgs.sudo}/bin/sudo -u rabbitmq ${pkgs.rabbitmq_server}/bin/rabbitmqctl \
-            add_user ${config.amqp.user} ${config.amqp.password}
-          ${pkgs.sudo}/bin/sudo -u rabbitmq ${pkgs.rabbitmq_server}/bin/rabbitmqctl \
-            add_vhost ${config.amqp.vhost}
-          ${pkgs.sudo}/bin/sudo -u rabbitmq ${pkgs.rabbitmq_server}/bin/rabbitmqctl \
-            set_permissions -p ${config.amqp.vhost} ${config.amqp.user} ".*" ".*" ".*"
-          touch ${config.stateDir}/.rabbitmq-init
-        fi
-      '';
+      #preStart = ''
+      #  set -x
+      #  if ! [ -e ${config.stateDir}/.rabbitmq-init ]; then
+      #    ${pkgs.sudo}/bin/sudo -u rabbitmq ${pkgs.rabbitmq_server}/bin/rabbitmqctl \
+      #      add_user ${config.amqp.user} ${config.amqp.password}
+      #    ${pkgs.sudo}/bin/sudo -u rabbitmq ${pkgs.rabbitmq_server}/bin/rabbitmqctl \
+      #      add_vhost ${config.amqp.vhost}
+      #    ${pkgs.sudo}/bin/sudo -u rabbitmq ${pkgs.rabbitmq_server}/bin/rabbitmqctl \
+      #      set_permissions -p ${config.amqp.vhost} ${config.amqp.user} ".*" ".*" ".*"
+      #    touch ${config.stateDir}/.rabbitmq-init
+      #  fi
+      #'';
     };
 
 
