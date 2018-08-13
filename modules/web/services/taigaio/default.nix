@@ -321,8 +321,11 @@ in
 
       wantedBy = [ "multi-user.target" ];
       #FIXME: correct taiga-back service name
-      requires = [ "network-online.target" "rabbitmq.service" "taiga-back.service" ];
-      after = [ "network-online.target" "rabbitmq.service" "taiga-back.service" ];
+      #requires = [ "network-online.target" "rabbitmq.service" "taiga-back.service" ];
+      #after = [ "network-online.target" "rabbitmq.service" "taiga-back.service" ];
+     
+      requires = [ "network-online.target" ];
+      after = [ "network-online.target" ];
 
       serviceConfig = {
         User  = "taigaio-t1";
@@ -358,6 +361,20 @@ in
 
   proxyOptions.websockets = {
     ws = {
+      https.record = ''
+        location /events {
+          set $targetIP 127.0.0.1;
+          set $targetPort 8888;
+          # https websocket default flags
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+          proxy_set_header X-Forwarded-For $remote_addr;
+          proxy_read_timeout 36000s;
+          # required because of CORS
+          proxy_set_header Host $host;
+          proxy_pass http://$targetIP:$targetPort$request_uri;
+        }'';
       subpath = "/events";
     };
   };
