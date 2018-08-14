@@ -157,7 +157,6 @@ in {
     # lib.mkOptionDefault.
     config = mattermostConfig;
 
-    # inject the leaps websocket
     proxyOptions.websockets = {
       ws = {
         subpath = "/api/v4/websocket";
