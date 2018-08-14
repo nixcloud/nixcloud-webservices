@@ -3,6 +3,13 @@
 let
   inherit (lib) mkOption types;
 
+  # The main binary for Mattermost has changed from (mattermost-)platform to
+  # just "mattermost".
+  is5orNewer = let
+    inherit (builtins.parseDrvName pkgs.mattermost.name) version;
+  in lib.versionAtLeast version "5.0";
+  mainBinary = if is5orNewer then "mattermost" else "platform";
+
   path = builtins.toPath "/${config.proxyOptions.domain}/${config.proxyOptions.path}";
   siteUrl = "${if (config.proxyOptions.https.mode == "on") then "https" else "http"}:/${path}";
 
@@ -41,17 +48,12 @@ let
     nativeBuildInputs = [ pkgs.mattermost pkgs.jq ];
     defaultConfig = "${pkgs.mattermost}/config/config.json";
     moduleConfig = builtins.toJSON config.config;
-    is5orNewer = let
-      inherit (builtins.parseDrvName pkgs.mattermost.name) version;
-    in lib.versionAtLeast version "5.0";
-    mainBinary = if is5orNewer then "mattermost" else"platform";
+    inherit mainBinary;
   } ''
     echo -n "$moduleConfig" | jq -s '.[0] * .[1]' "$defaultConfig" - > "$out"
 
     # Mattermost version 4.x segfaults if it can't find its prefix in $PWD.
-    if [ -z "$is5orNewer" ]; then
-      cd ${lib.escapeShellArg pkgs.mattermost}
-    fi
+    ${lib.optionalString is5orNewer "cd ${lib.escapeShellArg pkgs.mattermost}"}
 
     if output="$("$mainBinary" config validate -c "$out" 2>&1)"; then
       echo "=========== mattermost syntax check ============"
@@ -197,7 +199,7 @@ in {
             Restart = "on-failure";
             WorkingDirectory = "${config.stateDir}/www";
             PrivateTmp = true;
-            ExecStart = "${pkgs.mattermost}/bin/mattermost-platform";
+            ExecStart = "${pkgs.mattermost}/bin/${mainBinary}";
             LimitNOFILE = "49152";
           };
         };
