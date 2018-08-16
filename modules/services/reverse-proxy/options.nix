@@ -23,6 +23,36 @@ let
     '';
   };
 
+  subpath = mkOption {
+    type = types.str;
+    apply = checkPath;
+    description = ''
+      The 'subpath' is actually a subdirectory in the URL and the `path` variable from the proxyOption is prepended.
+      A subpath must start with a leading "/" and may not have white spaces or a trailing "/" in it.
+    '';
+  };
+
+  extraFlags = mkOption {
+    description = ''
+      Use `extraFlags` to add additional headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+    '';
+    default = "";
+    example = ''
+      add_header Strict-Transport-Security max-age=345678;
+    '';
+  };
+
+  record = mkOption {
+    description = ''
+      The 'location' can be used to override the default location record.
+      If this option is used the flags and extraflags options are ignored.
+      Ip and Port can be accessed in this record via '$targetIP' and '$targetPort'.
+    '';
+    default = "";
+  };
+
+  
+
   locationWebSocketModule = { config, lib, options, toplevel }: {
     options = {
       port = mkOption {
@@ -33,28 +63,16 @@ let
           'inet' socket port number (default: inherited from proxyOptions.port) used when creating a nginx location.
         '';
       };
-      subpath = mkOption {
-        type = types.str;
-        apply = checkPath;
-        description = ''
-          The 'subpath' is actually a subdirectory in the URL and the `path` variable from the proxyOption is prepended.
-          A subpath must start with a leading "/" and may not have white spaces or a trailing "/" in it.
-        '';
-      };
+      inherit subpath;
       http = {
         mode = mkOption {
           type = types.enum [ "redirect_to_https" "on" "off" ];
           example = "on";
           default = toplevel.config.http.mode;
           description = ''
-            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
+            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io.
+            Note: setting this to 'redirect_to_https' has the same effect as 'off'.
           '';
-        };
-        record = mkOption {
-          description = ''
-            The http.location can be used to override the default location record for http websocket (ws) usage when `http.mode = "on"` is set.
-          '';
-          default = "";
         };
         flags = mkOption {
           description = ''
@@ -74,16 +92,9 @@ let
             proxy_pass http://$targetIP:$targetPort$request_uri;
           '';
         };
-        extraFlags = mkOption {
-          description = ''
-            Use `http.extraFlags` with websockets to add additional headers to requests from the nixcloud.reverse-proxy to the internal webserver.
-          '';
-          default = "";
-          example = ''
-            add_header Strict-Transport-Security max-age=345678;
-          '';
-        };
+        inherit record;
         inherit basicAuth;
+        inherit extraFlags;
       };
       https = {
         mode = mkOption {
@@ -91,15 +102,10 @@ let
           example = "off";
           default = toplevel.config.https.mode;
           description = ''
-            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io
+            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io.
+            Note: setting this to 'redirect_to_http' has the same effect as 'off'.
           '';
         };
-        record = mkOption {
-          description = ''
-            The https.location can be used to override the default location record for https websocket (wss) usage when `https.mode = "on"` is set.
-          '';
-          default = "";
-        };     
         flags = mkOption {
           description = ''
             Use `https.flags` with websockets to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
@@ -118,16 +124,86 @@ let
             proxy_pass http://$targetIP:$targetPort$request_uri;
           '';
         };
-        extraFlags = mkOption {
+        inherit record;
+        inherit basicAuth;
+        inherit extraFlags;
+      };
+    };
+  };
+  extraLocationsModule = { config, lib, options, toplevel }: {
+    options = {
+      port = mkOption {
+        type = types.int;
+        example = 8080;
+        default = toplevel.config.port;
+        description = ''
+          'inet' socket port number (default: inherited from proxyOptions.port) used when creating a nginx location.
+        '';
+      };
+      ip = mkOption {
+        type = types.str;
+        example = "1.2.3.4";
+        default = toplevel.config.ip;
+        description = ''
+          The default is inherited from proxyOptions.ip but in case the ip for this extraLocations differs you can also point to a IP from a private network like "10.0.0.49".
+        '';
+      };
+      inherit subpath;
+      http = {
+        mode = mkOption {
+          type = types.enum [ "redirect_to_https" "on" "off" ];
+          example = "on";
+          default = toplevel.config.http.mode;
           description = ''
-            Use `https.extraFlags` with websockets to add additional headers to requests from the nixcloud.reverse-proxy to the internal webserver.
-          '';
-          default = "";
-          example = ''
-            add_header Strict-Transport-Security max-age=345678;
+            Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io.
           '';
         };
+        flags = mkOption {
+          description = ''
+            Use `http.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+            
+            $targetIP and $targetPort will be set to the respective values of your `proxyOptions` definition.
+          '';
+          default = ''
+              # http default flags
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_pass http://$targetIP:$targetPort$request_uri;
+          '';
+        };
+        inherit record;
         inherit basicAuth;
+        inherit extraFlags;                             
+      };
+      https = {
+        mode = mkOption {
+          type = types.enum [ "redirect_to_http" "on" "off" ];
+          example = "off";
+          default = toplevel.config.https.mode;
+          description = ''
+            Using TLS, thus 443, is the default for webapps on nixcloud.io.
+          '';
+        };
+        flags = mkOption {
+          description = ''
+            Use `https.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
+            
+            $targetIP and $targetPort will be set to the respective values of your `proxyOptions` definition.
+          '';
+          default = ''
+              # https default flags
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_pass http://$targetIP:$targetPort$request_uri;
+          '';
+        };
+        inherit record;
+        inherit basicAuth;
+        inherit extraFlags;                        
       };
     };
   };
@@ -158,13 +234,28 @@ in
         Note that the presence of a trailing slash affects the behaviour of the route matcher.
       '';
     };
+    extraLocations = mkOption {
+      type = types.attrsOf (types.submodule ({ ... } : extraLocationsModule { inherit config lib options toplevel; } ));
+      default = { };
+      example = ''
+        extraLocations = {
+          api = {
+            subpath = "/api";
+            port = "8080";
+          };
+        };
+      '';
+      description = ''
+        The `locations` option holds all your 'location' records. The 'root' location is the main location which must be set. All other locations are subdirectories of the 'root' location and are optional.
+      '';
+    };
     websockets = mkOption {
       type = types.attrsOf (types.submodule ({ ... } : locationWebSocketModule { inherit config lib options toplevel; } ));
       default = { };
       example = ''
         websockets = {
           ws = {
-            subpath = "/leaps/ws";
+            subpath = "/ws";
             https.basicAuth."nixclouduser" = "password_world_readable_in_nix_store";
           };
         };
@@ -220,16 +311,6 @@ in
           the use of TLS. That said, some legacy webapps might still require http support also.
         '';
       };
-      record = mkOption {
-        description = ''
-          The http.record will generate a default location record for http when `http.mode = "on"` is set. If record is explicitly set but flags also nix-evaluation
-          will abort since the flags mkOption is pointless but one might miss that fact easily.
-        '';
-        default = "";
-        example = ''
-          proxy_pass http://''${location.ip}:''${toString location.port}''${location.path};
-        '';
-      };
       flags = mkOption {
         description = ''
           Use `http.flags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver.
@@ -245,15 +326,8 @@ in
           proxy_pass http://$targetIP:$targetPort$request_uri;
         '';
       };
-      extraFlags = mkOption {
-        description = ''
-          Use `http.extraFlags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver. 
-        '';
-        default = "";
-        example = ''
-          add_header Strict-Transport-Security max-age=345678;
-        '';
-      };      
+      inherit record;
+      inherit extraFlags;
       inherit basicAuth;
     };
     https = {
@@ -265,13 +339,6 @@ in
           Using TLS, thus 443, is the default for webapps on nixcloud.io but it can also be turned off. This
           makes sense for content like downlaods, which can be cached by forward-proxies like squid for example.
         '';
-      };
-      record = mkOption {
-        description = ''
-          The https.record will generate a default location record for https when `https.mode = "on"` is set.
-        '';
-        default = "";
-        example = "";
       };
       flags = mkOption {
         description = ''
@@ -288,15 +355,8 @@ in
           proxy_pass http://$targetIP:$targetPort$request_uri;
         '';
       };
-      extraFlags = mkOption {
-        description = ''
-          Use `https.extraFlags` to add headers to requests from the nixcloud.reverse-proxy to the internal webserver. 
-        '';
-        default = "";
-        example = ''
-          add_header Strict-Transport-Security max-age=345678;
-        '';
-      };      
+      inherit record;
+      inherit extraFlags;
       inherit basicAuth;
     };
   };
