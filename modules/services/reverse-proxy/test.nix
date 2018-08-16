@@ -115,6 +115,7 @@ in
 
     nixcloud.TLS.certs = lib.mkForce {
       "stupid.io".mode = "selfsigned";
+      "ext.ra".mode = "selfsigned";
       "exclusive.ws1".mode = "selfsigned";
       "exclusive.ws2".mode = "selfsigned";
       "flags.io".mode = "selfsigned";
@@ -138,6 +139,35 @@ in
              subpath = "/websocket";
              http.mode = "off";
              https.mode = "off";
+           };
+         };
+        }
+        {
+         domain = "ext.ra";
+         path = "/location";
+         port = 60000;
+#         http.mode = "off";
+#         https.mode = "off";
+         http.mode = "on";
+         https.mode = "off";
+         extraLocations = {
+           test = {
+            http.mode = "off";
+            https.mode = "on";
+            port = 60000;
+            subpath = "/test";
+           };
+           extraTest = {
+            http.mode = "on";
+            https.mode = "on";
+            port = 60000;
+            subpath = "/extra/test";
+           };
+           fail = {
+            http.mode = "on";
+            https.mode = "on";
+            port = 12345;
+            subpath = "/fail";
            };
          };
         }
@@ -226,6 +256,15 @@ in
     # make sure both are answered by apache
     $machine->succeed('curl http://example.com/wiki | grep "<span>Apache" >&2');
     $machine->succeed('curl -k https://example.com/wiki | grep "<span>Apache" >&2');
+
+    #check if extraLocations work
+    $machine->succeed('curl http://ext.ra/location | grep "<span>Apache" >&2');
+    $machine->fail('curl -k https://ext.ra/location | grep "<span>Apache" >&2');
+    $machine->succeed('curl -k https://ext.ra/location/test | grep "<span>Apache" >&2');
+    $machine->succeed('curl http://ext.ra/location/extra/test | grep "<span>Apache" >&2');
+    $machine->succeed('curl -k https://ext.ra/location/extra/test | grep "<span>Apache" >&2');
+    $machine->fail('curl https://ext.ra/location/fail | grep "<span>Apache" >&2');
+    $machine->fail('curl -k https://ext.ra/location/fail | grep "<span>Apache" >&2');
     
     # make sure for both there is no entry in example.com/blog
     $machine->succeed('curl http://example.com/blog | grep 404 >&2');

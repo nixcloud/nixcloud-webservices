@@ -111,8 +111,13 @@ in
     # create a unique list of all domains from nixcloud.reverse-proxy
     allNCWDomains = unique (map (el: el.domain) allProxyOptions);
 
+    #checks if any of the given extraLocations or websocketLocations has the given mode enabled.
+    checkLocationMode = locations: mode: let
+      hasModeEnabled = name: locations.${name}.${mode}.mode != "off";
+    in lib.any hasModeEnabled (lib.attrNames locations);
+
     # a list of unique domains gained from nixcloud.webservices.proxyOption(s) which require a http server record in nginx.conf
-    allHttpOnlyProxyOptions = filter (el: el.http.mode != "off" || checkWebsockets el.websockets "http") allProxyOptions;
+    allHttpOnlyProxyOptions = filter (el: el.http.mode != "off" || checkLocationMode el.websockets "http" || checkLocationMode el.extraLocations "http") allProxyOptions;
     allHttpNCDomains = unique (map (el: el.domain) allHttpOnlyProxyOptions);
 
     # simp_le requires a webserver with http to serve challenge/response requests for let's encrypt ACME to work
@@ -152,9 +157,9 @@ in
         (if (m == "on") then
           ''
             location ${l} {
-            ${if r == "" then ''
               set $targetIP ${location.ip};
               set $targetPort ${toString location.port};
+            ${if r == "" then ''
               ${f}
               ${e}
             '' else r
@@ -177,32 +182,74 @@ in
         else if (m == "off") then ""
         else abort "unknown location mode: `${m}`, this should never happen.... but just in case!");
 
-    createWsPaths = mode: filteredProxyOptions:
-      lib.concatMapStringsSep "\n" (location: (createWsPaths_ mode location)) filteredProxyOptions;
-    
-    createWsPaths_ = mode: location:
-      lib.concatMapStringsSep "\n" (w: createWsPath mode location location.websockets.${w}) (attrNames location.websockets);
+    #creates all extraLocation entries for the Reverse Proxy
+    createExtraLocationsRecords = mode: filteredProxyOptions:
+      lib.concatMapStringsSep "\n" (location: (createExtraLocationsRecords_ mode location)) filteredProxyOptions;
+    #helper function that creates all extraLocation Reverse Proxy entries fo a single webservice
+    createExtraLocationsRecords_ = mode: location:
+      lib.concatMapStringsSep "\n" (w: createExtraLocationRecord mode location location.extraLocations.${w}) (attrNames location.extraLocations);
+    createExtraLocationRecord = mode: location: extraLocation:
+      let
+        m = extraLocation.${mode}.mode;
+        b = extraLocation.${mode}.basicAuth;
+        r = extraLocation.${mode}.record;
+        l = removeSuffix "/" (toString (builtins.toPath (location.path + extraLocation.subpath)));
+        f = extraLocation.${mode}.flags;
+        e = if extraLocation.${mode}.extraFlags == "" then location.${mode}.extraFlags else extraLocation.${mode}.extraFlags;
+      in
+        (if (m == "on") then
+          ''
+            location ${l} {
+              set $targetIP ${extraLocation.ip};
+              set $targetPort ${toString extraLocation.port};
+            ${if r == "" then ''
+              ${f}
+              ${e}
+            '' else r
+            }
+              ${if (b != {}) then mkBasicAuth b else ""}
+            }
+          '' #"
+        else if (m == "redirect_to_http" ) then
+          ''
+            location ${l} {
+              rewrite     ^   http://$server_name$request_uri? permanent;
+            }
+          ''
+        else if (m == "redirect_to_https" ) then
+          ''
+            location ${l} {
+              rewrite     ^   https://$server_name$request_uri? permanent;
+            }
+          ''
+        else if (m == "off") then ""
+        else abort "unknown location mode: `${m}`, this should never happen.... but just in case!");
 
-    checkWebsockets = websockets: mode: let
-      hasModeEnabled = name: websockets.${name}.${mode}.mode != "off";
-    in lib.any hasModeEnabled (lib.attrNames websockets);
 
-    createWsPath = mode: location: websocket:
+    #creates all Websocket entries for the Reverse Proxy
+    createWsRecords = mode: filteredProxyOptions:
+      lib.concatMapStringsSep "\n" (location: (createWsRecords_ mode location)) filteredProxyOptions;
+    #helper function that creates all websocket Reverse Proxy entries fo a single webservice
+    createWsRecords_ = mode: location:
+      lib.concatMapStringsSep "\n" (w: createWsRecord mode location location.websockets.${w}) (attrNames location.websockets);
+
+    #creates the reverseproxy entry for a single websocket Path
+    createWsRecord = mode: location: websocket:
       let
         b = websocket.${mode}.basicAuth;
         r = websocket.${mode}.record;
         m = websocket.${mode}.mode;
         f = websocket.${mode}.flags;
         p = websocket.port;
-        e = location.${mode}.extraFlags;
+        e = if websocket.${mode}.extraFlags == "" then location.${mode}.extraFlags else websocket.${mode}.extraFlags;
         ppp = removeSuffix "/" (toString (builtins.toPath (location.path + websocket.subpath)));
       in
         if (m == "on") then
           ''
             location ${ppp} {
-            ${if r == "" then ''
               set $targetIP ${location.ip};
               set $targetPort ${toString p};
+            ${if r == "" then ''
               ${f}
               ${e}
             '' else r
@@ -240,7 +287,8 @@ in
           ''}
 
           ${createLocationRecords "http" filteredProxyOptions}
-          ${createWsPaths "http" filteredProxyOptions}
+          ${createWsRecords "http" filteredProxyOptions}
+          ${createExtraLocationsRecords "http" filteredProxyOptions}
         } ''; #"  '' ''
 
     in 
@@ -249,7 +297,7 @@ in
     createHttpsServerRecord = allProxyOptions: domain:
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
-      needsHttps = any (el: el.https.mode != "off" || checkWebsockets el.websockets "https") filteredProxyOptions;
+      needsHttps = any (el: el.https.mode != "off" || checkLocationMode el.websockets "https" || checkLocationMode el.extraLocations "https") filteredProxyOptions;
     in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {
         ssl on;
@@ -262,7 +310,8 @@ in
         ssl_certificate_key ${config.nixcloud.TLS.certs.${nixcloudTLSHandles.${domain}}.tls_certificate_key};
 
         ${createLocationRecords "https" filteredProxyOptions}
-        ${createWsPaths "https" filteredProxyOptions}
+        ${createWsRecords "https" filteredProxyOptions}
+        ${createExtraLocationsRecords "https" filteredProxyOptions}
       }
     '';
     checkAndFormatNginxConfigfile = (import ../../web/webserver/lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile;
