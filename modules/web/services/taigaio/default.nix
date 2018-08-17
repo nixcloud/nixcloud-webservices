@@ -3,8 +3,8 @@
 with lib;
 
 let
-  taiga-back = pkgs.callPackage ./taiga-back.nix {};
-  taiga-front = pkgs.callPackage ./taiga-front-dist.nix {};
+  taiga-back   = pkgs.callPackage ./taiga-back.nix {};
+  taiga-front  = pkgs.callPackage ./taiga-front-dist.nix {};
   taiga-events = (pkgs.callPackage ./taiga-events/override.nix {}).TaigaIO-Events;
 
   python = pkgs.python3;
@@ -328,10 +328,28 @@ in
     };
 
 
-  proxyOptions.websockets = {
-    ws = {
-      port = 8888;
-      subpath = "/events";
+  proxyOptions = {
+    #FIXME: thos need to be set in the reverse-proxy also!
+    #  client_max_body_size "50m";
+    #  large_client_header_buffers 4 32k;
+    #  charset utf-8;
+    extraLocations = {
+      api = {
+        subpath = "/api";
+        # FIXME: hardcoded port
+        port = 8000;
+      };
+      # FIXME optionalString (config.enableDjangoAdmin) ''
+      admin = {
+        subpath = "/admin";
+        port = 8000;
+      };
+    };
+    websockets = {
+      ws = {
+        port = 8000;
+        subpath = "/events";
+      };
     };
   };
 
@@ -345,11 +363,6 @@ in
 
     try_files $uri $uri/ /index.html;
 
-    # FIXME: hardcoded port
-    location /api {
-      proxy_pass http://127.0.0.1:8000/api;
-    }
-
     location /static {
       alias ${config.stateDir}/www/static;
     }
@@ -359,12 +372,7 @@ in
     location /conf.json {
       alias ${taigaFrontConfigFile};
     }
-    '' +
-    optionalString (config.enableDjangoAdmin) ''
-    location /admin = {
-      proxyPass "http://127.0.0.1:8000$request_uri";
-    }
-  '';
+    '';
 
 #    tests.wanted = [ ./test.nix ];
   };
