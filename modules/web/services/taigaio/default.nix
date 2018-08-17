@@ -347,7 +347,7 @@ in
     };
     websockets = {
       ws = {
-        port = 8000;
+        port = 8888;
         subpath = "/events";
       };
     };
