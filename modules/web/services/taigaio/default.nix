@@ -1,5 +1,19 @@
 { config, pkgs, lib, mkUniqueUser, mkUniqueGroup, ... }:
 
+# todo
+# * fix all BUG/FIXME/SECURITY inside this document
+# * admin:
+#   * fix django /admin  webstuff
+#   * create manage.py admin binary for console stuff...?
+# * remove url options and integrate 
+# * rabbitmq
+#   * integrate rabbitmq as a nixcloud-webservices (aszlig)
+#   * eventually use unix domain socket
+# * write test
+#   * wsgi mode
+#   * manage.py mode
+#   * write websocket test
+
 with lib;
 
 let
@@ -92,40 +106,34 @@ in
   options = {
     enableDebug = mkOption {
       type = types.bool;
-      default = true;
+      default = false;
       description = "Enable debugging.";
     };
-
     enablePublicRegistration = mkOption {
       type = types.bool;
       default = false;
       description = "Enable public registration.";
     };
-
     enableFeedback = mkOption {
       type = types.bool;
       default = false;
       description = ""; # TODO check what this does
     };
-
     enableDjangoAdmin = mkOption {
       type = types.bool;
       default = false;
       description = "Enable django admin interface.";
     };
-
     enableWebsockets = mkOption {
       type = types.bool;
       default = true;
       description = "Enable Websockets-Support.";
     };
-
     enableWsgi = mkOption {
       type = types.bool;
       default = true;
       description = "Enable WSGI-Support.";
     };
-
     wsgiWorkers = mkOption {
       type = types.int;
       default = 3;
@@ -170,12 +178,10 @@ in
         Addtional configuration options as Nix attribute set in conf.json schema.
       '';
     };
-
     djangoSecret = mkOption {
       type = types.str;
       description = "Secret key for Django which is actually a salt.";
     };
-
     amqp = {
       user = mkOption {
         type = types.str;
@@ -339,7 +345,7 @@ in
         # FIXME: hardcoded port
         port = 8000;
       };
-      # FIXME optionalString (config.enableDjangoAdmin) ''
+    } // optionalAttrs (config.enableDjangoAdmin) {
       admin = {
         subpath = "/admin";
         port = 8000;

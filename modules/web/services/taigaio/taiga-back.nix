@@ -1,7 +1,6 @@
 { stdenv, fetchFromGitHub, pkgs, python3Packages, lib }:
 with lib;
 let
-    #    pythong3Packages = python3Packages // myPythonPackages;
     myPythonPackages = with python3Packages; rec {
       asana = buildPythonPackage rec {
         pname = "asana";
