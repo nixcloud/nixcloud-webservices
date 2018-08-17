@@ -365,6 +365,12 @@ let
      # ERROR: test_image_path_from_directory (tests.tests.TestImageHelpers)
      # ERROR: test_image_stream (tests.tests.TestImageHelpers)
        doCheck = false;
+
+
+       # HACK To prevent collision with pythonPackages.sampledata
+       preBuild = ''
+         rm tests/*
+       '';
     
        checkPhase = ''
          nosetests -e "TestImageHelpers"
@@ -401,7 +407,7 @@ let
      };
    };
 in
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonPackage rec {
   pname = "taiga-back";
   version = "3.3.13";
   #version = "3.3.14";
@@ -414,7 +420,7 @@ python3Packages.buildPythonApplication rec {
     sha256 = "1cy5ak7mw9ia9b0d1lil0s6ck87kinrmicsw61m6vpkal1slnnf7";  # 3.3.13
     #sha256 = "1csampq2g84za3fxnlfr9sffq304mz5mj9000dyk4y0720w9v1d1"; # 3.3.14
   };
-  
+
   propagatedBuildInputs = with python3Packages; with myPythonPackages; [
     pkgs.gettext
     amqp
