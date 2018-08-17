@@ -13,6 +13,9 @@
 #   * wsgi mode
 #   * manage.py mode
 #   * write websocket test
+# * add assert to check that 
+#   * taiga is not run in an subpath
+# * add documentation that taiga can only be run on a domain without subdir, see https://groups.google.com/forum/#!msg/taigaio/o0odcpBTsKU/FuhhfNkyBwAJ
 
 with lib;
 
@@ -361,7 +364,7 @@ in
 
   webserver.variant = "nginx";
   webserver.nginx.extraConfig = ''
-    client_max_body_size "50m";
+    client_max_body_size "51m";
     large_client_header_buffers 4 32k;
     charset utf-8;
 
