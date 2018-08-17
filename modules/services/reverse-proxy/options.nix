@@ -42,6 +42,17 @@ let
     '';
   };
 
+  extraServerFlags = mkOption {
+    description = ''
+      Use `extraServerFlags` to add additional flags in the server record from the nixcloud.reverse-proxy. Since there is no 
+      collision detection for this option use extraFlags whenever possible instead.
+    '';
+    default = "";
+    example = ''
+      large_client_header_buffers 4 32k;
+    '';
+  };
+
   record = mkOption {
     description = ''
       The 'location' can be used to override the default location record.
@@ -175,7 +186,7 @@ let
         };
         inherit record;
         inherit basicAuth;
-        inherit extraFlags;                             
+        inherit extraFlags;
       };
       https = {
         mode = mkOption {
@@ -328,6 +339,7 @@ in
       };
       inherit record;
       inherit extraFlags;
+      inherit extraServerFlags;
       inherit basicAuth;
     };
     https = {
@@ -357,6 +369,7 @@ in
       };
       inherit record;
       inherit extraFlags;
+      inherit extraServerFlags;
       inherit basicAuth;
     };
   };

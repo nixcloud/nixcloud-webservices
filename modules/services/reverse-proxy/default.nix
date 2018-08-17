@@ -156,6 +156,7 @@ in
       in
         (if (m == "on") then
           ''
+            ${location.${mode}.extraServerFlags}
             location ${l} {
               set $targetIP ${location.ip};
               set $targetPort ${toString location.port};
