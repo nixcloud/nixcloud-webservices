@@ -106,11 +106,13 @@ class EmailTest(unittest.TestCase):
                       text)
 
     def test_spam_filter(self):
-        msg = 'I am a spammer'
-        self.send_email('bob', 'spameater', msg,
-                        to_addr='eatit@catchall.example')
-        text = self.wait_for_one_email('spameater')
-        self.assertRegex(text, RE_IS_SPAM)
+        with self.assertRaises(smtplib.SMTPDataError) as cm:
+            msg = 'XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X'
+            self.send_email('bob', 'spameater', msg,
+                            to_addr='eatit@catchall.example')
+        err = cm.exception
+        self.assertEqual(554, err.smtp_code)
+        self.assertEqual(b'5.7.1 Gtube pattern', err.smtp_error)
 
 
 if __name__ == '__main__':
