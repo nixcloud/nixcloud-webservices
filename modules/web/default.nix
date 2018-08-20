@@ -1,7 +1,13 @@
 { config, options, lib, nclib, ... }:
 
 {
-  imports = lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
+  imports = let
+    # Special submodule without implementing a specific service.
+    customModule = import ../../lib/make-webservice.nix "custom" {
+      config = {};
+      meta.license = null;
+    };
+  in (lib.mapAttrsToList (import ../../lib/make-webservice.nix) {
     apache            = services/apache;
     nginx             = services/nginx;
     filesender        = services/filesender;
@@ -11,7 +17,7 @@
     static-darkhttpd  = services/static-darkhttpd;
     static-nginx      = services/static-nginx;
     mattermost        = services/mattermost;
-  };
+  }) ++ lib.singleton customModule;
 
   config = let
     # A list of all the "toplevel" option definitions of all web services.
