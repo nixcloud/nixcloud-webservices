@@ -1,11 +1,12 @@
 { config, pkgs, lib, mkUniqueUser, mkUniqueGroup, ... }:
-
+# https://taigaio.github.io/taiga-doc/dist/setup-production.html
 # todo
-# * fix all BUG/FIXME/SECURITY inside this document
+# * port 8000 hardcoded 
+# * systemd dependencies
+# * file bug in nixpkgs on buildPythonPackage vs buildPythonApplication with penv.extraLibs where taiga-back won't inherit the propagatedBuildInputs
 # * admin:
 #   * fix django /admin  webstuff
 #   * create manage.py admin binary for console stuff...?
-# * remove url options and integrate 
 # * rabbitmq
 #   * integrate rabbitmq as a nixcloud-webservices (aszlig)
 #   * eventually use unix domain socket
@@ -13,9 +14,8 @@
 #   * wsgi mode
 #   * manage.py mode
 #   * write websocket test
-# * add assert to check that 
-#   * taiga is not run in an subpath
-# * add documentation that taiga can only be run on a domain without subdir, see https://groups.google.com/forum/#!msg/taigaio/o0odcpBTsKU/FuhhfNkyBwAJ
+# * fix all BUG/FIXME/SECURITY inside this document
+# * reverse-proxy settings: client_max_body_size "51m"; large_client_header_buffers 4 32k; charset utf-8; merge...
 
 with lib;
 
@@ -37,7 +37,9 @@ let
   amqpUrl = "amqp://${config.amqp.user}:${config.amqp.password}@localhost:5672/${config.amqp.vhost}";
 
   httpScheme = ''${if config.proxyOptions.https.mode == "on" then "https" else "http"}'';
-  wsScheme =   ''${if config.proxyOptions.https.mode == "on" then "wss" else "ws"}'';
+  wsScheme   = ''${if config.proxyOptions.https.mode == "on" then "wss" else "ws"}'';
+  path       = builtins.toPath "/${config.proxyOptions.domain}/${config.proxyOptions.path}";
+  baseUrl    = "${httpScheme}:/${path}";
 
   taigaBackConfigFile = pkgs.writeText "gaBackConfigFiletaiga-back-config-raw.py" ''
     from .common import *
@@ -52,11 +54,11 @@ let
     MEDIA_ROOT = "${config.stateDir}/www/media"
     STATIC_ROOT = "${config.stateDir}/www/static"
 
-    MEDIA_URL = "${httpScheme}://${config.urls.media}/"
-    STATIC_URL = "${httpScheme}://${config.urls.static}/"
+    MEDIA_URL = "${baseUrl}/media/";
+    STATIC_URL = "${baseUrl}/static/"
 
     SITES["front"]["scheme"] = "${httpScheme}"
-    SITES["front"]["domain"] = "${config.urls.front}"
+    SITES["front"]["domain"] = "${config.proxyOptions.domain}"
 
     PUBLIC_REGISTER_ENABLED = ${if config.enablePublicRegistration then "True" else "False"}
 
@@ -82,8 +84,8 @@ let
   defaultFrontConfig = builtins.fromJSON (readFile "${taiga-front}/dist/conf.example.json");
 
   taigaFrontConfig = foldl recursiveUpdate defaultFrontConfig [
-    { api =                   "${httpScheme}://${config.urls.api}";
-      eventsUrl =             "${wsScheme}://${config.urls.events}";
+    { api =                   "${baseUrl}/api/v1";
+      eventsUrl =             "${wsScheme}:/${path}/events";
       debug =                 config.enableDebug;
       publicRegisterEnabled = config.enablePublicRegistration;
       feedbackEnabled =       config.enableFeedback;
@@ -142,38 +144,6 @@ in
       default = 3;
       description = "Number of WSGI workers.";
     };
-
-    # FIXME this whole url-set doesn't feel sane
-    # FIXME: (qknignht) most can be removed
-    urls = {
-      # fixme: replace by proxyOptions.domain ...
-      front = mkOption {
-        type = types.string;
-        default = "nix.lt";
-        description = "Frontend URL";
-      };
-      api = mkOption {
-        type = types.string;
-        default = "nix.lt/api/v1";
-        description = "API URL";
-      };
-      events = mkOption {
-        type = types.str;
-        default = "nix.lt/events";
-        description = "Events URL";
-      };
-      static = mkOption {
-        type = types.str;
-        default = "nix.lt/static";
-        description = "Static-Content URL";
-      };
-      media = mkOption {
-        type = types.str;
-        default = "nix.lt/media";
-        description = "Media URL";
-      };
-    };
-
     extraFrontConfig = mkOption {
       type = types.attrs;
       default = { };
@@ -183,7 +153,7 @@ in
     };
     djangoSecret = mkOption {
       type = types.str;
-      description = "Secret key for Django which is actually a salt.";
+      description = "Secret key for Django (which is actually a salt).";
     };
     amqp = {
       user = mkOption {
@@ -215,14 +185,20 @@ in
     meta.platforms = lib.platforms.linux;
   };
 
-  config = lib.mkIf config.enable {
+  config = lib.mkIf config.enable { 
+
+    assertions = [
+      { assertion = config.proxyOptions.path == "/";
+        message = "Taiga front can't run in a subdirectory, see https://groups.google.com/forum/#!msg/taigaio/o0odcpBTsKU/FuhhfNkyBwAJ";
+      }
+    ];
 
     directories.www.postCreate = ''
       mkdir media
       mkdir static
-      mkdir temp 
     '';
 
+    # FIXME: i'd love to see a output on the shell, that there is complex stuff going on and 'what' is going on
     database.taigaio.postCreate = 
       let
         inherit (config.database.taigaio) type;
@@ -252,20 +228,22 @@ in
     groups.taigaio-events = {};
 
     systemd.services.taiga-back = rec {
-     description = "${config.uniqueName} main service (taigaio)";
+     description = "${config.uniqueName} main service (taigaio, django)";
 
       wantedBy      = [ "multi-user.target" ];
       after         = [ "network.target" ];
 
       environment = {
-        PYTHONPATH = "${taigaBackConfigPkg}:${penv}/${python.sitePackages}/"; #:${taiga-back}/${python.sitePackages}";
+        PYTHONPATH = "${taigaBackConfigPkg}:${penv}/${python.sitePackages}/";
       };
 
       serviceConfig = {
         User = mkUniqueUser "taigaio";
         Group = mkUniqueGroup "taigaio";
         WorkingDirectory = "${config.stateDir}/www";
-        PrivateTmp = false;
+        #FIXME check if we can use that
+        #PrivateTmp = true;
+
         # FIXME: port 8000 is hardcoded
         ExecStart = 
          if config.enableWsgi then ''
@@ -383,6 +361,6 @@ in
     }
     '';
 
-#    tests.wanted = [ ./test.nix ];
+    #tests.wanted = [ ./test.nix ];
   };
 }
