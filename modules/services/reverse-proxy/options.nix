@@ -215,14 +215,6 @@ let
     assert (!(containsSpace path)) || abort "path: '${path}' contains space(es)!";
     path;
 
-  passthruToplevel = {
-    ip = lib.mkDefault config.ip;
-    http.mode = lib.mkDefault config.http.mode;
-    https.mode = lib.mkDefault config.https.mode;
-  } // lib.optionalAttrs options.port.isDefined {
-    port = lib.mkDefault config.port;
-  };
-
 in
 
 {
@@ -246,9 +238,16 @@ in
       '';
     };
     extraLocations = mkOption {
-      type = types.attrsOf (types.submodule [
-        extraLocationsModule passthruToplevel
-      ]);
+      type = types.attrsOf (types.submodule {
+        imports = [ extraLocationsModule ];
+        config = {
+          ip = lib.mkDefault config.ip;
+          http.mode = lib.mkDefault config.http.mode;
+          https.mode = lib.mkDefault config.https.mode;
+        } // lib.optionalAttrs options.port.isDefined {
+          port = lib.mkDefault config.port;
+        };
+      });
       default = { };
       example = ''
         extraLocations = {
@@ -263,9 +262,15 @@ in
       '';
     };
     websockets = mkOption {
-      type = types.attrsOf (types.submodule [
-        locationWebSocketModule passthruToplevel
-      ]);
+      type = types.attrsOf (types.submodule {
+        imports = [ locationWebSocketModule ];
+        config = {
+          http.mode = lib.mkDefault config.http.mode;
+          https.mode = lib.mkDefault config.https.mode;
+        } // lib.optionalAttrs options.port.isDefined {
+          port = lib.mkDefault config.port;
+        };
+      });
       default = { };
       example = ''
         websockets = {
