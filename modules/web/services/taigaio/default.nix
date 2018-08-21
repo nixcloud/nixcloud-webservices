@@ -2,6 +2,7 @@
 # https://taigaio.github.io/taiga-doc/dist/setup-production.html
 # todo
 # * port 8000 hardcoded 
+#   -> use unix domain socket instead of inet socket
 # * systemd dependencies
 # * file bug in nixpkgs on buildPythonPackage vs buildPythonApplication with penv.extraLibs where taiga-back won't inherit the propagatedBuildInputs
 # * admin:
@@ -196,6 +197,7 @@ in
     directories.www.postCreate = ''
       mkdir media
       mkdir static
+      mkdir socket
     '';
 
     # FIXME: i'd love to see a output on the shell, that there is complex stuff going on and 'what' is going on
@@ -242,9 +244,8 @@ in
         Group = mkUniqueGroup "taigaio";
         WorkingDirectory = "${config.stateDir}/www";
         #FIXME check if we can use that
-        #PrivateTmp = true;
+        PrivateTmp = false;
 
-        # FIXME: port 8000 is hardcoded
         ExecStart = 
          if config.enableWsgi then ''
 	        ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
@@ -256,14 +257,15 @@ in
             --log-level ${if config.enableDebug then "debug" else "info"} \
             --workers ${toString config.wsgiWorkers} \
             --pid ${config.stateDir}/www/gunicorn-taiga.pid \
-            --bind 127.0.0.1:8000
+            --bind unix:/var/run/gunicorn/socket
         '' else 
+        # FIXME: port 8000 is hardcoded
         ''
           ${taiga-back}/bin/manage.py runserver --nostatic "127.0.0.1:8000"
         '';
         Restart = "always";
         PermissionsStartOnly = true;
-        PrivateDevices = true;
+        #PrivateDevices = true;
         TimeoutSec = 300; # initial ./manage.py migrate can take a while
       };
     };
@@ -321,11 +323,11 @@ in
     #  large_client_header_buffers 4 32k;
     #  charset utf-8;
     extraLocations = {
-      api = {
-        subpath = "/api";
-        # FIXME: hardcoded port
-        port = 8000;
-      };
+      #api = {
+      #  subpath = "/api";
+      #  # FIXME: hardcoded port
+      #  port = 8000;
+      #};
     } // optionalAttrs (config.enableDjangoAdmin) {
       admin = {
         subpath = "/admin";
@@ -358,6 +360,12 @@ in
     }
     location /conf.json {
       alias ${taigaFrontConfigFile};
+    }
+    location /api {
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $http_host;
+      proxy_redirect off;
+      proxy_pass http://unix:/var/run/gunicorn/socket;
     }
     '';
 
