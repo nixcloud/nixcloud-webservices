@@ -62,14 +62,11 @@ let
     default = "";
   };
 
-  
-
-  locationWebSocketModule = { config, lib, options, toplevel }: {
+  locationWebSocketModule = {
     options = {
       port = mkOption {
         type = types.int;
         example = 8080;
-        default = toplevel.config.port;
         description = ''
           'inet' socket port number (default: inherited from proxyOptions.port) used when creating a nginx location.
         '';
@@ -79,7 +76,6 @@ let
         mode = mkOption {
           type = types.enum [ "redirect_to_https" "on" "off" ];
           example = "on";
-          default = toplevel.config.http.mode;
           description = ''
             Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io.
             Note: setting this to 'redirect_to_https' has the same effect as 'off'.
@@ -111,7 +107,6 @@ let
         mode = mkOption {
           type = types.enum [ "redirect_to_http" "on" "off" ];
           example = "off";
-          default = toplevel.config.https.mode;
           description = ''
             Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io.
             Note: setting this to 'redirect_to_http' has the same effect as 'off'.
@@ -141,12 +136,11 @@ let
       };
     };
   };
-  extraLocationsModule = { config, lib, options, toplevel }: {
+  extraLocationsModule = {
     options = {
       port = mkOption {
         type = types.int;
         example = 8080;
-        default = toplevel.config.port;
         description = ''
           'inet' socket port number (default: inherited from proxyOptions.port) used when creating a nginx location.
         '';
@@ -154,7 +148,6 @@ let
       ip = mkOption {
         type = types.str;
         example = "1.2.3.4";
-        default = toplevel.config.ip;
         description = ''
           The default is inherited from proxyOptions.ip but in case the ip for this extraLocations differs you can also point to a IP from a private network like "10.0.0.49".
         '';
@@ -164,7 +157,6 @@ let
         mode = mkOption {
           type = types.enum [ "redirect_to_https" "on" "off" ];
           example = "on";
-          default = toplevel.config.http.mode;
           description = ''
             Using TLS, thus 443, is the default for websockets of webapps on nixcloud.io.
           '';
@@ -192,7 +184,6 @@ let
         mode = mkOption {
           type = types.enum [ "redirect_to_http" "on" "off" ];
           example = "off";
-          default = toplevel.config.https.mode;
           description = ''
             Using TLS, thus 443, is the default for webapps on nixcloud.io.
           '';
@@ -223,6 +214,15 @@ let
     assert (builtins.substring 0 1 path == "/") || abort "'${path}' lacks leading '/'!";
     assert (!(containsSpace path)) || abort "path: '${path}' contains space(es)!";
     path;
+
+  passthruToplevel = {
+    ip = lib.mkDefault config.ip;
+    http.mode = lib.mkDefault config.http.mode;
+    https.mode = lib.mkDefault config.https.mode;
+  } // lib.optionalAttrs options.port.isDefined {
+    port = lib.mkDefault config.port;
+  };
+
 in
 
 {
@@ -246,7 +246,9 @@ in
       '';
     };
     extraLocations = mkOption {
-      type = types.attrsOf (types.submodule ({ ... } : extraLocationsModule { inherit config lib options toplevel; } ));
+      type = types.attrsOf (types.submodule [
+        extraLocationsModule passthruToplevel
+      ]);
       default = { };
       example = ''
         extraLocations = {
@@ -261,7 +263,9 @@ in
       '';
     };
     websockets = mkOption {
-      type = types.attrsOf (types.submodule ({ ... } : locationWebSocketModule { inherit config lib options toplevel; } ));
+      type = types.attrsOf (types.submodule [
+        locationWebSocketModule passthruToplevel
+      ]);
       default = { };
       example = ''
         websockets = {
