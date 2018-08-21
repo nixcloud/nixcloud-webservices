@@ -93,6 +93,7 @@ in {
     networking.firewall.enable = false;
 
     virtualisation.memorySize = 2048;
+    virtualisation.writableStoreUseTmpfs = false;
     # Needed so that we have all dependencies available for building the
     # container config within the VM.
     virtualisation.pathsInNixDB = let
