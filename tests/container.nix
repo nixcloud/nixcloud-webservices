@@ -89,11 +89,15 @@ in {
     in
   {
     nix.nixPath = [ "nixpkgs=${pkgs.path}" ];
+
+    # XXX: Sandbox setup fails while trying to hardlink files from the host's
+    #      store file system into the prepared chroot directory.
+    nix.useSandbox = false;
+
     nixcloud.container.enable = true;
     networking.firewall.enable = false;
 
     virtualisation.memorySize = 2048;
-    virtualisation.writableStoreUseTmpfs = false;
     # Needed so that we have all dependencies available for building the
     # container config within the VM.
     virtualisation.pathsInNixDB = let
