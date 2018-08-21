@@ -13,17 +13,13 @@ let
   path = builtins.toPath "/${config.proxyOptions.domain}/${config.proxyOptions.path}";
   siteUrl = "${if (config.proxyOptions.https.mode == "on") then "https" else "http"}:/${path}";
 
-
-  #FIXME quick hack so the manual can be build
-  socketPath = if (config.database ? mattermost) then config.database.mattermost.socketPath else "`socketPath`";
-
   mattermostConfig = {
     ServiceSettings.SiteURL = "${siteUrl}"; # "https://chat.example.com";
     ServiceSettings.ListenAddress = "localhost:${toString config.proxyOptions.port}";
     TeamSettings.SiteName = config.siteName;
     SqlSettings = {
       DriverName = "postgres";
-      DataSource = "postgres:///mattermost?host=${socketPath}";
+      DataSource = "postgres:///mattermost?host=${config.database.mattermost.socketPath}";
       # SECURITY/FIXME: hardcoded
       AtRestEncryptKey = "7rAh6iwQCkV4cA1Gsg3fgGOXJAQ43QVg";
     };
@@ -82,7 +78,6 @@ in {
     };
     config = mkOption {
       type = types.attrs;
-      default = mattermostConfig;
       description = ''
         Configuration options for Mattermost as Nix attribute set in
         config.json schema. The documentation for these options can be found at
@@ -159,8 +154,6 @@ in {
   };
 
   config = lib.mkIf config.enable {
-    # Re-define the default config, so that override is possible without
-    # lib.mkOptionDefault.
     config = mattermostConfig;
 
     proxyOptions.websockets = {
