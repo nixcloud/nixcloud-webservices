@@ -250,6 +250,17 @@ in {
           UMask 0002
         '';
       };
+      environment.systemPackages = let
+        nixcloud-dkim-records = pkgs.writeScriptBin "nixcloud-dkim-records"
+          ''
+            #!${pkgs.stdenv.shell}
+            for domain in ${lib.concatStringsSep " " cfg.domains}; do
+              echo "=========== $domain ==========="
+              cat /var/lib/dkim/keys/mail.txt | sed "1 s/\s/.$domain. /"
+              echo ""
+            done
+          '';
+      in [ nixcloud-dkim-records ];
     })
 
     # FIXME: add a mkOption to set domains or email addresses on a white list
