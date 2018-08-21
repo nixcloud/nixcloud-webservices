@@ -69,9 +69,10 @@ with lib;
       serviceConfig = let
         checkAndFormatNginxConfigfile = (import lib/nginx_check_config.nix {inherit lib pkgs;}).checkAndFormatNginxConfigfile {configFile = nginxConfigFile; inherit fileName;};
 
-        # FIXME: add user record only if run as root (which is not the case if PermissionsStartOnly=false IIRC)
         nginxConfigFile = pkgs.writeText "${config.uniqueName}.conf" ''
-          user "${mkUniqueUser config.webserver.user}" "${mkUniqueGroup config.webserver.group}";
+          ${optionalString (config.webserver.user == "root") ''
+            user "${mkUniqueUser config.webserver.user}" "${mkUniqueGroup config.webserver.group}";
+          ''}
           error_log stderr;
           daemon off;
           events {}
