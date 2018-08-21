@@ -24,9 +24,54 @@ let
       inherit system;
     };
 
+  unknownModule = "<unknown-file>";
+
+  #coppy of the lib function from nixpkgs with a small change that checks with builtins.tryEval 
+  #if a value can be evaluated before using them.
+  #FIXME use the original function (find a better way to do this)
+  optionAttrSetToDocList = optionAttrSetToDocList' [];
+  optionAttrSetToDocList' = prefix: options:
+    lib.concatMap (opt:
+      with lib.attrsets; let
+        docOption = rec {
+          loc = opt.loc;
+          name = lib.showOption opt.loc;
+          description = opt.description or (throw "Option `${name}' has no description.");
+          declarations = lib.filter (x: x != unknownModule) opt.declarations;
+          internal = opt.internal or false;
+          visible = opt.visible or true;
+          readOnly = opt.readOnly or false;
+          type = opt.type.description or null;
+        }
+        // optionalAttrs (opt ? example) { example = lib.scrubOptionValue opt.example; }
+        // optionalAttrs (opt ? default) { default = scrubOptionValue opt.default; }
+        // optionalAttrs (opt ? defaultText) { default = opt.defaultText; }
+        // optionalAttrs (opt ? relatedPackages && opt.relatedPackages != null) { inherit (opt) relatedPackages; };
+
+        subOptions =
+          let ss = opt.type.getSubOptions opt.loc;
+          in if ss != {} then optionAttrSetToDocList' opt.loc ss else [];
+      in
+        [ docOption ] ++ subOptions) (lib.collect lib.isOption options);
+  #another copy of a buildin function 
+  /* This function recursively removes all derivation attributes from
+     `x' except for the `name' attribute.  This is to make the
+     generation of `options.xml' much more efficient: the XML
+     representation of derivations is very large (on the order of
+     megabytes) and is not actually used by the manual generator. */
+  scrubOptionValue = x:
+    if (builtins.tryEval x).success then
+      if ( (lib.isDerivation x)) then
+        { type = "derivation"; drvPath = x.name; outPath = x.name; name = x.name; }
+      else if lib.isList x then map scrubOptionValue x
+      else if lib.isAttrs x then lib.mapAttrs (n: v: scrubOptionValue v) (removeAttrs x ["_args"])
+      else x
+    else "`?`";
+
+
     isNcOpt = opt: lib.head (lib.splitString "." opt.name) == "nixcloud";
     filterDoc = lib.filter (opt: isNcOpt opt && opt.visible && !opt.internal);
-    filtered = filterDoc (lib.optionAttrSetToDocList modules.options);
+    filtered = filterDoc (optionAttrSetToDocList modules.options);
     # XXX: Instead of unsafe discard, let's actually strip the prefix someday.
     optionsXML = builtins.unsafeDiscardStringContext (builtins.toXML filtered);
     optionsFile = builtins.toFile "options.xml" optionsXML;
