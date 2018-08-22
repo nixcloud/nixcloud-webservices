@@ -215,7 +215,7 @@ in {
       # the nixos script returns with exit 2 even if the configuration was
       # successfully switched because it does not manage to remount some directorys
       # once this bug is fixed this test should be changed back to 'succeed'
-      $machine->fail('nixcloud-container rollback test >&2');
+      $machine->succeed('nixcloud-container rollback test >&2');
       $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitrollsback');
       $machine->succeed('nixcloud-container list-generations test >&2');
     });
@@ -251,6 +251,10 @@ in {
         nixcloud-container state test | grep "RUNNING"
       ');
       $machine->waitUntilSucceeds('test -f /var/lib/lxc/test/rootfs/home/testUser/yesitrollsback');
+    });
+
+    $machine->nest('delete a machine that does exist but is startet', sub {
+      $machine->fail('nixcloud-container destroy test');
     });
 
     $machine->nest('terminate a machine that does exist', sub {
