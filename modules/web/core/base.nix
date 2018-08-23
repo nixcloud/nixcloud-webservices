@@ -171,14 +171,38 @@ in {
       _module.args.mkUniqueGroup = mkUniqueUserGroup "group";
     }
     (lib.mkIf config.enable {
-      systemd.mounts = lib.singleton {
-        description = "Runtime Directory For ${config.uniqueName}";
-        requiredBy = lib.singleton (mkUnique "instance-init.target");
-        before = lib.singleton (mkUnique "instance-init.target");
-        what = "none";
-        where = config.runtimeDir;
-        type = "tmpfs";
-        options = "nodev,nosuid,mode=1777";
+      runtimeDirectories."/" = {
+        users = lib.mapAttrs' (name: lib.const {
+          name = mkUniqueUser name;
+          value.fullAccess = true;
+        }) config.users;
+        groups = lib.mapAttrs' (name: lib.const {
+          name = mkUniqueGroup name;
+          value.fullAccess = true;
+        }) config.groups;
+        owner = "root";
+        group = let
+          withRevProxy = toplevel.config.nixcloud.reverse-proxy.enable;
+        in if withRevProxy then "reverse-proxy" else "root";
+        permissions.group.write = false;
+        permissions.others.noAccess = true;
+        permissions.recursive = false;
+        instance.before = [
+          "webserver-init.service" "instance-init.target"
+          "runtimedir-set-sticky.service"
+        ];
+      };
+
+      systemd.services.runtimedir-set-sticky = {
+        description = "Set Sticky Bit For ${config.runtimeDir}";
+        instance.before = [ "webserver-init.service" "instance-init.target" ];
+        instance.requiredBy = [ "instance-init.target" ];
+        instance.ignore-init = true;
+        serviceConfig.Type = "oneshot";
+        serviceConfig.ExecStart = lib.escapeShellArgs [
+          "${pkgs.coreutils}/bin/chmod" "+t" config.runtimeDir
+        ];
+        serviceConfig.RemainAfterExit = true;
       };
 
       directories = let
@@ -217,6 +241,11 @@ in {
           name = "webservice-extra-path";
           paths = config.webserver.systemPackages;
         });
+
+        # Needed for permissions on runtimeDir.
+        system.requiredKernelConfig = [
+          (toplevel.config.lib.kernelConfig.isYes "TMPFS_POSIX_ACL")
+        ];
 
         users.users = lib.mapAttrs' (name: ucfg: {
           name = mkUniqueUser name;
