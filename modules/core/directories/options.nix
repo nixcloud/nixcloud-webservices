@@ -92,32 +92,40 @@ let
     filePerms = mkPermOpts (attrs // { isDir = false; execute = false; });
   } // mkPermOpts (attrs // { isDir = true; });
 
-  mkPostCreateOpt = useRootUser: lib.mkOption {
+  mkPostCreateUpdateOpt = isUpdate: useRootUser: lib.mkOption {
     type = types.lines;
     default = "";
     example = "echo hello world > test.txt";
-    description = ''
-      Shell commands to run directly after creating the directory. If the
-      directory already exists nothing is executed.
+    description = let
+      userNote = if useRootUser then ''
+        <note><para>The command is run as user <systemitem
+        class="username">root</systemitem> and group <systemitem
+        class="groupname">root</systemitem>.</para></note>
+      '' else ''
+        <note><para>The command is run as the user specified in
+        <option>owner</option> and the group specified in
+        <option>group</option>.</para></note>
+      '';
 
-      The current working directory for this is set to the newly created
-      directory.
+      mainDesc = if isUpdate then ''
+        Shell commands to run directly after creating the directory and after
+        fixing up the permissions on the directory.
 
-      This runs only if <option>create</option> is set to
-      <literal>true</literal> (the default) and execution takes place
-    '' + (if useRootUser then ''
-      after <option>postCreate</option>.
+        The current working directory for this is set to the directory that is
+        to be created or fixed up.
+      '' else ''
+        Shell commands to run directly after creating the directory. If the
+        directory already exists nothing is executed.
 
-      <note><para>The command is run as user <systemitem
-      class="username">root</systemitem> and group <systemitem
-      class="groupname">root</systemitem>.</para></note>
-    '' else ''
-      before <option>postCreateAsRoot</option>.
+        The current working directory for this is set to the newly created
+        directory.
 
-      <note><para>The command is run as the user specified in
-      <option>owner</option> and the group specified in
-      <option>group</option>.</para></note>
-    '');
+        This runs only if <option>create</option> is set to
+        <literal>true</literal> (the default) and execution takes place
+        ${if useRootUser then "after <option>postCreate</option>"
+          else "before <option>postCreateAsRoot</option>"}.
+      '';
+    in mainDesc + userNote;
   };
 
 in lib.mkOption {
@@ -251,8 +259,10 @@ in lib.mkOption {
         };
       };
 
-      postCreate = mkPostCreateOpt false;
-      postCreateAsRoot = mkPostCreateOpt true;
+      postCreate = mkPostCreateUpdateOpt false false;
+      postUpdate = mkPostCreateUpdateOpt true false;
+      postCreateAsRoot = mkPostCreateUpdateOpt false true;
+      postUpdateAsRoot = mkPostCreateUpdateOpt true true;
 
       users = lib.mkOption {
         type = types.attrsOf (types.submodule {

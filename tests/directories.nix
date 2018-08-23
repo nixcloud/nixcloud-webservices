@@ -28,6 +28,8 @@
       owner = "bob";
       group = "vip";
       users.alice = {};
+      postUpdate = "id -nu > owner.txt";
+      postUpdateAsRoot = "id -nu > root.txt";
     };
 
     "/only/alice" = {
@@ -171,9 +173,23 @@
       $machine->succeed('test "$(< /super/n/e/s/t/e/d/root.txt)" = root');
     });
 
+    $machine->nest('check whether postUpdate has worked', sub {
+      ensureOwner "/little/house/of/bob/owner.txt", "bob";
+      ensureGroup "/little/house/of/bob/owner.txt", "vip";
+      ensureOwner "/little/house/of/bob/root.txt", "root";
+      ensureGroup "/little/house/of/bob/root.txt", "root";
+      $machine->succeed('test "$(< /little/house/of/bob/owner.txt)" = bob');
+      $machine->succeed('test "$(< /little/house/of/bob/root.txt)" = root');
+    });
+
     $machine->nest('remove postCreate files to check after reboot', sub {
-      $machine->succeed('rm -f /super/n/e/s/t/e/d/owner.txt');
-      $machine->succeed('rm -f /super/n/e/s/t/e/d/root.txt');
+      $machine->succeed('rm /super/n/e/s/t/e/d/owner.txt');
+      $machine->succeed('rm /super/n/e/s/t/e/d/root.txt');
+    });
+
+    $machine->nest('remove postUpdate files to check after reboot', sub {
+      $machine->succeed('rm /little/house/of/bob/owner.txt');
+      $machine->succeed('rm /little/house/of/bob/root.txt');
     });
 
     $machine->nest('rebooting machine', sub {
@@ -192,6 +208,11 @@
     $machine->nest('check whether postCreate ran on existing directory', sub {
       $machine->fail('test -e /super/n/e/s/t/e/d/owner.txt');
       $machine->fail('test -e /super/n/e/s/t/e/d/root.txt');
+    });
+
+    $machine->nest('check whether postUpdate ran on existing directory', sub {
+      $machine->succeed('test -e /little/house/of/bob/owner.txt');
+      $machine->succeed('test -e /little/house/of/bob/root.txt');
     });
 
     $machine->nest('check whether noAccess modes are applied correctly', sub {

@@ -153,13 +153,17 @@ let
   };
 
   onPostCreate = lib.optional (cfg.postCreate != "");
+  onPostUpdate = lib.optional (cfg.postUpdate != "");
   onPostCreateAsRoot = lib.optional (cfg.postCreateAsRoot != "");
+  onPostUpdateAsRoot = lib.optional (cfg.postUpdateAsRoot != "");
 
   createService = mkService "mkdir" "Create Directory" {
     script = (lib.concatStringsSep "\n" [ mkDirectory setPerms ]) + "\n";
     postStart = let
       triggers = onPostCreate (mkServiceName "post-create" path)
-              ++ onPostCreateAsRoot (mkServiceName "post-create-as-root" path);
+              ++ onPostUpdate (mkServiceName "post-update" path)
+              ++ onPostCreateAsRoot (mkServiceName "post-create-as-root" path)
+              ++ onPostUpdateAsRoot (mkServiceName "post-update-as-root" path);
       mkTrigger = unit: mkCmd [ "systemctl" "--wait" "start" unit ];
     in (lib.concatMapStringsSep "\n" mkTrigger triggers) + "\n";
     unitConfig.ConditionPathExists = "!${absPath}";
@@ -174,6 +178,15 @@ let
     serviceConfig.WorkingDirectory = absPath;
   };
 
+  postUpdateService = mkCreateService {
+    name = "post-update";
+    desc = "Run postUpdate Commands on";
+    script = cfg.postUpdate;
+    serviceConfig.User = cfg.owner;
+    serviceConfig.Group = cfg.group;
+    serviceConfig.WorkingDirectory = absPath;
+  };
+
   postCreateAsRootService = mkCreateService {
     name = "post-create-as-root";
     desc = "Run postCreateAsRoot Commands on";
@@ -181,9 +194,19 @@ let
     serviceConfig.WorkingDirectory = absPath;
   };
 
+  postUpdateAsRootService = mkCreateService {
+    name = "post-update-as-root";
+    desc = "Run postUpdateAsRoot Commands on";
+    script = cfg.postUpdateAsRoot;
+    serviceConfig.WorkingDirectory = absPath;
+  };
+
   createServices = lib.singleton createService
                 ++ onPostCreate postCreateService
                 ++ onPostCreateAsRoot postCreateAsRootService;
+
+  updateServices = onPostUpdate postUpdateService
+                ++ onPostUpdateAsRoot postUpdateAsRootService;
 
   fixupService = mkService "fixup" "Fixup Permissions for Directory" {
     serviceConfig.ExecStart = let
@@ -197,7 +220,14 @@ let
       permsFile = findSetPerm "f" (mkACL false);
       perms = permsDir ++ [ "-o" ] ++ permsFile;
     in mkCmd ([ findCmd absPath ] ++ excludes ++ perms);
+    postStart = let
+      triggers = onPostUpdate (mkServiceName "post-update" path)
+              ++ onPostUpdateAsRoot (mkServiceName "post-update-as-root" path);
+      mkTrigger = unit: mkCmd [ "systemctl" "--wait" "start" unit ];
+    in (lib.concatMapStringsSep "\n" mkTrigger triggers) + "\n";
     unitConfig.ConditionPathExists = "${absPath}";
   };
 
-in lib.singleton fixupService ++ lib.optionals cfg.create createServices
+  mandatoryServices = lib.singleton fixupService ++ updateServices;
+
+in mandatoryServices ++ lib.optionals cfg.create createServices
