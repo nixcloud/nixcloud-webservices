@@ -103,6 +103,7 @@ let
     secret = config.djangoSecret;
     # FIXME hardcoded port
     webSocketServer = { port = 8888; };
+    #webSocketServer = "${config.runtimeDir}/socket-events";
   } ];
 
   taigaEventsConfigFile = pkgs.writeText "taiga-events-config-raw.json" (builtins.toJSON taigaEventsConfig);
@@ -125,6 +126,7 @@ in
       default = false;
       description = ""; # TODO check what this does
     };
+    # FIXME: get this working
     enableDjangoAdmin = mkOption {
       type = types.bool;
       default = false;
@@ -134,11 +136,6 @@ in
       type = types.bool;
       default = true;
       description = "Enable Websockets-Support.";
-    };
-    enableWsgi = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Enable WSGI-Support.";
     };
     wsgiWorkers = mkOption {
       type = types.int;
@@ -197,7 +194,6 @@ in
     directories.www.postCreate = ''
       mkdir media
       mkdir static
-      mkdir socket
     '';
 
     # FIXME: i'd love to see a output on the shell, that there is complex stuff going on and 'what' is going on
@@ -222,6 +218,7 @@ in
       group       = "taigaio";
     };
     groups.taigaio = {};
+    # FIXME reverse-proxy needs to be in the taiga-12 group to accesss the unix domain socket
 
     users.taigaio-events = {
       description = "taigaio-events server user";
@@ -246,8 +243,7 @@ in
         #FIXME check if we can use that
         PrivateTmp = false;
 
-        ExecStart = 
-         if config.enableWsgi then ''
+        ExecStart = ''
 	        ${pkgs.python3Packages.gunicorn}/bin/gunicorn taiga.wsgi \
             -k gevent \
             -u ${mkUniqueUser "taigaio"} \
@@ -257,11 +253,7 @@ in
             --log-level ${if config.enableDebug then "debug" else "info"} \
             --workers ${toString config.wsgiWorkers} \
             --pid ${config.stateDir}/www/gunicorn-taiga.pid \
-            --bind unix:/var/run/gunicorn/socket
-        '' else 
-        # FIXME: port 8000 is hardcoded
-        ''
-          ${taiga-back}/bin/manage.py runserver --nostatic "127.0.0.1:8000"
+            --bind unix:${config.runtimeDir}/socket
         '';
         Restart = "always";
         PermissionsStartOnly = true;
@@ -323,21 +315,27 @@ in
     #  large_client_header_buffers 4 32k;
     #  charset utf-8;
     extraLocations = {
-      #api = {
-      #  subpath = "/api";
-      #  # FIXME: hardcoded port
-      #  port = 8000;
-      #};
+      api = {
+        subpath = "/api";
+        https.record = ''
+          proxy_pass http://unix:${config.runtimeDir}/socket;
+        '';
+      };
     } // optionalAttrs (config.enableDjangoAdmin) {
       admin = {
         subpath = "/admin";
-        port = 8000;
+        https.record = ''
+          proxy_pass http://unix:${config.runtimeDir}/socket;
+        '';
       };
     };
     websockets = {
       ws = {
-        port = 8888;
         subpath = "/events";
+        port = 8888;
+        #https.record = ''
+        #  proxy_pass http://unix:${config.runtimeDir}/socket-events;
+        #'';
       };
     };
   };
@@ -360,12 +358,6 @@ in
     }
     location /conf.json {
       alias ${taigaFrontConfigFile};
-    }
-    location /api {
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header Host $http_host;
-      proxy_redirect off;
-      proxy_pass http://unix:/var/run/gunicorn/socket;
     }
     '';
 
