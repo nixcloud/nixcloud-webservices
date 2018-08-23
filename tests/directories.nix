@@ -39,13 +39,23 @@
     };
   };
 
+  machine.nixcloud.webservices.custom.foo = {
+    enable = true;
+    directories."/relative/to/statedir" = {
+      owner = "alice";
+      group = "bobs";
+    };
+  };
+
   machine.users.groups.vip = {};
   machine.users.groups.bobs = {};
   machine.users.users.alice.isNormalUser = true;
   machine.users.users.bob.isNormalUser = true;
   machine.users.users.bob.extraGroups = [ "bobs" ];
 
-  testScript = ''
+  testScript = { nodes, ... }: let
+    inherit (nodes.machine.config.nixcloud.webservices.custom) foo;
+  in ''
     sub ensureStat ($$$$) {
       my ($path, $expect, $desc, $flag) = @_;
       my $result = $machine->succeed('stat -c %'.$flag.' '.$path);
@@ -98,6 +108,9 @@
       ensureOwner "/only/alice", "alice";
       ensureGroup "/only/alice", "bobs";
       ensureMode "/only/alice", "0700";
+
+      ensureOwner "${foo.stateDir}/relative/to/statedir", "alice";
+      ensureGroup "${foo.stateDir}/relative/to/statedir", "bobs";
     }
 
     $machine->waitForUnit('multi-user.target');
