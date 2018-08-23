@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  inherit (lib) types mkOption;
+  inherit (lib) types mkOption mkRenamedOptionModule;
   cfg = config.nixcloud.email;
 
   excludeDirection = dir: lib.filter (x: x.direction != dir) cfg.headerChecks;
@@ -9,8 +9,17 @@ let
   checksOutgoing = lib.concatMapStringsSep "\n" (x: "${x.pattern} ${x.action}") (excludeDirection "incoming");
   relayPasswd = lib.concatStringsSep "\n" (lib.mapAttrsToList (user: password: "${cfg.relay.host} ${user}:${password}") cfg.relay.passwords);
 
+  postfixCfg = config.services.postfix;
+  rspamdCfg = config.services.rspamd;
+  rspamdSocket = if rspamdCfg.socketActivation
+    then "rspamd-rspamd_proxy-1.socket"
+    else "rspamd.service";
+
 in {
-  imports = [ ./virtual-mail-users.nix ];
+  imports = [
+    ./virtual-mail-users.nix
+    (mkRenamedOptionModule [ "nixcloud" "email" "enableSpamassassin" ] [ "nixcloud" "email" "enableRspamd" ])
+  ];
 
   options.nixcloud.email = {
     enable = mkOption {
@@ -53,13 +62,12 @@ in {
         domains. Used by Postfix and ACME.
       '';
     };
-    enableSpamassassin = mkOption {
+    enableRspamd = mkOption {
       type = types.bool;
       default = true;
       description = ''
-        SpamAssassin is the #1 Open Source anti-spam platform giving system
-        administrators a filter to classify email and block spam (unsolicited
-        bulk email).
+        Fast, free and open-source spam (unsolicited bulk email) filtering
+        system.
       '';
     };
     enableGreylisting = mkOption {
@@ -206,20 +214,6 @@ in {
   };
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
-    (lib.mkIf cfg.enableSpamassassin {
-      services.spamassassin = {
-        enable = true;
-        #debug = true;
-        config = ''
-          #rewrite_header Subject [***** SPAM _SCORE_ *****]
-          required_score          5.0
-          use_bayes               1
-          bayes_auto_learn        1
-          add_header all Status _YESNO_, score=_SCORE_ required=_REQD_ tests=_TESTS_ autolearn=_AUTOLEARN_ version=_VERSION_
-        '';
-      };
-    })
-
     (lib.mkIf cfg.enableTLS {
       nixcloud.reverse-proxy.enable = true;
 
@@ -267,6 +261,56 @@ in {
       services.postgrey.enable = true;
     })
 
+    (lib.mkIf cfg.enableRspamd {
+      services.rspamd = {
+        enable = true;
+        socketActivation = false;
+        extraConfig = ''
+          extended_spam_headers = yes;
+        '';
+
+        workers.rspamd_proxy = {
+          type = "proxy";
+          bindSockets = [{
+            socket = "/run/rspamd/rspamd-milter.sock";
+            mode = "0664";
+          }];
+          count = 1; # Do not spawn too many processes of this type
+          extraConfig = ''
+            milter = yes; # Enable milter mode
+            timeout = 120s; # Needed for Milter usually
+
+            upstream "local" {
+              default = yes; # Self-scan upstreams are always default
+              self_scan = yes; # Enable self-scan
+            }
+          '';
+        };
+        workers.controller = {
+          type = "controller";
+          count = 1;
+          bindSockets = [{
+            socket = "/run/rspamd/worker-controller.sock";
+            mode = "0666";
+          }];
+          includes = [];
+        };
+
+      };
+      systemd.services.postfix = {
+        after = [ rspamdSocket ];
+        requires = [ rspamdSocket ];
+      };
+      users.users.${postfixCfg.user}.extraGroups = [ rspamdCfg.group ];
+      services.postfix.config = {
+        smtpd_milters = [
+          "unix:/run/rspamd/rspamd-milter.sock"
+        ];
+        milter_protocol = "6";
+        milter_mail_macros = "i {mail_addr} {client_addr} {client_name} {auth_type} {auth_authen} {auth_author} {mail_addr} {mail_host} {mail_mailer}";
+      };
+    })
+
     {
       networking.firewall = {
         allowPing = true;
@@ -292,13 +336,7 @@ in {
           smtp_inet = {
             args = [
              "-o" "smtp_header_checks=header_checks_incoming"
-            ] ++ lib.optionals cfg.enableSpamassassin [ "-o" "content_filter=spamassassin" ];
-          };
-        } // lib.optionalAttrs cfg.enableSpamassassin {
-          spamassassin = {
-            command = "pipe";
-            args = [ "user=spamd" "argv=${pkgs.spamassassin}/bin/spamc" "-f" "-e" "/run/wrappers/bin/sendmail" "-oi" "-f" ''''${sender}'' ''''${recipient}'' ];
-            privileged = true;
+            ];
           };
         } // lib.optionalAttrs cfg.enableSPFPolicy {
           policydspf = {
