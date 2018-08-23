@@ -40,12 +40,14 @@
     tests = passSubOption [ "nixcloud" "tests" "wanted" ] [ "tests" "wanted" ];
 
     # Special case: We don't want to pass the options to the top-level
-    # unmodified because want to remove the instance.* attributes as those are
-    # already merged in the config attribute of the directories submodule.
+    # unmodified because we want to remove all the web service-specific
+    # attributes as those are already merged in the config attribute of the
+    # directories submodule.
     dirs.nixcloud.directories = let
       modifyConfig = cfg: let
         removeInstance = lib.flip removeAttrs [ "instance" ];
-      in lib.mapAttrs (lib.const removeInstance) cfg.directories;
+        combined = cfg.directories // cfg.runtimeDirectories;
+      in lib.mapAttrs (lib.const removeInstance) combined;
     in lib.mkMerge (nclib.mapWSConfigToList modifyConfig);
 
   in lib.mkMerge [ toplevel tests dirs ];
