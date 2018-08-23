@@ -171,7 +171,7 @@ in {
       _module.args.mkUniqueGroup = mkUniqueUserGroup "group";
     }
     (lib.mkIf config.enable {
-      runtimeDirectories."/" = {
+      runtimeDirectories."/" = rec {
         users = lib.mapAttrs' (name: lib.const {
           name = mkUniqueUser name;
           value.fullAccess = true;
@@ -187,22 +187,12 @@ in {
         permissions.group.write = false;
         permissions.others.noAccess = true;
         permissions.recursive = false;
-        instance.before = [
-          "webserver-init.service" "instance-init.target"
-          "runtimedir-set-sticky.service"
-        ];
-      };
-
-      systemd.services.runtimedir-set-sticky = {
-        description = "Set Sticky Bit For ${config.runtimeDir}";
         instance.before = [ "webserver-init.service" "instance-init.target" ];
-        instance.requiredBy = [ "instance-init.target" ];
-        instance.ignore-init = true;
-        serviceConfig.Type = "oneshot";
-        serviceConfig.ExecStart = lib.escapeShellArgs [
-          "${pkgs.coreutils}/bin/chmod" "+t" config.runtimeDir
-        ];
-        serviceConfig.RemainAfterExit = true;
+        postUpdateAsRoot = ''
+          ${lib.escapeShellArg pkgs.coreutils}/bin/chmod +t .
+          ${lib.escapeShellArg pkgs.acl}/bin/setfacl \
+            -d -m g:${lib.escapeShellArg group}:rwx .
+        '';
       };
 
       directories = let
