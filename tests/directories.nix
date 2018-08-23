@@ -41,10 +41,19 @@
 
   machine.nixcloud.webservices.custom.foo = {
     enable = true;
+
     directories."/relative/to/statedir" = {
       owner = "alice";
       group = "bobs";
     };
+
+    runtimeDirectories."relative/to/runtimedir" = {
+      owner = "bob";
+      group = "vip";
+    };
+
+    directories.overlap.owner = "root";
+    runtimeDirectories.overlap.owner = "alice";
   };
 
   machine.users.groups.vip = {};
@@ -111,6 +120,12 @@
 
       ensureOwner "${foo.stateDir}/relative/to/statedir", "alice";
       ensureGroup "${foo.stateDir}/relative/to/statedir", "bobs";
+
+      ensureOwner "${foo.runtimeDir}/relative/to/runtimedir", "bob";
+      ensureGroup "${foo.runtimeDir}/relative/to/runtimedir", "vip";
+
+      ensureOwner "${foo.stateDir}/overlap", "root";
+      ensureOwner "${foo.runtimeDir}/overlap", "alice";
     }
 
     $machine->waitForUnit('multi-user.target');

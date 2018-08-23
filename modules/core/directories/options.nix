@@ -1,4 +1,6 @@
-{ config, lib, isWebServices ? false }:
+{ config, lib, isWebServices ? false, basePath ? null, basePathOpt ? null }:
+
+assert isWebServices -> basePath != null && basePathOpt != null;
 
 let
   inherit (lib) types;
@@ -287,6 +289,10 @@ in lib.mkOption {
         '';
       };
     } // lib.optionalAttrs isWebServices {
+      # NOTE: If you add any option here, you need to make sure it's removed in
+      # modules/core/web/default.nix, because the top-level variant of the
+      # "directories" submodule does not contain them.
+
       instance.before = lib.mkOption {
         type = types.listOf types.str;
         default = [];
@@ -309,8 +315,8 @@ in lib.mkOption {
   example."foo/bar".group = "shinyones";
   apply = lib.mapAttrs' (path: value: {
     name = let
-      maybeStateDir = lib.optionalString isWebServices "${config.stateDir}/";
-      sanitized = sanitizePath (maybeStateDir + path);
+      maybeBasePath = lib.optionalString isWebServices "${basePath}/";
+      sanitized = sanitizePath (maybeBasePath + path);
       errorMsg = "The path '${path}' (canonicalized: '${sanitized}') is"
                + " either invalid or refers to '/', which is not allowed"
                + " for the 'nixcloud.directories' option.";
@@ -318,7 +324,7 @@ in lib.mkOption {
     inherit value;
   });
   description = let
-    relativeDoc = "paths relative to <option>stateDir</option>";
+    relativeDoc = "paths relative to <option>${basePathOpt}</option>";
     absoluteDoc = "absolute paths";
   in ''
     Directories to create and set permissions for.
