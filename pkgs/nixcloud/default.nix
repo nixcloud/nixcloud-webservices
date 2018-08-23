@@ -7,8 +7,8 @@
     src = pkgs.fetchFromGitHub {
       owner = "nixcloud";
       repo = "nixcloud-container";
-      rev = "6c3d330560e52e7508f439cb7556ba2b62cb0cb4";
-      sha256 = "0yz6gqih14hcqnapf3gm9d3zl5b0jbgim6q35ba435qizwajdm31";
+      rev = "4d2c527f825d1365a432ca1b7e66ffab7754a237";
+      sha256 = "11pvhpdg5ipxy98sq0laxc3bbgbahhkbbvbjygx6k4jknkk5bmm5";
     };
 
     nativeBuildInputs = [ pkgs.makeWrapper ];
