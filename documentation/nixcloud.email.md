@@ -197,11 +197,11 @@ Settings are:
     User Name: js@lastlog.de
     Secure Connection: True
 
-We already provide a minimal sieve setup for spamassassin:
+We already provide a minimal sieve setup for rspamd:
 
     require ["fileinto", "reject", "envelope", "mailbox", "reject"];
 
-    if header :contains "X-Spam-Flag" "YES" {
+    if header :contains "X-Spam" "YES" {
       fileinto :create "Spam";
       stop;
     }
