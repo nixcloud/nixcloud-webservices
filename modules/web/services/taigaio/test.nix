@@ -4,12 +4,15 @@
   machine.nixcloud.reverse-proxy.enable = true;
   machine.nixcloud.reverse-proxy.extendEtcHosts = true;
   machine.nixcloud.webservices.taigaio = {
-    foo.enable = true;
-    foo.proxyOptions.TLS = "none";
-    foo.proxyOptions.domain = "example.com";
-    foo.proxyOptions.http.mode = "on";
-    foo.proxyOptions.https.mode = "off";
-    foo.proxyOptions.port = 8080;
+    foo = {
+      enable = true;
+      proxyOptions.TLS = "none";
+      proxyOptions.domain = "example.com";
+      proxyOptions.http.mode = "on";
+      proxyOptions.https.mode = "off";
+      proxyOptions.port = 8080;
+      djangoSecret = "theveryultratopse";
+    };
   };
 
   testScript = ''
@@ -33,12 +36,12 @@
     $machine->waitForUnit('multi-user.target');
     $machine->waitForOpenPort(80);
     $machine->waitForOpenPort(8080);
-    $machine->succeed('curl http://example.com/ | grep -qF leaps_logo.png');
+    $machine->succeed('curl http://example.com/ | grep -qF taigaio');
 
-    ensureOwner "/var/lib/nixcloud/webservices/leaps-foo/www", "leaps-foo";
-    ensureGroup "/var/lib/nixcloud/webservices/leaps-foo/www", "leaps-foo";
+    #ensureOwner "/var/lib/nixcloud/webservices/leaps-foo/www", "leaps-foo";
+    #ensureGroup "/var/lib/nixcloud/webservices/leaps-foo/www", "leaps-foo";
 
-    ensureOwner "/var/lib/nixcloud/webservices/leaps-bar/www", "leaps-bar";
-    ensureGroup "/var/lib/nixcloud/webservices/leaps-bar/www", "leaps-bar";
+    #ensureOwner "/var/lib/nixcloud/webservices/leaps-bar/www", "leaps-bar";
+    #ensureGroup "/var/lib/nixcloud/webservices/leaps-bar/www", "leaps-bar";
   '';
 }

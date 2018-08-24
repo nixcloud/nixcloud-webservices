@@ -1,8 +1,8 @@
 { config, pkgs, lib, mkUniqueUser, mkUniqueGroup, ... }:
 # https://taigaio.github.io/taiga-doc/dist/setup-production.html
 # todo
-# * port 8000 hardcoded 
-#   -> use unix domain socket instead of inet socket
+# * port 8888 hardcoded 
+#   -> use unix domain socket wrapper by aszlig
 # * systemd dependencies
 # * file bug in nixpkgs on buildPythonPackage vs buildPythonApplication with penv.extraLibs where taiga-back won't inherit the propagatedBuildInputs
 # * admin:
@@ -13,7 +13,6 @@
 #   * eventually use unix domain socket
 # * write test
 #   * wsgi mode
-#   * manage.py mode
 #   * write websocket test
 # * fix all BUG/FIXME/SECURITY inside this document
 # * reverse-proxy settings: client_max_body_size "51m"; large_client_header_buffers 4 32k; charset utf-8; merge...
@@ -103,7 +102,7 @@ let
     secret = config.djangoSecret;
     # FIXME hardcoded port
     webSocketServer = { port = 8888; };
-    #webSocketServer = "${config.runtimeDir}/socket-events";
+    #webSocketServer = { server = "${config.runtimeDir}/socket-events"; };
   } ];
 
   taigaEventsConfigFile = pkgs.writeText "taiga-events-config-raw.json" (builtins.toJSON taigaEventsConfig);
@@ -280,7 +279,8 @@ in
         User = mkUniqueUser "taigaio-events";
         Group = mkUniqueGroup "taigaio-events";
         
-        WorkingDirectory = "${config.stateDir}/www";
+        WorkingDirectory = "${taiga-events}/lib/node_modules/TaigaIO-Events/";
+          #${indexcoffee} \
         ExecStart = ''
           ${pkgs.nodePackages.coffee-script}/lib/node_modules/coffee-script/bin/coffee \
           ${taiga-events}/lib/node_modules/TaigaIO-Events/index.coffee \
@@ -332,10 +332,10 @@ in
     websockets = {
       ws = {
         subpath = "/events";
-        port = 8888;
-        #https.record = ''
-        #  proxy_pass http://unix:${config.runtimeDir}/socket-events;
-        #'';
+        #port = 8888;
+        https.record = ''
+          proxy_pass http://unix:${config.runtimeDir}/socket-events;
+        '';
       };
     };
   };
