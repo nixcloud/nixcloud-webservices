@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   _module.args.nclib = rec {
@@ -29,5 +29,23 @@
       getConfig = lib.mapAttrsToList (lib.const applyCond);
       getFlatCfg = wscfg: lib.concatLists (getConfig wscfg);
     in lib.concatLists (lib.mapAttrsToList (lib.const getFlatCfg) webservices);
+
+    # Map UNIX Domain Sockets to Unix sockets, example usage:
+    #
+    # ipToUnix {
+    #   program = "${pkgs.nginx}/bin/nginx";
+    #   rules = [
+    #     { direction = "outgoing"; socketPath = "/run/other.sock"; }
+    #     { address = "127.0.0.1"; socketPath = "/run/local.sock"; }
+    #     { socketActivation = true; fdName = "foo" }
+    #   ];
+    # }
+    ipToUnix = args: (lib.evalModules {
+      modules = [
+        { config._module.args = { inherit pkgs; }; }
+        { config = args; }
+        ./ip-to-unix
+      ];
+    }).config.__result;
   };
 }

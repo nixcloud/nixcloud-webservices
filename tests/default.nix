@@ -9,6 +9,7 @@ in {
   custom-webservice = callTest ./custom-webservice.nix;
   dbshell = callTest ./dbshell.nix;
   directories = callTest ./directories.nix;
+  ip-to-unix = callTest ./ip-to-unix.nix;
   mkunique = callTest ./mkunique.nix;
   user-allocation-uid-gid-test = callTest ./user-allocation-uid-gid-test.nix;
   version = callTest ./version.nix;
