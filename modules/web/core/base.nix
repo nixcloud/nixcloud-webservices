@@ -61,7 +61,9 @@ let
   isHashed = val: builtins.match "(user|group)-[a-f0-9]+" val != null;
 
 in {
-  imports = [ ./webserver.nix ./meta.nix ./directories.nix ../database ];
+  imports = [
+    ./webserver.nix ./meta.nix ./directories.nix ../database ../messaging
+  ];
 
   options = {
     enable = lib.mkOption {

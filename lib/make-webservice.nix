@@ -1,6 +1,6 @@
 wsName: module:
 
-{ config, options, pkgs, lib, ... }@toplevel:
+{ config, options, pkgs, lib, nclib, ... }@toplevel:
 
 {
   options.nixcloud.webservices.${wsName} = lib.mkOption {
@@ -13,7 +13,7 @@ wsName: module:
         ../modules/web/webserver/nginx.nix
         ../modules/web/webserver/darkhttpd.nix
       ];
-      _module.args = { inherit wsName pkgs toplevel; };
+      _module.args = { inherit wsName pkgs toplevel nclib; };
     });
     default = {};
     # TODO: Flesh out this description.
