@@ -18,6 +18,7 @@ in {
   # XXX: These tests should be automatically gathered by the module system!
   reverse-proxy = callTest ../modules/services/reverse-proxy/test.nix;
   email = callTest ../modules/services/email/test;
+  messaging.rabbitmq = callTest ../modules/web/messaging/rabbitmq/test.nix;
   webservices.mediawiki = callTest ../modules/web/services/mediawiki/test.nix;
   webservices.mattermost = callTest ../modules/web/services/mattermost/test.nix;
   webservices.hydra = callTest ../modules/web/services/hydra/test.nix;
