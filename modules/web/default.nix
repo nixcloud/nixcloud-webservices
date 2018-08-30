@@ -14,6 +14,7 @@
     hydra             = services/hydra;
     leaps             = services/leaps;
     taigaio           = services/taigaio;
+    editoria          = services/editoria;
     mediawiki         = services/mediawiki;
     static-darkhttpd  = services/static-darkhttpd;
     static-nginx      = services/static-nginx;

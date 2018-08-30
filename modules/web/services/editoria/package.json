@@ -1,0 +1,45 @@
+{
+  "author": "Yannis Barlas",
+  "description": "Monorepo grouping all the different parts of the Editoria project",
+  "devDependencies": {
+    "babel-eslint": "^8.0.3",
+    "babel-preset-es2015": "^6.24.1",
+    "eslint": "^4.13.1",
+    "eslint-config-pubsweet": "^0.0.6",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-jest": "^21.4.2",
+    "eslint-plugin-jsx-a11y": "^6.0.2",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-prettier": "^2.3.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-react": "^7.4.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "lerna": "^2.5.1",
+    "lint-staged": "^6.0.0",
+    "prettier": "^1.8.2",
+    "stylelint": "^8.2.0",
+    "stylelint-config-prettier": "^2.0.0",
+    "stylelint-config-pubsweet": "^0.0.3"
+  },
+  "license": "MIT",
+  "name": "editoria-monorepo",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.coko.foundation:editoria/editoria.git"
+  },
+  "scripts": {
+    "bootstrap": "lerna bootstrap",
+    "clean": "lerna clean",
+    "publish": "lerna publish",
+    "updated": "lerna updated",
+    "test": "lerna run test"
+  },
+  "version": "0.0.0",
+  "dependencies": {
+    "babel-preset-stage-0": "^6.24.1"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
