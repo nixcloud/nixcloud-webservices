@@ -127,11 +127,13 @@ In a nutshell, you need to do three things:
     nixcloud.TLS.certs = {
       "example.org" = {
         mode = "ACME";
+        users = [ "murmur" ];
         reload  = [ "myservice1.service" ];
         restart = [ "myservice2.service" ];
       };
     };
 
+**Note:** It is important to list all the users, like murmur, so NixOS services which are not started as root still can access the certificates! A list of such user names can be found in https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/ids.nix!
 **Note:** It is important that you list your systemd services in `reload` or `restart` so they get reloaded or restarted once a new certificate arrives.
 
 ### Referencing certificate/key
