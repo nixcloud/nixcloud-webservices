@@ -41,7 +41,7 @@ A more complex example configuration for `nixcloud.TLS` would be:
         domain = "example.com";
         mode = "ACME";
         email = "foo@example.com";
-        reload = [ "postifx.service" "myservice.service" ];
+        reload = [ "postfix.service" "myservice.service" ];
       };
       "example.com-selfsigned" = {
         domain = "example.com";
