@@ -198,18 +198,33 @@ let
 in
 
 {
-  options.nixcloud.TLS.certs = mkOption {
-    default = {};
-    type = types.attrsOf (types.submodule certOpts);
-    description = ''
-      Attribute set of certificates to be used by various NixOS services.
-    '';
-    example = literalExample ''
-      "example.com" = {
-        email = "foo@example.com";
-        reload = [ "postfix.service" "myservice.service" ];
-      };
-    '';
+  options.nixcloud.TLS = {
+    email = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = ''
+        Optional (global) contact email address used for all let's encrypt CA requests so they can
+        reach you. This global option can be overriden using the email option in the `certs` scope.
+      '';
+    };
+    certs = mkOption {
+      default = {};
+      type = types.attrsOf (types.submodule {
+        imports = [ certOpts ];
+        config = {
+          email = lib.mkDefault config.nixcloud.TLS.email;
+        };
+      });
+      description = ''
+        Attribute set of certificates to be used by various NixOS services.
+      '';
+      example = literalExample ''
+        "example.com" = {
+          email = "foo@example.com";
+          reload = [ "postfix.service" "myservice.service" ];
+        };
+      '';
+    };
   };
   config = let
     usersuppliedTargets = fold (identifier: con: if isAttrs config.nixcloud.TLS.certs.${identifier}.mode then con ++ [
