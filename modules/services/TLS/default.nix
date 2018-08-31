@@ -8,7 +8,7 @@ let
 
   replace = [ "." ];
   replaceWith = [ "-" ];
-  filterIdentifier = replaceChars replace replaceWith;
+  filterIdentifier = x: "nc-${replaceChars replace replaceWith x}";
 
   nixcloudTLSDomainType = mkOptionType {
     name = "nixcloud.TLS.certs.<name>.domain";
