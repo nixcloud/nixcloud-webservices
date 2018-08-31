@@ -70,11 +70,11 @@ let
         type = nixcloudReloadType;
         apply = x: lib.subtractLists toplevel.config.restart (unique x);
         default = [];
-        example = [ "postifx.service" ];
+        example = [ "postfix.service" ];
         description = ''
           A list of systemd services which are <emphasis>reloaded</emphasis>
           after certificates are re-issued. A service is only
-          <emphasis>reloaded</emphasis> once, even when mentioned serveral
+          <emphasis>reloaded</emphasis> once, even when mentioned several
           times in this list. It is not reloaded if it is also listed in the
           <option>restart</option> list, then it is only restarted.
         '';
@@ -83,7 +83,7 @@ let
         type = nixcloudRestartType;
         default = [];
         apply = x: unique x;
-        example = [ "postifx.service" ];
+        example = [ "postfix.service" ];
         description = ''
           A list of systemd services which are <emphasis>restarted</emphasis>
           after certificates are re-issued. A service is only
@@ -188,7 +188,7 @@ in
     example = literalExample ''
       "example.com" = {
         email = "foo@example.com";
-        reload = [ "postifx.service" "myservice.service" ];
+        reload = [ "postfix.service" "myservice.service" ];
       };
     '';
   };

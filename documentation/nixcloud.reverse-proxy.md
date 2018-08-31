@@ -47,7 +47,7 @@ The `TLS` field was set to the identifier "myidentifier" for which you need a:
     nixcloud.TLS.certs."myidentifier" = {
       domain = "example.org";
       mode = "selfsigned";
-      reload = [ "postifx.service" "myservice.service" ];
+      reload = [ "postfix.service" "myservice.service" ];
     };
 
 By default the `proxyOptions.TLS` option is set to the `proxyOptions.domain` and `nixcloud.TLS` will then have "ACME" as the default so it will use `security.acme` as backend. 
