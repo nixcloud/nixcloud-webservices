@@ -3,11 +3,14 @@
 let
   nix = toplevel.config.nix.package.overrideAttrs (drv: {
     # This patch allows pass a --store argument to nix-daemon.
-    patches = (drv.patches or []) ++ lib.singleton (pkgs.fetchpatch {
-      url = "https://github.com/NixOS/nix/commit/"
-          + "e388739098cfb14a166923cd24b6140674b176f8.patch";
-      sha256 = "0mh328ff9p6np1iw70lkrvsiwr10y6y3dqj6mq47w0y4n38vimck";
-    });
+    patches = (drv.patches or []) ++ 
+      (if (builtins.compareVersions nix.version "2.1") == -1 then
+        lib.singleton (pkgs.fetchpatch {
+          url = "https://github.com/NixOS/nix/commit/"
+            + "e388739098cfb14a166923cd24b6140674b176f8.patch";
+          sha256 = "0mh328ff9p6np1iw70lkrvsiwr10y6y3dqj6mq47w0y4n38vimck";
+        })
+      else []);
 
     # XXX: We can't easily .override nix.perl-bindings, so it's copy & pasted
     # from <nixpkgs/pkgs/tools/package-management/nix/default.nix>.
