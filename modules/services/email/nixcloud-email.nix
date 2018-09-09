@@ -253,10 +253,6 @@ in {
     })
 
     # FIXME: add a mkOption to set domains or email addresses on a white list
-    # FIXME: 1. if no SPF found -> greylist
-    #        2. if no SPF found + valid DMARC signature -> greylist
-    #        3. if SPF + no valid DMARC signature -> greylist
-    #        4. if SPF + valid DMARC signature -> receive directly
     (lib.mkIf cfg.enableGreylisting {
       services.postgrey.enable = true;
     })
