@@ -9,6 +9,12 @@
 * [x] POP3 support (optional)
 * [x] Greylisting (optional)
 * [x] Rspamd (optional)
+     * We use this metric:
+
+                score < 4  allow message
+           4  < score < 6  greylist message
+           6  < score < 15 add spam header
+           15 < score       reject message
 * [x] supports [nixcloud.TLS.md](nixcloud.TLS.md) (optional)
      * ACME TLS certificates
      * usersupplied certificates
