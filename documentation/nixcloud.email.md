@@ -319,6 +319,15 @@ all files from:
 * /var/lib/dkim/keys/
 * /var/lib/virtualMail/
 
+# Developing/Testing
+
+When you change the `nixcloud.email` abstraction you can run our tests manually by:
+
+    cd tests
+    nix-build -A email
+
+Keep in mind, when you run 'nixos-rebuild switch' this test is also executed implicitly.
+
 # Links
 
 * [https://github.com/NixOS/nixpkgs/pull/29366](https://github.com/NixOS/nixpkgs/pull/29366)
