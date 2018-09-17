@@ -309,7 +309,7 @@ in {
 
     {
       networking.firewall = {
-        allowPing = true;
+        allowPing = lib.mkDefault true;
         allowedTCPPorts = [
           25   # master (postfix)
           143  # imap (dovecot)
