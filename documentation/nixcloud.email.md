@@ -38,17 +38,15 @@ See [implementation](../modules/services/email)
 
 Upcoming features:
 
-* [ ] Add mailinglist support
-* [ ] Refactor `nixcloud.email.relay` into `nixcloud.email-relay`
-* [ ] DNS abstraction (generate a list of DNS entries for manual configuration)
-* [ ] Webmail support (Roundcube)
-* [ ] Add small command line tool to manage users / passwords (in addition to declarative users/passwords)
-* [ ] Rewrite sender mail address when forwarding (SRS) correctly
-* [ ] SNI support for Nix Dovecot abstraction
-* [ ] Advanced logging
-* [ ] Adding group aliases
+* SNI support for dovecot2/postfix
+* Webmail support (Roundcube)
+* Refactor `nixcloud.email.relay` into `nixcloud.email-relay`
+* Advanced monitoring using https://github.com/nixcloud/nixcloud.monitoring
+* Adding group aliases
+* Rewrite sender mail address when forwarding (SRS) correctly
+* Advanced logging
 
-Thanks to the support of nlnet.nl!
+Thanks to the support of https://nlnet.nl!
 
 # Job offer
 
