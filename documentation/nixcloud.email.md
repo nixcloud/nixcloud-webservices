@@ -48,16 +48,11 @@ Upcoming features:
 
 Thanks to the support of https://nlnet.nl!
 
-# Job offer
-
-If you are familiar with email technology and want to implement one of the above features, contact us:
-
-  info@nixcloud.io
-
 # Limitations
 
 * No support for shell users, only virtualUsers. This is by intention to reduce complexity in the backend.
 * Using `nixcloud.email.enableTLS = true;` will not work with `services.nginx` out of the box, [see this](nixcloud.reverse-proxy.md#extramappings-examples).
+* Managing users/passwords only possible by using the `nixcloud.email` abstraction, no shell tooling
 
 # Configuration
 
@@ -83,7 +78,6 @@ See https://nixdoc.io/nixcloud-webservices#nixcloud
           { name = "foo1"; domain = "dune2.de"; password = "{PLAIN}asdfasdfasdfasdf"; }
         ];
       };
-
 
 ## DNS entries
 
