@@ -120,12 +120,18 @@ in
     allHttpOnlyProxyOptions = filter (el: el.http.mode != "off" || checkLocationMode el.websockets "http" || checkLocationMode el.extraLocations "http") allProxyOptions;
     allHttpNCDomains = unique (map (el: el.domain) allHttpOnlyProxyOptions);
 
-    # simp_le requires a webserver with http to serve challenge/response requests for let's encrypt ACME to work
-    ACMEImpliedDomains = unique (mapAttrsToList (name: value: if (value.domain != null) then value.domain else name) config.security.acme.certs);
-    ACMEImpliedDomains_ = unique (mapAttrsToList (name: value:
-      { name = if (value.domain != null) then value.domain else name; value = value.webroot; }) config.security.acme.certs);
+    # a complete list of domains using ACME simple list of ACME domains
+    # since a domain might be a 'extraDomain' and the challanges folder is located via the identifier
+    ACMEImpliedDomains = let
+      allIdentifiers = attrNames config.nixcloud.TLS.certs;
+    in
+      unique ((map (i: config.nixcloud.TLS.certs.${i}.domain) allIdentifiers) ++ fold (i: c: c ++ config.nixcloud.TLS.certs.${i}.extraDomains) [] allIdentifiers);
+    ACMEImpliedDomainsSet = lib.traceValSeq (builtins.listToAttrs (let
+      children = identifier: extraDomains: fold (domain: c: c ++ [ { name = "${domain}"; value = "/var/lib/nixcloud/TLS/${identifier}/ACME/challenges"; } ]) [] extraDomains;
+    in
+      fold (identifier: c: c ++ (children identifier config.nixcloud.TLS.certs.${identifier}.extraDomains) 
+        ++ [ { name = config.nixcloud.TLS.certs.${identifier}.domain; value = "/var/lib/nixcloud/TLS/${identifier}/ACME/challenges"; } ]) [] (attrNames config.nixcloud.TLS.certs)));
 
-    allAcmeDomains = builtins.listToAttrs ACMEImpliedDomains_;
     allHttpDomains = unique (ACMEImpliedDomains ++ allHttpNCDomains);
 
     # nixcloud.TLS details
@@ -278,11 +284,11 @@ in
           listen [::]:${toString cfg.httpPort};
           
           server_name ${domain};  
-          ${optionalString (allAcmeDomains ? "${domain}")
+          ${optionalString (ACMEImpliedDomainsSet ? "${domain}")
           ''
             # ACME requires this in the http record (will not work over https)
             location /.well-known/acme-challenge {
-              root ${allAcmeDomains."${domain}"};
+              root ${ACMEImpliedDomainsSet."${domain}"};
               auth_basic off;
             }
           ''}
