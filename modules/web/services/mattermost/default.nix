@@ -16,7 +16,10 @@ let
   mattermostConfig = {
     ServiceSettings.SiteURL = "${siteUrl}"; # "https://chat.example.com";
     ServiceSettings.ListenAddress = "localhost:${toString config.proxyOptions.port}";
-    TeamSettings.SiteName = config.siteName;
+    TeamSettings = {
+      SiteName = config.siteName;
+      ExperimentalDefaultChannels = [];
+    };
     SqlSettings = {
       DriverName = "postgres";
       DataSource = "postgres:///mattermost?host=${config.database.mattermost.socketPath}";
