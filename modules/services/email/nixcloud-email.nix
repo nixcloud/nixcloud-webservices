@@ -15,10 +15,18 @@ let
     then "rspamd-rspamd_proxy-1.socket"
     else "rspamd.service";
 
+  sniString = x: ''
+    local_name mail.${x} {
+      ssl_cert = <${config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate}
+      ssl_key = <${config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate_key}
+    }
+  '';
+
 in {
   imports = [
     ./virtual-mail-users.nix
     (mkRenamedOptionModule [ "nixcloud" "email" "enableSpamassassin" ] [ "nixcloud" "email" "enableRspamd" ])
+    (mkRenamedOptionModule [ "nixcloud" "email" "hostname" ] [ "nixcloud" "email" "fqdn" ])
   ];
 
   options.nixcloud.email = {
@@ -53,13 +61,12 @@ in {
         The domains for which the mailserver is responsible.
       '';
     };
-    hostname = mkOption {
+    fqdn = mkOption {
       type = types.str;
       example = "mail.example.com";
       default = config.networking.hostName;
       description = ''
-        The domain the MX record points to and hostname needs not be listed in
-        domains. Used by Postfix and ACME.
+        The FQDN (fully qualified domain name) of your mailserver.
       '';
     };
     enableRspamd = mkOption {
@@ -223,9 +230,12 @@ in {
       systemd.services.dovecot2.after = [ "nixcloud.TLS-certificates.target" ];
       systemd.services.dovecot2.wants = [ "nixcloud.TLS-certificates.target" ];
 
-      nixcloud.TLS.certs."${cfg.hostname}" = {
+      nixcloud.TLS.certs."${cfg.fqdn}" = {
+        domain = "${cfg.fqdn}";
+        extraDomains = map (x: "mail.${x}") cfg.domains;
         reload = [ "postfix.service" "dovecot2.service" ];
       };
+
       # https://github.com/nixcloud/nixcloud-webservices/issues/21
       # https://github.com/NixOS/nixpkgs/pull/39507
       security.dhparams = {
@@ -236,34 +246,30 @@ in {
       };
     })
 
-    # FIXME: when using nixcloud DNS we want the pubkey during nix evaluation time to generate
-    #        a prober DNS entry for uploading BUT the keys generation is delayed and takes place
-    #        during service activation and therefore we can't generate the DNS entry just yet
     (lib.mkIf cfg.enableDKIM {
       users.users.postfix.extraGroups = [ "opendkim" ];
       services.opendkim = {
         enable = true;
-        selector = "mail";
+        selector = config.nixcloud.email.fqdn; #"mail
         keyPath = "/var/lib/dkim/keys/";
         domains = "csl:${lib.concatStringsSep "," cfg.domains}";
         configFile = pkgs.writeText "opendkim.conf" ''
           UMask 0002
         '';
       };
-      environment.systemPackages = let
-        nixcloud-dkim-records = pkgs.writeScriptBin "nixcloud-dkim-records"
-          ''
-            #!${pkgs.stdenv.shell}
-            for domain in ${lib.concatStringsSep " " cfg.domains}; do
-              echo "=========== $domain ==========="
-              cat /var/lib/dkim/keys/mail.txt | sed "1 s/\s/.$domain. /"
-              echo ""
-            done
-          '';
-      in [ nixcloud-dkim-records ];
+      #environment.systemPackages = let
+      #  nixcloud-dkim-records = pkgs.writeScriptBin "nixcloud-dkim-records"
+      #    ''
+      #      #!${pkgs.stdenv.shell}
+      #      for domain in ${lib.concatStringsSep " " cfg.domains}; do
+      #        echo "=========== $domain ==========="
+      #        cat /var/lib/dkim/keys/mail.txt | sed "1 s/\s/.$domain. /"
+      #        echo ""
+      #      done
+      #    '';
+      #in [ nixcloud-dkim-records ];
     })
 
-    # FIXME: add a mkOption to set domains or email addresses on a white list
     (lib.mkIf cfg.enableGreylisting {
       services.postgrey.enable = true;
     })
@@ -354,7 +360,7 @@ in {
           };
         };
         setSendmail = true;
-        hostname = cfg.hostname;
+        hostname = cfg.fqdn;
         destination = [
           "localhost"
         ];
@@ -429,8 +435,8 @@ in {
           smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
         };
       } // lib.optionalAttrs cfg.enableTLS {
-        sslCert = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate;
-        sslKey  = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate_key;
+        sslCert = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate;
+        sslKey  = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate_key;
       } // lib.optionalAttrs (cfg.relay.host != null) {
         relayHost = cfg.relay.host;
         relayPort = cfg.relay.port;
@@ -540,10 +546,11 @@ in {
           }
           service managesieve {
           }
-        '';
+        '' + lib.fold (el: con: con + sniString el) "" config.nixcloud.email.domains;
+
       } // lib.optionalAttrs cfg.enableTLS {
-        sslServerCert = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate;
-        sslServerKey  = config.nixcloud.TLS.certs.${cfg.hostname}.tls_certificate_key;
+        sslServerCert = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate;
+        sslServerKey  = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate_key;
       };
     }
   ]);

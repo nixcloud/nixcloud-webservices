@@ -1,5 +1,6 @@
 { pkgs, ... }:
 {
+  lego = pkgs.callPackage ./lego/default.nix {};
   container = pkgs.stdenv.mkDerivation rec {
     name = "nixcloud-container-${version}";
     version = "0.0.1";

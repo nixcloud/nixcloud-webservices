@@ -6,6 +6,16 @@ let
   cfg = config.nixcloud.TLS;
   stateDir = "/var/lib/nixcloud/TLS";
 
+  # to prevent accidently exceeding the ACME's rate limit (API) we hash the options in a way
+  # that the order of the 'inputs' as domains, extraDomains and API endpoint don't affect the
+  # generated certificate
+  hashIdentifierACMEOptions = identifier: let 
+    c = config.nixcloud.TLS.certs.${identifier};
+    server = c.acmeApiEndpoint;
+    h = fold (el: c: c // { ${el} = ""; }) {} ([ c.domain ] ++ c.extraDomains ++ [ server ]);
+  in
+    builtins.hashString "sha256" (builtins.toJSON h);
+
   replace = [ "." ];
   replaceWith = [ "-" ];
   filterIdentifier = x: "nc-${replaceChars replace replaceWith x}";
@@ -38,6 +48,12 @@ let
     check = c;
     merge = m;
   };
+  acmeApiEndpointType = mkOptionType {
+    name = "nixcloud.TLS.certs.<name>.acmeApiEndpoint";
+    check = x: (isString x && x != "");
+    merge = mergeEqualOption;
+  };
+
   nixcloudExtraDomainsType = mkOptionType {
     name = "nixcloud.TLS.certs.<name>.extraDomains";
     check = c;
@@ -54,13 +70,23 @@ let
     merge = m;
   };
 
-  certOpts = { name, ... } @ toplevel: {
+  certOpts = { name, ... } @ toplevel: let identifier = name; in {
     options = {
       domain = mkOption {
         type = nixcloudTLSDomainType;
-        default = name;
+        default = identifier;
         description = ''
           Domain to fetch certificate for (defaults to the entry name)
+        '';
+      };
+      acmeApiEndpoint = mkOption {
+        default = "https://acme-staging-v02.api.letsencrypt.org/directory";
+        # FIXME: revert this to the 'none' staging
+        #default = "https://acme-v02.api.letsencrypt.org/directory";
+        example = "https://acme-staging-v02.api.letsencrypt.org/directory";
+        type = acmeApiEndpointType;
+        description = ''
+          ACME with let's encrypt has a production and a testing endpoint. This option can be set per identifier.
         '';
       };
       extraDomains = mkOption {
@@ -166,10 +192,10 @@ let
         readOnly = true;
         default =
           if isString toplevel.config.mode then
-            if toplevel.config.mode == "ACME" then "/var/lib/acme/${name}/key.pem" else
-            if toplevel.config.mode == "selfsigned" then "${stateDir}/${name}/selfsigned/key.pem" else
+            if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.key" else
+            if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/key.pem" else
             "/undefined1"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${name}/usersupplied/key.pem" else
+          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/usersupplied/key.pem" else
             "/undefined2";
         description = ''
           Internally set option (read only) which points to the
@@ -182,10 +208,10 @@ let
         readOnly = true;
         default =
           if isString toplevel.config.mode then
-            if toplevel.config.mode == "ACME" then "/var/lib/acme/${name}/fullchain.pem" else
-            if toplevel.config.mode == "selfsigned" then "${stateDir}/${name}/selfsigned/fullchain.pem" else
+            if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.crt" else
+            if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/fullchain.pem" else
             "/undefined1_"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${name}/usersupplied/fullchain.pem" else
+          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/usersupplied/fullchain.pem" else
             "/undefined2_";
         description = ''
           Internally set option (read only) which points to the
@@ -226,7 +252,62 @@ in
       '';
     };
   };
+# FIXME: we have two problems:
+#
+# PROBLEM1
+#   lego creates the files as root, the webserver is not able to read those, see:
+#   [root@mail:/var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/challenges/.well-known/acme-challenge]#  ls -lahtr
+#    total 16K
+#    drwxrwxrwx 3 root nc-mail-nix-lt 4.0K Oct  5 20:19 ..
+#    -rwxrwxrwx 1 root nc-mail-nix-lt    6 Oct  5 21:37 index.html
+#    -rw-r--r-- 1 root root             87 Oct  6 00:34 d02yY9AuX4D4lTzPyg6BC11ZCVz4_lP_upsKrov0kNk
+#
+# PROBLEM2 
+#   /var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/challenges (and so on) belongs to the user nc-mail-nix-lt and the user 'reverse-proxy' can not traverse those either 
+#
   config = let
+    acmeSupplied = fold (identifier: con: if (config.nixcloud.TLS.certs.${identifier}.mode) == "ACME" then con ++ [
+      (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
+        c = config.nixcloud.TLS.certs.${identifier};
+        allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
+        email = if (isString c.email) then c.email else "info@${c.domain}";
+        hash = hashIdentifierACMEOptions identifier;
+      in {
+        description = "nixcloud.TLS: create acmeSupplied certificate for ${identifier}";
+        script = ''
+          cd ${stateDir}/${identifier}/acmeSupplied
+          chown :${filterIdentifier identifier} ${stateDir}/${identifier} -R
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=${stateDir}/${identifier}/acmeSupplied/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=${stateDir}/${identifier}/acmeSupplied/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
+        '';
+        preStart = ''
+          # directory used by the nixcloud.reverse-proxy
+          mkdir -p ${stateDir}/${identifier}/acmeSupplied/challenges/.well-known/acme-challenge
+          mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}
+          chmod 0550 ${stateDir}/${identifier} -R
+          chmod 0555 ${stateDir}/${identifier}
+          chmod 0555 ${stateDir}/${identifier}/acmeSupplied
+          chmod 0555 ${stateDir}/${identifier}/acmeSupplied/challenges -R
+          chown :${filterIdentifier identifier} ${stateDir}/${identifier}
+          chown :${filterIdentifier identifier} ${stateDir}/${identifier}/acmeSupplied -R
+        '';
+        serviceConfig = {
+          Type = "oneshot";
+          # [root@mail:/var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/challenges/.well-known/acme-challenge]# ls -lathr
+          # total 16K                                                                                               
+          # dr-xr-xr-x 3 root nc-mail-nix-lt 4.0K Oct  5 20:19 ..                                                
+          # -r-xr-xr-x 1 root nc-mail-nix-lt    6 Oct  5 21:37 index.html                                    
+          # -rw-r--r-- 1 root root             87 Oct 10 20:27 hJqWwzYJ5jwJ5tUEfwqsjw-g0yWvuNoQILdQh17L0T4
+          UMask= "0111"; 
+          # workdir has a race condition since preStatr ISN't execute before
+          #WorkingDirectory = "${stateDir}/${identifier}/acmeSupplied";
+          #StateDirectory = "nixcloud/TLS/${identifier}";
+        };
+        before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
+        wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
+      }))
+    ] else con) [] (attrNames config.nixcloud.TLS.certs);
+
     usersuppliedTargets = fold (identifier: con: if isAttrs config.nixcloud.TLS.certs.${identifier}.mode then con ++ [
       (nameValuePair "nixcloud.TLS-usersupplied-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
@@ -268,7 +349,7 @@ in
       (nameValuePair "nixcloud.TLS-selfsigned-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
       in {
-        description = "nixcloud.TLS: create preliminary self-signed certificate for ${identifier}";
+        description = "nixcloud.TLS: create fallback self-signed certificate for ${identifier}";
 
         script = ''
           rm -Rf ${stateDir}/${identifier}/selfsigned # should not be needed
@@ -279,9 +360,14 @@ in
           workdir=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
           ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
           ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
-          ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr \
-            -subj "/C=UK/ST=Warwickshire/L=Leamington/O=OrgName/OU=IT Department/CN=example.com"
-          ${pkgs.openssl.bin}/bin/openssl x509 -req -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
+          ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr
+          #  -subj "/C=UK/ST=Warwickshire/L=Leamington/O=OrgName/OU=IT Department/CN=example.com"
+
+          # FIXME do this right, ...
+          # openssl x509 -req -extfile <(printf "subjectAltName=DNS:example.com,DNS:www.example.com") -days 365 -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+          # concatMapStringsSep "," (x: toUpper x) a
+
+          ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${concatMapStringsSep "," (x: "DNS:${x}") (config.nixcloud.TLS.certs.${identifier}.domain ++ config.nixcloud.TLS.certs.${identifier}.extraDomains)}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
           # Move key to destination
           mv $workdir/server.key $TMPDIR/selfsigned/key.pem
           mv $workdir/server.crt $TMPDIR/selfsigned/fullchain.pem
@@ -311,26 +397,15 @@ in
       }))
     ] else con) [] (attrNames config.nixcloud.TLS.certs);
   in {
-    security.acme.preliminarySelfsigned = true;
-    security.acme.certs = fold (cert: con: if config.nixcloud.TLS.certs.${cert}.mode == "ACME" then con // {
-      "${cert}" = let c = config.nixcloud.TLS.certs.${cert}; in {
-        domain = "${c.domain}";
-        email = c.email;
-        group = "${filterIdentifier cert}";
-        allowKeysForGroup = true;
-        webroot = "/var/lib/acme/acme-challenges";
-        postRun = ''
-          ${lib.concatStringsSep "\n" (map (el: "  systemctl restart ${el}") c.restart)}
-          ${lib.concatStringsSep "\n" (map (el: "  systemctl reload ${el}") c.reload)}
-        '';
-      };
-    } else con) {} (attrNames config.nixcloud.TLS.certs);
-
     users.groups = fold (identifier: con: con // {
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
     }) {} (attrNames config.nixcloud.TLS.certs);
 
-    systemd.services = listToAttrs (selfsignedTargets ++ usersuppliedTargets);
+    systemd.services = listToAttrs (selfsignedTargets ++ usersuppliedTargets ++ acmeSupplied);
+
+    systemd.targets."nixcloud.TLS-acmeSupplied-certificates" = {
+      description = "If reached, all certificates, which were supplied by lego, are in place";
+    };
 
     systemd.targets."nixcloud.TLS-usersupplied-certificates" = {
       description = "If reached, all certificates, which were supplied by the user, were already copied in place to be used";
@@ -346,18 +421,12 @@ in
       wantedBy = [ "multi-user.target" ];
 
       after =
-        # security.acme
-           [ "acme-selfsigned-certificates.target" ]
-        ++ [ "acme-certificates.target" ]
-        # nixcloud.TLS
+           [ "nixcloud.TLS-acmeSupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
 
       wants =
-        # security.acme
-           [ "acme-selfsigned-certificates.target" ]
-        ++ [ "acme-certificates.target" ]
-        # nixcloud.TLS
+           [ "nixcloud.TLS-acmeSupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
     };
