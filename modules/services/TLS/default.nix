@@ -262,7 +262,7 @@ in
       in {
         description = "nixcloud.TLS: create acmeSupplied certificate for ${identifier}";
         preStart = ''
-          mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}
+          mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}/certificates
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
           chown nixcloud-lego-user:${filterIdentifier identifier} ${stateDir}/${identifier} -R
         '';
@@ -276,10 +276,10 @@ in
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
         '';
         serviceConfig = {
-          User="nixcloud-lego-user";
           # with DynamicUser we don't know the UID in the preStart when PermissionsStartOnly so we can't use it, see
           # https://stackoverflow.com/questions/52755860/systemd-with-dynamicuser-uid-unknown
           #DynamicUser = true;
+          User="nixcloud-lego-user";
           ReadWritePaths = "-${stateDir}/${identifier}/acmeSupplied";
           SupplementaryGroups = "${filterIdentifier identifier}";
           ProtectSystem="strict";
@@ -287,6 +287,7 @@ in
           Type = "oneshot";
           RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
         };
+        onFailure = [ "" ];
         before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
       }))
@@ -335,23 +336,28 @@ in
       in {
         description = "nixcloud.TLS: create fallback self-signed certificate for ${identifier}";
 
-        script = ''
+        script = let
+          subjectAltName = lib.traceValSeq ( concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains));
+        in ''
           rm -Rf ${stateDir}/${identifier}/selfsigned # should not be needed
           TMPDIR=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
           mkdir $TMPDIR/selfsigned
 
           # Create self-signed key
           workdir=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
+          # create a self signed CA
           ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
           ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
-          ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr
-          #  -subj "/C=UK/ST=Warwickshire/L=Leamington/O=OrgName/OU=IT Department/CN=example.com"
+          # create a CSR
+          ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr -subj "/C=UK/ST=Warwickshire/L=Leamington/O=OrgName/OU=IT Department/CN=example.com"
+          # sign the CSR
+          ${pkgs.openssl.bin}/bin/openssl x509 -req -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
 
           # FIXME do this right, ...
           # openssl x509 -req -extfile <(printf "subjectAltName=DNS:example.com,DNS:www.example.com") -days 365 -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
           # concatMapStringsSep "," (x: toUpper x) a
+          # ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${subjectAltName}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
 
-          ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${concatMapStringsSep "," (x: "DNS:${x}") (config.nixcloud.TLS.certs.${identifier}.domain ++ config.nixcloud.TLS.certs.${identifier}.extraDomains)}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
           # Move key to destination
           mv $workdir/server.key $TMPDIR/selfsigned/key.pem
           mv $workdir/server.crt $TMPDIR/selfsigned/fullchain.pem
