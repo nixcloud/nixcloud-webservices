@@ -252,19 +252,6 @@ in
       '';
     };
   };
-# FIXME: we have two problems:
-#
-# PROBLEM1
-#   lego creates the files as root, the webserver is not able to read those, see:
-#   [root@mail:/var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/challenges/.well-known/acme-challenge]#  ls -lahtr
-#    total 16K
-#    drwxrwxrwx 3 root nc-mail-nix-lt 4.0K Oct  5 20:19 ..
-#    -rwxrwxrwx 1 root nc-mail-nix-lt    6 Oct  5 21:37 index.html
-#    -rw-r--r-- 1 root root             87 Oct  6 00:34 d02yY9AuX4D4lTzPyg6BC11ZCVz4_lP_upsKrov0kNk
-#
-# PROBLEM2 
-#   /var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/challenges (and so on) belongs to the user nc-mail-nix-lt and the user 'reverse-proxy' can not traverse those either 
-#
   config = let
     acmeSupplied = fold (identifier: con: if (config.nixcloud.TLS.certs.${identifier}.mode) == "ACME" then con ++ [
       (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
@@ -274,34 +261,28 @@ in
         hash = hashIdentifierACMEOptions identifier;
       in {
         description = "nixcloud.TLS: create acmeSupplied certificate for ${identifier}";
+        preStart = ''
+          mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}
+          chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
+          chown nc-lego:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+        '';
         script = ''
           cd ${stateDir}/${identifier}/acmeSupplied
-          chown :${filterIdentifier identifier} ${stateDir}/${identifier} -R
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=${stateDir}/${identifier}/acmeSupplied/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=${stateDir}/${identifier}/acmeSupplied/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
         '';
-        preStart = ''
-          # directory used by the nixcloud.reverse-proxy
-          mkdir -p ${stateDir}/${identifier}/acmeSupplied/challenges/.well-known/acme-challenge
-          mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}
-          chmod 0550 ${stateDir}/${identifier} -R
-          chmod 0555 ${stateDir}/${identifier}
-          chmod 0555 ${stateDir}/${identifier}/acmeSupplied
-          chmod 0555 ${stateDir}/${identifier}/acmeSupplied/challenges -R
-          chown :${filterIdentifier identifier} ${stateDir}/${identifier}
-          chown :${filterIdentifier identifier} ${stateDir}/${identifier}/acmeSupplied -R
+       postStart = ''
+          chown nc-lego:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+          chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
         '';
         serviceConfig = {
+          #DynamicUser = true;
+          User = "nc-lego";
+          ReadWritePaths = "-${stateDir}/${identifier}/acmeSupplied";
+          SupplementaryGroups = "${filterIdentifier identifier}";
+          PermissionsStartOnly = true;
           Type = "oneshot";
-          # [root@mail:/var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/challenges/.well-known/acme-challenge]# ls -lathr
-          # total 16K                                                                                               
-          # dr-xr-xr-x 3 root nc-mail-nix-lt 4.0K Oct  5 20:19 ..                                                
-          # -r-xr-xr-x 1 root nc-mail-nix-lt    6 Oct  5 21:37 index.html                                    
-          # -rw-r--r-- 1 root root             87 Oct 10 20:27 hJqWwzYJ5jwJ5tUEfwqsjw-g0yWvuNoQILdQh17L0T4
-          UMask= "0111"; 
-          # workdir has a race condition since preStatr ISN't execute before
-          #WorkingDirectory = "${stateDir}/${identifier}/acmeSupplied";
-          #StateDirectory = "nixcloud/TLS/${identifier}";
+          RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
         };
         before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
@@ -400,6 +381,13 @@ in
     users.groups = fold (identifier: con: con // {
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
     }) {} (attrNames config.nixcloud.TLS.certs);
+
+    # FIXME: use systemd DynamicUser instead of having a declarative user
+    users.users = optionalAttrs (acmeSupplied != []) {
+      nc-lego =  {
+        name = "nc-lego";
+      };
+    };
 
     systemd.services = listToAttrs (selfsignedTargets ++ usersuppliedTargets ++ acmeSupplied);
 

@@ -129,10 +129,10 @@ in
     in
       unique ((map (i: config.nixcloud.TLS.certs.${i}.domain) allIdentifiers) ++ fold (i: c: c ++ config.nixcloud.TLS.certs.${i}.extraDomains) [] allIdentifiers);
     ACMEImpliedDomainsSet = (builtins.listToAttrs (let
-      children = identifier: extraDomains: fold (domain: c: c ++ [ { name = "${domain}"; value = "/var/lib/nixcloud/TLS/${identifier}/acmeSupplied/challenges"; } ]) [] extraDomains;
+      children = identifier: extraDomains: fold (domain: c: c ++ [ { name = "${domain}"; value = "/run/nixcloud/lego/${identifier}/challenges"; } ]) [] extraDomains;
     in
       fold (identifier: c: c ++ (children identifier config.nixcloud.TLS.certs.${identifier}.extraDomains) 
-        ++ [ { name = config.nixcloud.TLS.certs.${identifier}.domain; value = "/var/lib/nixcloud/TLS/${identifier}/acmeSupplied/challenges"; } ]) [] (attrNames config.nixcloud.TLS.certs)));
+        ++ [ { name = config.nixcloud.TLS.certs.${identifier}.domain; value = "/run/nixcloud/lego/${identifier}/challenges"; } ]) [] (attrNames config.nixcloud.TLS.certs)));
 
     allHttpDomains = unique (ACMEImpliedDomains ++ allHttpNCDomains);
 
