@@ -235,12 +235,12 @@ in
     };
     certs = mkOption {
       default = {};
-      type = types.attrsOf (types.submodule {
+      type = types.attrsOf (types.submodule ({ name, pkgs, lib, ... } @ ppp: {
         imports = [ certOpts ];
         config = {
-          email = lib.mkDefault config.nixcloud.TLS.email;
+          email = lib.mkDefault config.nixcloud.TLS.email; #ppp.email;
         };
-      });
+      }));
       description = ''
         Attribute set of certificates to be used by various NixOS services.
       '';
