@@ -264,7 +264,7 @@ in
         preStart = ''
           mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
-          chown nc-lego:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+          chown nixcloud-lego-user:${filterIdentifier identifier} ${stateDir}/${identifier} -R
         '';
         script = ''
           cd ${stateDir}/${identifier}/acmeSupplied
@@ -272,14 +272,17 @@ in
           ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
         '';
        postStart = ''
-          chown nc-lego:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+          chown nixcloud-lego-user:${filterIdentifier identifier} ${stateDir}/${identifier} -R
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
         '';
         serviceConfig = {
+          User="nixcloud-lego-user";
+          # with DynamicUser we don't know the UID in the preStart when PermissionsStartOnly so we can't use it, see
+          # https://stackoverflow.com/questions/52755860/systemd-with-dynamicuser-uid-unknown
           #DynamicUser = true;
-          User = "nc-lego";
           ReadWritePaths = "-${stateDir}/${identifier}/acmeSupplied";
           SupplementaryGroups = "${filterIdentifier identifier}";
+          ProtectSystem="strict";
           PermissionsStartOnly = true;
           Type = "oneshot";
           RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
@@ -382,11 +385,9 @@ in
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
     }) {} (attrNames config.nixcloud.TLS.certs);
 
-    # FIXME: use systemd DynamicUser instead of having a declarative user
+    # FIXME: use systemd 'DynamicUser' instead of having a declarative user
     users.users = optionalAttrs (acmeSupplied != []) {
-      nc-lego =  {
-        name = "nc-lego";
-      };
+      nixcloud-lego-user = {};
     };
 
     systemd.services = listToAttrs (selfsignedTargets ++ usersuppliedTargets ++ acmeSupplied);
