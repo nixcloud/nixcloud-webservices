@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, ... } @ toplevel:
 
 with lib;
 
@@ -28,8 +28,7 @@ let
   };
   nixcloudTLSEmailType = mkOptionType {
     name = "nixcloud.TLS.certs.<name>.email";
-    check = x: (isString x && x != "")
-      || isNull x;
+    check = x: (isString x && x != "");
     merge = mergeEqualOption;
   };
   nixcloudTLSModeType = mkOptionType {
@@ -128,10 +127,9 @@ let
       };
       email = mkOption {
         type = nixcloudTLSEmailType;
-        default = null;
         description = ''
-          Optional contact email address for the let's encrypt CA to be able to
-          reach you when using ACME.
+          Optional contact email address used for ACME requests or self-signed certificates. 
+          Since ACME requires this option to be set our default is: "info@''${domain}".
         '';
       };
       users = mkOption {
@@ -226,19 +224,18 @@ in
 {
   options.nixcloud.TLS = {
     email = mkOption {
-      type = types.nullOr types.str;
-      default = null;
+      type = types.str;
       description = ''
-        Optional (global) contact email address used for all let's encrypt CA requests so they can
-        reach you. This global option can be overriden using the email option in the `certs` scope.
+        Optional (global) contact email address used for ACME requests or self-signed certificates. 
+        This global option can be overriden using the email option in the `certs` scope.
       '';
     };
     certs = mkOption {
       default = {};
-      type = types.attrsOf (types.submodule ({ name, pkgs, lib, ... } @ ppp: {
+      type = types.attrsOf (types.submodule ({ name, pkgs, lib, ... } @ lowlevel: {
         imports = [ certOpts ];
         config = {
-          email = lib.mkDefault config.nixcloud.TLS.email; #ppp.email;
+          email = lib.mkDefault (if (toplevel.options.nixcloud.TLS.email.isDefined) then toplevel.config.nixcloud.TLS.email else "info@${lowlevel.config.domain}");
         };
       }));
       description = ''
@@ -257,7 +254,6 @@ in
       (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
         allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
-        email = if (isString c.email) then c.email else "info@${c.domain}";
         hash = hashIdentifierACMEOptions identifier;
       in {
         description = "nixcloud.TLS: create acmeSupplied certificate for ${identifier}";
@@ -268,8 +264,8 @@ in
         '';
         script = ''
           cd ${stateDir}/${identifier}/acmeSupplied
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${c.email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${c.email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
         '';
         postStart = ''
           chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
@@ -337,7 +333,7 @@ in
         description = "nixcloud.TLS: create fallback self-signed certificate for ${identifier}";
 
         script = let
-          subjectAltName = lib.traceValSeq ( concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains));
+          subjectAltName = concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains);
         in ''
           TMPDIR=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
           mkdir $TMPDIR/selfsigned
