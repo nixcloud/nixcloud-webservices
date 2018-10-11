@@ -195,7 +195,7 @@ let
             if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.key" else
             if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/key.pem" else
             "/undefined1"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/usersupplied/key.pem" else
+          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userSupplied/key.pem" else
             "/undefined2";
         description = ''
           Internally set option (read only) which points to the
@@ -211,7 +211,7 @@ let
             if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.crt" else
             if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/fullchain.pem" else
             "/undefined1_"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/usersupplied/fullchain.pem" else
+          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userupplied/fullchain.pem" else
             "/undefined2_";
         description = ''
           Internally set option (read only) which points to the
@@ -271,8 +271,8 @@ in
           ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
           ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
         '';
-       postStart = ''
-          chown nixcloud-lego-user:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+        postStart = ''
+          chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
         '';
         serviceConfig = {
@@ -293,26 +293,26 @@ in
       }))
     ] else con) [] (attrNames config.nixcloud.TLS.certs);
 
-    usersuppliedTargets = fold (identifier: con: if isAttrs config.nixcloud.TLS.certs.${identifier}.mode then con ++ [
-      (nameValuePair "nixcloud.TLS-usersupplied-${identifier}" (let
+    userSuppliedTargets = fold (identifier: con: if isAttrs config.nixcloud.TLS.certs.${identifier}.mode then con ++ [
+      (nameValuePair "nixcloud.TLS-userSupplied-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
         tls_certificate =     c.mode.tls_certificate;
         tls_certificate_key = c.mode.tls_certificate_key;
       in {
-        description = "nixcloud.TLS: create usersupplied certificate for ${identifier}";
+        description = "nixcloud.TLS: create userSupplied certificate for ${identifier}";
 
         script = ''
-          rm -Rf ${stateDir}/${identifier}/usersupplied # should not be needed
-          TMPDIR=$(mktemp -d usersupplied-${identifier}.XXXXXXXXXX --tmpdir)
-          mkdir $TMPDIR/usersupplied
+          rm -Rf ${stateDir}/${identifier}/userSupplied # should not be needed
+          TMPDIR=$(mktemp -d userSupplied-${identifier}.XXXXXXXXXX --tmpdir)
+          mkdir $TMPDIR/userSupplied
 
-          cp ${toString tls_certificate_key} $TMPDIR/usersupplied/key.pem
-          cp ${toString tls_certificate} $TMPDIR/usersupplied/fullchain.pem
+          cp ${toString tls_certificate_key} $TMPDIR/userSupplied/key.pem
+          cp ${toString tls_certificate} $TMPDIR/userSupplied/fullchain.pem
 
-          chmod 0700 $TMPDIR/usersupplied
+          chmod 0700 $TMPDIR/userSupplied
           mkdir -p ${stateDir}/${identifier}/
           chmod 0755 ${stateDir}
-          mv $TMPDIR/usersupplied ${stateDir}/${identifier}/
+          mv $TMPDIR/userSupplied ${stateDir}/${identifier}/
           chmod 0550 ${stateDir}/${identifier} -R
           chown :${filterIdentifier identifier} ${stateDir}/${identifier} -R
         '';
@@ -323,10 +323,10 @@ in
         '';
         serviceConfig = {
           Type = "oneshot";
-          RuntimeDirectory = "nixcloud.TLS-acme-usersupplied-${identifier}";
+          RuntimeDirectory = "nixcloud.TLS-acme-userSupplied-${identifier}";
         };
-        before = [ "nixcloud.TLS-usersupplied-certificates.target" ];
-        wantedBy = [ "nixcloud.TLS-usersupplied-certificates.target" ];
+        before = [ "nixcloud.TLS-userSupplied-certificates.target" ];
+        wantedBy = [ "nixcloud.TLS-userSupplied-certificates.target" ];
       }))
     ] else con) [] (attrNames config.nixcloud.TLS.certs);
 
@@ -339,7 +339,6 @@ in
         script = let
           subjectAltName = lib.traceValSeq ( concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains));
         in ''
-          rm -Rf ${stateDir}/${identifier}/selfsigned # should not be needed
           TMPDIR=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
           mkdir $TMPDIR/selfsigned
 
@@ -392,13 +391,13 @@ in
       nixcloud-lego-user = {};
     };
 
-    systemd.services = listToAttrs (selfsignedTargets ++ usersuppliedTargets ++ acmeSupplied);
+    systemd.services = listToAttrs (selfsignedTargets ++ userSuppliedTargets ++ acmeSupplied);
 
     systemd.targets."nixcloud.TLS-acmeSupplied-certificates" = {
       description = "If reached, all certificates, which were supplied by lego, are in place";
     };
 
-    systemd.targets."nixcloud.TLS-usersupplied-certificates" = {
+    systemd.targets."nixcloud.TLS-userSupplied-certificates" = {
       description = "If reached, all certificates, which were supplied by the user, were already copied in place to be used";
     };
 
@@ -413,12 +412,12 @@ in
 
       after =
            [ "nixcloud.TLS-acmeSupplied-certificates.target" ]
-        ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+        ++ [ "nixcloud.TLS-userSupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
 
       wants =
            [ "nixcloud.TLS-acmeSupplied-certificates.target" ]
-        ++ [ "nixcloud.TLS-usersupplied-certificates.target" ]
+        ++ [ "nixcloud.TLS-userSupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
     };
 
