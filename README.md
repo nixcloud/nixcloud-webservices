@@ -27,6 +27,18 @@ nixcloud-webservices which are tested against different NixOS releases:
 # nix-channel --update
 ```
 
+18.03 is obsolete:
+
+* update to 18.09 by removing the 18.03 with the 18.09 channel and do a `nix-channel --update` and a `nixos-rebuild switch`
+* also update the `system.stateVersion = "18.09";` when you are at it 
+
+## For NixOS 18.09
+
+```sh-session
+# nix-channel --add https://hydra.nixcloud.io/channel/custom/nixcloud-webservices/release-18.09/nixcloud-webservices
+# nix-channel --update
+```
+
 ## For NixOS Unstable
 
 ```sh-session
