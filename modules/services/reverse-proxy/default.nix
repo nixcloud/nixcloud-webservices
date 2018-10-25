@@ -340,8 +340,8 @@ in
       description   = "Connects several webservers together and manages TLS and makes hosting easy!";
       
       wantedBy = [ "multi-user.target" ];
-      after    = [ "nixcloud.TLS-certificates.target" ];
-      wants    = [ "nixcloud.TLS-certificates.target" ];
+      after    = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
+      wants    = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
 
       stopIfChanged = false;
 

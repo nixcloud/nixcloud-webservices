@@ -5,6 +5,25 @@ with lib;
 let
   cfg = config.nixcloud.TLS;
   stateDir = "/var/lib/nixcloud/TLS";
+  selfSignedCertScript = identifier: subjectAltName: workDir: pkgs.writeScriptBin "selfSignedCertScript.sh" ''
+    mkdir /tmp/selfsigned
+    # RANDFILE needs to be defined, otherwise `openssl` attempts to write to `~/.rnd`
+    # which will fail when everything else is write-protected
+    export RANDFILE=/tmp/rnd
+
+    # Create self-signed key
+    workdir=/tmp
+    echo "Create a self signed CA 1/2"
+    ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
+    echo "Create a self signed CA 2/2"
+    ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
+    echo "Create a CSR"
+    ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr -subj "/C=DE/ST=Burrow/L=Linux/O=OrgName/OU=nixcloud IT Department"
+
+    echo "Sign the CSR"
+    ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${subjectAltName}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
+    echo "Done creating a self signed certificate"
+  '';
 
   # to prevent accidently exceeding the ACME's rate limit (API) we hash the options in a way
   # that the order of the 'inputs' as domains, extraDomains and API endpoint don't affect the
@@ -270,22 +289,74 @@ in
         postStart = ''
           chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
+          ${lib.concatStringsSep "\n" (map (el: "  systemctl --no-block restart ${el}") c.restart)}
+          ${lib.concatStringsSep "\n" (map (el: "  systemctl --no-block reload ${el}") c.reload)}
         '';
         serviceConfig = {
-          # with DynamicUser we don't know the UID in the preStart when PermissionsStartOnly so we can't use it, see
-          # https://stackoverflow.com/questions/52755860/systemd-with-dynamicuser-uid-unknown
-          #DynamicUser = true;
-          User="nixcloud-lego-user";
+          User = "nixcloud-lego-user";
           ReadWritePaths = "-${stateDir}/${identifier}/acmeSupplied";
+          SupplementaryGroups = "${filterIdentifier identifier}";
+          ProtectSystem = "strict";
+          PermissionsStartOnly = true;
+          Type = "oneshot";
+          RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
+        };
+        requires = [ "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}.service" "nixcloud.reverse-proxy.service" ];
+        after = [ "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}.service" "nixcloud.reverse-proxy.service" ];
+        before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
+        wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
+      }))
+    ] else con) [] (attrNames config.nixcloud.TLS.certs);
+
+    acmeSuppliedPreliminary = fold (identifier: con: if (config.nixcloud.TLS.certs.${identifier}.mode) == "ACME" then con ++ [
+      (nameValuePair "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}" (let
+        c = config.nixcloud.TLS.certs.${identifier};
+        allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
+        hash = hashIdentifierACMEOptions identifier;
+        workDir = "/tmp";
+        targetPath = "${stateDir}/${identifier}/acmeSupplied/${hash}/certificates/";
+        tls_certificate_path = "${targetPath}/${identifier}.crt";
+        tls_certificate_key_path = "${targetPath}/${identifier}.key";
+      in {
+        description = "nixcloud.TLS: create acmeSuppliedPreliminary certificate for ${identifier}";
+        preStart = ''
+          mkdir -p ${stateDir}/${identifier}/acmeSupplied/${hash}/certificates
+          chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
+          chown nixcloud-lego-user:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+        '';
+        script =
+          let
+            subjectAltName = concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains);
+          in ''
+            ${selfSignedCertScript identifier subjectAltName workDir}/bin/selfSignedCertScript.sh
+          '';
+        postStart = ''
+          # ideally, the whole service shouldn't have to run in case the key and certificate are already in place, but:
+          # systemd doesn't allow to combine the logic of `ConditionFileNotEmpty=` as boolean OR, but only as AND
+          # so this problem needs to be solved in-script by simply creating both of them in their temporary location
+          # everytime and using `cp -n` to only copy files, which aren't present yet
+          # Before that, make sure that either both are there or both are absent, but remove the remaining one if just
+          # one of both is there
+          [[ ! -e "${tls_certificate_key_path}" || ! -e "${tls_certificate_path}" ]] \
+            && echo "Only one of key/cert found, removing remaining one" \
+            && rm -f "${tls_certificate_key_path}" "${tls_certificate_path}"
+          cp -n ${workDir}/server.key ${toString tls_certificate_key_path}
+          cp -n ${workDir}/server.crt ${toString tls_certificate_path}
+          chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
+          chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
+        '';
+        serviceConfig = {
+          User="nixcloud-lego-user";
+          ReadWritePaths = "-${stateDir} -${stateDir}/${identifier} -${stateDir}/${identifier}/selfsigned";
           SupplementaryGroups = "${filterIdentifier identifier}";
           ProtectSystem="strict";
           PermissionsStartOnly = true;
           Type = "oneshot";
           RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
+          PrivateTmp = true;
         };
-        onFailure = [ "" ];
-        before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
-        wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
+        before = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
+        wantedBy = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
       }))
     ] else con) [] (attrNames config.nixcloud.TLS.certs);
 
@@ -329,25 +400,14 @@ in
     selfsignedTargets = fold (identifier: con: if ((config.nixcloud.TLS.certs.${identifier}.mode) == "selfsigned") then con ++ [
       (nameValuePair "nixcloud.TLS-selfsigned-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
+        workDir = "/run/nixcloud.TLS-acme-selfsigned-${identifier}";
       in {
         description = "nixcloud.TLS: create fallback self-signed certificate for ${identifier}";
 
         script = let
           subjectAltName = concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains);
         in ''
-          TMPDIR=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
-          mkdir $TMPDIR/selfsigned
-
-          # Create self-signed key
-          workdir=$(mktemp -d selfsigned-${identifier}.XXXXXXXXXX --tmpdir)
-          # create a self signed CA
-          ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
-          ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
-          # create a CSR
-          ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr -subj "/C=DE/ST=Burrow/L=Linux/O=OrgName/OU=nixcloud IT Department"
-
-          # sign the CSR
-          ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${subjectAltName}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
+          ${selfSignedCertScript identifier subjectAltName workDir}/bin/selfSignedCertScript.sh
 
           # Move key to destination
           mv $workdir/server.key $TMPDIR/selfsigned/key.pem
@@ -367,7 +427,7 @@ in
         '';
         serviceConfig = {
           Type = "oneshot";
-          RuntimeDirectory = "nixcloud.TLS-acme-selfsigned-${identifier}";
+          RuntimeDirectory = "${workDir}";
         };
         unitConfig = {
           # Do not create self-signed key when key already exists
@@ -382,15 +442,18 @@ in
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
     }) {} (attrNames config.nixcloud.TLS.certs);
 
-    # FIXME: use systemd 'DynamicUser' instead of having a declarative user
     users.users = optionalAttrs (acmeSupplied != []) {
       nixcloud-lego-user = {};
     };
 
-    systemd.services = listToAttrs (selfsignedTargets ++ userSuppliedTargets ++ acmeSupplied);
+    systemd.services = listToAttrs (selfsignedTargets ++ userSuppliedTargets ++ acmeSupplied ++ acmeSuppliedPreliminary);
+
+    systemd.targets."nixcloud.TLS-acmeSuppliedPreliminary-certificates" = {
+      description = "If reached, all preliminary ACME certificates, are in place";
+    };
 
     systemd.targets."nixcloud.TLS-acmeSupplied-certificates" = {
-      description = "If reached, all certificates, which were supplied by lego, are in place";
+      description = "If reached, all certificates, which were supplied (or were supposed to be supplied) by lego, are in place";
     };
 
     systemd.targets."nixcloud.TLS-userSupplied-certificates" = {
@@ -399,6 +462,23 @@ in
 
     systemd.targets."nixcloud.TLS-selfsigned-certificates" = {
       description = "If reached, all self-signed certificates, which were automatically created, were already copied in place to be used";
+    };
+ 
+    # only used for the nixcloud.reverse-proxy
+    systemd.targets."nixcloud.TLS-reverse-proxy-certificates" = {
+      description = "If reached, all certificates managed via nixcloud.TLS have been put into place to be used";
+
+      wantedBy = [ "multi-user.target" ];
+
+      after =
+           [ "nixcloud.TLS-userSupplied-certificates.target" ]
+        ++ [ "nixcloud.TLS-acmeSuppliedPreliminary-certificates.target" ]
+        ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
+
+      wants =
+           [ "nixcloud.TLS-userSupplied-certificates.target" ]
+        ++ [ "nixcloud.TLS-acmeSuppliedPreliminary-certificates.target" ]
+        ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
     };
 
     systemd.targets."nixcloud.TLS-certificates" = {

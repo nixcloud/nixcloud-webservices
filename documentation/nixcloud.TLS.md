@@ -171,6 +171,12 @@ The "nixcloud.TLS-certificates.target" waits for these 4 targets to finish:
 
 ## Debugging
 
+Show the contents of a certificate: 
+
+    openssl x509 -text -noout -in /var/lib/nixcloud/TLS/mail.nix.lt/acmeSupplied/5b84c8ac4508564bb7b33337fb6cf88622a8c72e56c540558413a9637e6fab7c/certificates/mail.nix.lt.crt
+
+### Systemd jobs
+
 These commands might come in handy:
 
     systemctl list-units --type=target
