@@ -6,17 +6,19 @@
 
 The motivation for creating `nixcloud.TLS` was:
 
-* Easy to use, no longer manual certificate management
+* We are lazy and don't like manual certificate management
 
 * Easily switch between 'ACME', 'selfsigned' or 'usersupplied' scenarious:
 
     This makes it easy for testing (using selfsigned TLS certificates) and production (using "ACME" or you own certificates) configurations
 
-* Because of the [ACME rate limits](https://letsencrypt.org/docs/rate-limits/) we try to minimize the amount of requests
+* Because of the [ACME rate limits](https://letsencrypt.org/docs/rate-limits/) we try to minimize the amount of requests using a hashing scheme
 
-**Note:** `nixcloud.TLS` makes `security.acme` obsolete. 
+* Replacing `simp_le` https://github.com/kuba/simp_le with `lego` https://github.com/xenolf/lego
 
-**Note:** `nixcloud.TLS` is meant to be used with `nixcloud.reverse-proxy` running on port 80. If you instead decide to run `services.nginx` on port 80 a lot of assumptions won't work and we can't support that. See [issue 23](https://github.com/nixcloud/nixcloud-webservices/issues/23) on that matter. You can use `nixcloud.webservices.nginx` or `nixcloud.webservices.apache` instead but keep in mind that your webservice must be configured to run behind a reverse-proxy.
+* nixcloud.TLS runs the 'lego' service(s) with limited user rights and not as 'root' for added security and certificates are in dedicated groups so services as 'murmur' can still access them without having to be started as root!
+
+**Note:** `nixcloud.TLS` obsoletes `security.acme` but forces you to use the `nixcloud.reverse-proxy` for your webservices. If you want to use `services.nginx` on port 80 a lot of assumptions won't work and this breaks our assumptions. See [issue 23](https://github.com/nixcloud/nixcloud-webservices/issues/23) on that matter. The good news is, you can most likely use `nixcloud.webservices.nginx` or `nixcloud.webservices.apache` instead but, again, keep in mind that your webservice must be configured to run behind a reverse-proxy.
 
 ## How to use nixcloud.TLS
 
@@ -54,22 +56,23 @@ A more complex example configuration for `nixcloud.TLS` would be:
         };
       };
     };
-    
+
 As said, the default value for `domain` is the `identifier`. It would not make sense in any of the above examples as "example.com-ACME" is not a correct domain therefore the `domain` is set explicitly to "example.com" in each example. In `nixcloud.TLS.certs."nixcloud.io" the domain is set to "nixcloud.io" which is a correct domain and an intended default. The
-    
-The `reload` example for "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to the [postrun](https://nixos.org/nixos/options.html#security.acme.certs.%3Cname%3E.postrun) hook. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
-    
+
+The reload line in "example.com-ACME" adds two services, "postfix.service" and "myservice.service" to be reloaded once a new certificate arrives. If you would use `nixcloud.email` and `nixcloud-webservices` it would contain [ "postfix.service" "dovecot2.service" "nixcloud.reverse-proxy" "myservice.service" ] as it accumulates all defined services and applies `lib.unique` to the list.
+
 The example above creates three certificates for the same domain. The certificates can be found in:
 
-* `/var/lib/acme/example.com-ACME/`
-* `/var/lib/nixcloud/TLS/example.com-selfsigned/selfsigned`
-* `/var/lib/nixcloud/TLS/example.com-usersupplied/usersupplied`
+* `/var/lib/nixcloud/TLS/example.com-ACME/acmeSupplied/fee339b10e3d326ebb11ae590bd2b3c00077a086d18191fe11f7ac307be2a033/certificates/`
+* `/var/lib/nixcloud/TLS/example.com-selfsigned/selfsigned/`
+* `/var/lib/nixcloud/TLS/example.com-usersupplied/usersupplied/`
 
-But they should be referenced using:
+But they should be referenced using the read only mkOption(s):
 
-* `config.nixcloud.TLS.certs."identifier".tls_certificate` 
+* `config.nixcloud.TLS.certs."identifier".tls_certificate`
+* `config.nixcloud.TLS.certs."identifier".tls_certificate_key`
 
-Since the `nixcloud.TLS` abstraction will return the correct location according to the `mode` of operation.
+Since the `nixcloud.TLS` abstraction will return the correct location according to the `mode` of operation. Yes, this is indeed amazing!
 
 ## Different usage modes in detail
 
@@ -84,6 +87,8 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
       };
     };
 
+**Note:** If you don't specify an email address, the abstraction will use "info@" on your domain, so here it would be "info@example.com" then. This is then used for self-signed certificates and for ACME registration.
+
 ### Using 'usersupplied' certificates
 
     nixcloud.TLS.certs = {
@@ -95,7 +100,7 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
         email = "foo@example.com";
       };
     };
-    
+
 ### Using 'selfsigned' certificates
 
     nixcloud.TLS.certs = {
@@ -103,9 +108,6 @@ If you are using `nixcloud-webservices` or `nixcloud.email` you will be using `n
         mode = "selfsigned";
       };
     };
-    
-**Note:** `security.acme` also creates a self-signed certificate but if your testing environment can't successfully use ACME to replace it with a valid
-      certificate it will always report `simp_le` errors on `nixos-rebuild switch` updates and this is the reason we created a self-signed implementation.
 
 ## Using nixcloud.TLS with any NixOS service
 
@@ -125,22 +127,22 @@ In a nutshell, you need to do three things:
       "example.org" = {
         mode = "ACME";
         users = [ "murmur" ];
-        reload  = [ "myservice1.service" ];
-        restart = [ "myservice2.service" ];
+        reload  = [ "murmur" ];
       };
     };
 
-**Note:** It is important to list all the users, like murmur, so NixOS services which are not started as root still can access the certificates! A list of such user names can be found in https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/ids.nix!
-**Note:** It is important that you list your systemd services in `reload` or `restart` so they get reloaded or restarted once a new certificate arrives.
+**Note:** It is important to list all the users, like murmur, so NixOS services which are not started as root still can access the certificates in nixcloud.TLS! A list of such user names can be found in https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/ids.nix!
+
+**Note:** It is important that you list your systemd services in `reload` or `restart` so they get reloaded or restarted once a new certificate arrives. Most often 'reload' is sufficient.
 
 ### Referencing certificate/key
 
 If you want to reference a `tls_certificate` or a `tls_certificate_key` you can use the `nixcloud.TLS` 
 identifier (string) with the `config` variable:
-    
+
     sslServerCert = config.nixcloud.TLS.certs."example.org".tls_certificate;
     sslServerKey  = config.nixcloud.TLS.certs."example.org".tls_certificate_key;
-    
+
 **Note:** Most often the identifier "example.org" is the same as the the domain you want to have a certificate for. However, using such identifier you can easily issue several different certificates for the same domain. You must use the quotes, so that "example.org" is a single attribute in the Nix attribute path!
 
 ### Systemd dependencies injection
@@ -154,20 +156,17 @@ Here is an example how one would extend `postfix`:
     systemd.services.postfix.wants = [ "nixcloud.TLS-certificates.target" ];
 
 **Note:** This code was copied from `nixcloud.email`.
-    
+
 The "nixcloud.TLS-certificates.target" waits for these 4 targets to finish:
-
-* security.acme:
-
-    * `acme-selfsigned-certificates.target` 
-    * `acme-certificates.target`
 
 * nixcloud.TLS:
 
     * `nixcloud.TLS-selfsigned.target`
     * `nixcloud.TLS-usersupplied.target`
+    * `nixcloud.TLS-acmeSuppliedPreliminary-certificates.target`
+    * `nixcloud.TLS-acmeSupplied-certificates.target`
 
-**Note:** Most services in nixpkgs using `security.acme` lack the former two target dependencies and if you deploy a server for the first time the services might and probably will fail to start since there won't be any certificates in place for the configured cert/key pair yet. This is a race condition we'd like to fix in the future.
+**Note:** With the "nixcloud.TLS-certificates.target" we make sure that either valid ACME generated certificates or preliminary self-signed 'fake' certificates are in place and your services will start at all.
 
 ## Debugging
 
@@ -180,6 +179,7 @@ Show the contents of a certificate:
 These commands might come in handy:
 
     systemctl list-units --type=target
+    systemctl list-timers --all
     systemctl status nixcloud.TLS-certificates.target
     systemctl status nixcloud.TLS-usersupplied-certificates.target
     systemctl status nixcloud.TLS-selfsigned-certificates.target
@@ -189,6 +189,11 @@ These commands might come in handy:
 
 Thanks to:
 
-* `security.acme` authors 
-* uwap
-* eliasp
+* http://github.com/eliasp
+* https://github.com/uwap
+* http://github.com/nixcloud
+
+Special thanks for inspiration:
+
+* `security.acme` authors, see https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/security/acme.nix 
+

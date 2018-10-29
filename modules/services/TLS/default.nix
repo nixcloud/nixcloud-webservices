@@ -1,10 +1,10 @@
 { config, pkgs, lib, ... } @ toplevel:
-
 with lib;
 
 let
   cfg = config.nixcloud.TLS;
   stateDir = "/var/lib/nixcloud/TLS";
+
   selfSignedCertScript = identifier: subjectAltName: workDir: pkgs.writeScriptBin "selfSignedCertScript.sh" ''
     mkdir /tmp/selfsigned
     # RANDFILE needs to be defined, otherwise `openssl` attempts to write to `~/.rnd`
@@ -25,7 +25,7 @@ let
     echo "Done creating a self signed certificate"
   '';
 
-  # to prevent accidently exceeding the ACME's rate limit (API) we hash the options in a way
+  # to prevent accidentally exceeding the ACME's rate limit (API) we hash the options in a way
   # that the order of the 'inputs' as domains, extraDomains and API endpoint don't affect the
   # generated certificate
   hashIdentifierACMEOptions = identifier: let 
@@ -35,9 +35,19 @@ let
   in
     builtins.hashString "sha256" (builtins.toJSON h);
 
+  # Create a unique name for a user, creating a hashed version of it
+  # whenever the length exceeds 31 characters. The reason for that is that
+  # glibc imposes a restriction of maximum 31 characters on user and group
+  # names.
+  mkUniqueUserGroup = prefix: suffix: let
+    uniqueHash = builtins.hashString "sha256" suffix;
+    hashLen = 30 - lib.stringLength prefix;
+    hashed = "${prefix}-${builtins.substring 0 hashLen uniqueHash}";
+  in if builtins.stringLength suffix > 31 then hashed else suffix;
+
   replace = [ "." ];
   replaceWith = [ "-" ];
-  filterIdentifier = x: "nc-${replaceChars replace replaceWith x}";
+  filterIdentifier = x: mkUniqueUserGroup "cert-" (replaceChars replace replaceWith x);
 
   nixcloudTLSDomainType = mkOptionType {
     name = "nixcloud.TLS.certs.<name>.domain";
@@ -98,14 +108,14 @@ let
         '';
       };
       acmeApiEndpoint = mkOption {
-        default = "https://acme-staging-v02.api.letsencrypt.org/directory";
-        # FIXME: revert this to the 'none' staging
-        #default = "https://acme-v02.api.letsencrypt.org/directory";
+        default = "https://acme-v02.api.letsencrypt.org/directory";
         example = "https://acme-staging-v02.api.letsencrypt.org/directory";
         type = acmeApiEndpointType;
         description = ''
           ACME with let's encrypt has a production and a testing endpoint. This option can be set per identifier.
-        '';
+
+          See https://letsencrypt.org/docs/staging-environment/
+        ''; #'
       };
       extraDomains = mkOption {
         type = nixcloudExtraDomainsType;
@@ -129,7 +139,8 @@ let
           after certificates are re-issued. A service is only
           <emphasis>reloaded</emphasis> once, even when mentioned several
           times in this list. It is not reloaded if it is also listed in the
-          <option>restart</option> list, then it is only restarted.
+          <option>restart</option> list, then it is only restarted. For most
+          services it is sufficient to <option>reload</option> them rather to <option>restart</option> them.
         '';
       };
       restart = mkOption {
