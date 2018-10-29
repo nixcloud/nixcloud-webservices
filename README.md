@@ -117,6 +117,8 @@ Many thanks to:
 - [profpatsch](https://github.com/Profpatsch) (Early prototyping)
 - [aszlig](https://github.com/aszlig) (NixOS module system)
 - [uwap](https://github.com/uwap) (Email abstraction)
+- [griff](https://github.com/griff) (Email abstraction)
+- [elias](https://github.com/eliasp) (nixcloud.TLS, email abstraction)
 - [clever](https://github.com/cleverca22) (Helping with hydra.nixcloud.io)
 - [brauner](https://github.com/brauner) (Help with LXC)
 - [leenaars](https://github.com/leenaars) (Requirements, testing, review)
