@@ -265,12 +265,16 @@ Assuming your `fqdn` is set as in the example to "mail.lastlog.de" then you can 
 
 If you already have your own certificates and you want to use them instead of ACME or selfsigned ones, then read the documentation [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
 
-Since we do SNI, your DNS setup has to be correct to make this work. We use the Subject Alternative Name:
+### SNI, nixlcoud.TLS internals on nixcloud.email
+
+Since nixcloud.TLS does SNI, your DNS setup has to be correct to make this work. We use the Subject Alternative Name:
 
             X509v3 Subject Alternative Name:                
                 DNS:mail.dune2.de, DNS:mail.lastlog.de, DNS:mail.nixcloud.io
 
 Therefore each of the 3 domains must point to the same IPv4/IPv6 address for which the `nixcloud.reverse-proxy` together with LEGO (ACME client) generates a valid ACME certificate or if that fails a selfSigned certificate.
+
+In general you don't have to write any nixcloud.TLS configuration as nixcloud.email takes care of that for you. Just make sure that the DNS records are all correct and see the logs of the lego process which fetches the certificates using ACME.
 
 ## IMAP setup (thunderbird)
 
@@ -368,6 +372,7 @@ all files from:
 
 * /var/lib/dkim/keys/
 * /var/lib/virtualMail/
+* /var/lib/nixcloud/TLS/
 
 # Developing/Testing
 
@@ -376,7 +381,7 @@ When you change the `nixcloud.email` abstraction you can run our tests manually 
     cd tests
     nix-build -A email
 
-Keep in mind, when you run 'nixos-rebuild switch' this test is also executed implicitly.
+Keep in mind, when you run `nixos-rebuild switch` this test is also executed implicitly.
 
 # Links
 
@@ -386,4 +391,4 @@ Keep in mind, when you run 'nixos-rebuild switch' this test is also executed imp
 
 # Alternative implementations
 
-* https://github.com/r-raymond/nixos-mailserver
+* https://gitlab.com/simple-nixos-mailserver/nixos-mailserver
