@@ -411,34 +411,35 @@ in
     selfsignedTargets = fold (identifier: con: if ((config.nixcloud.TLS.certs.${identifier}.mode) == "selfsigned") then con ++ [
       (nameValuePair "nixcloud.TLS-selfsigned-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
-        workDir = "/run/nixcloud.TLS-acme-selfsigned-${identifier}";
+        workDir = "/tmp";
+        targetPath = "${stateDir}/${identifier}/selfsigned/";
+        tls_certificate_path = "${targetPath}/fullchain.pem";
+        tls_certificate_key_path = "${targetPath}/key.pem";
       in {
-        description = "nixcloud.TLS: create fallback self-signed certificate for ${identifier}";
+        description = "nixcloud.TLS: create self-signed certificate for ${identifier}";
 
+        preStart = ''
+          mkdir -p ${targetPath}
+          chmod 0550 -R ${targetPath}
+          chown :${filterIdentifier identifier} ${targetPath} -R
+        '';
         script = let
           subjectAltName = concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains);
         in ''
           ${selfSignedCertScript identifier subjectAltName workDir}/bin/selfSignedCertScript.sh
-
-          # Move key to destination
-          mv $workdir/server.key $TMPDIR/selfsigned/key.pem
-          mv $workdir/server.crt $TMPDIR/selfsigned/fullchain.pem
-
-          chmod 0700 $TMPDIR/selfsigned
-          mkdir -p ${stateDir}/${identifier}/
-          chmod 0755 ${stateDir}
-          mv $TMPDIR/selfsigned ${stateDir}/${identifier}/
-          chmod 0550 ${stateDir}/${identifier} -R
-          chown :${filterIdentifier identifier} ${stateDir}/${identifier} -R
+          cp -n ${workDir}/server.key ${toString tls_certificate_key_path}
+          cp -n ${workDir}/server.crt ${toString tls_certificate_path}
         '';
-        preStart = ''
-          mkdir -p ${stateDir}/${identifier}/
-          chmod 0550 ${stateDir}/${identifier} -R
-          chown :${filterIdentifier identifier} ${stateDir}/${identifier} -R
+        postStart = ''
+          chown root:${filterIdentifier identifier} ${targetPath} -R
+          chmod 0750 ${targetPath} -R
         '';
         serviceConfig = {
           Type = "oneshot";
-          RuntimeDirectory = "${workDir}";
+          ReadWritePaths = "-${stateDir} -${stateDir}/${identifier} -${stateDir}/${identifier}/selfsigned";
+          ProtectSystem="strict";
+          PermissionsStartOnly = true;
+          PrivateTmp = true;
         };
         unitConfig = {
           # Do not create self-signed key when key already exists

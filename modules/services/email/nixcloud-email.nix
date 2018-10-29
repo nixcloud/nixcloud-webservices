@@ -15,11 +15,15 @@ let
     then "rspamd-rspamd_proxy-1.socket"
     else "rspamd.service";
 
-  sniString = x: ''
-    local_name mail.${x} {
-      ssl_cert = <${config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate}
-      ssl_key = <${config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate_key}
-    }
+  sniString = x: 
+    let
+      sslCert = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate;
+      sslKey  = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate_key;
+    in ''
+      local_name mail.${x} {
+        ssl_cert = <${sslCert}
+        ssl_key = <${sslKey}
+      }
   '';
 
 in {
@@ -424,8 +428,8 @@ in {
           smtp_sasl_password_maps = "hash:/etc/postfix/relay_passwd";
         };
       } // lib.optionalAttrs cfg.enableTLS {
-        sslCert = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate;
-        sslKey  = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate_key;
+        sslCert = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate;
+        sslKey  = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate_key;
       } // lib.optionalAttrs (cfg.relay.host != null) {
         relayHost = cfg.relay.host;
         relayPort = cfg.relay.port;
@@ -442,7 +446,6 @@ in {
 
         mailUser = "virtualMail";
         mailGroup = "virtualMail";
-
 
         modules = [ pkgs.dovecot_pigeonhole ];
 
@@ -535,11 +538,11 @@ in {
           }
           service managesieve {
           }
-        '' + lib.fold (el: con: con + sniString el) "" config.nixcloud.email.domains;
+        '' + lib.optionalString (cfg.enableTLS) (lib.fold (el: con: con + sniString el) "" config.nixcloud.email.domains);
 
       } // lib.optionalAttrs cfg.enableTLS {
-        sslServerCert = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate;
-        sslServerKey  = config.nixcloud.TLS.certs.${cfg.fqdn}.tls_certificate_key;
+        sslServerCert = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate;
+        sslServerKey  = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate_key;
       };
     }
   ]);

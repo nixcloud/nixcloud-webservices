@@ -84,7 +84,8 @@ let
       enableTLS = false;
       ipAddress = config._test-support.v4addr;
       ip6Address = config._test-support.v6addr;
-      inherit hostname domains;
+      fqdn = hostname;
+      inherit domains;
       # FIXME: Disabled for now because we really don't want to wait >300
       #        seconds for the test to run.
       enableGreylisting = false;
