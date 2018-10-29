@@ -255,7 +255,7 @@ This section helps you to configure which TLS certificates are used. If you have
 
 Say you want to use selfsigned certificates for testing purposes:
 
-Assuming your `hostname` is set as in the example to "mail.lastlog.de" then you can simply add this to configuration.nix
+Assuming your `fqdn` is set as in the example to "mail.lastlog.de" then you can simply add this to configuration.nix
 
     nixcloud.TLS.certs = {
       "mail.lastlog.de" = {
@@ -263,15 +263,14 @@ Assuming your `hostname` is set as in the example to "mail.lastlog.de" then you 
       };
     };
 
-If you have valid certificates and you want to use them instead of ACME or selfsigned ones, then read the documentation [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
+If you already have your own certificates and you want to use them instead of ACME or selfsigned ones, then read the documentation [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
 
-Say you wanted to use a certificate with extraDomains based on the used nixcloud.email.domains:
+Since we do SNI, your DNS setup has to be correct to make this work. We use the Subject Alternative Name:
 
-    nixcloud.TLS.certs = {
-      "mail.lastlog.de" = {
-        extraDomains = builtins.listToAttrs (fold (el: c: c ++ [ { name = "${el}"; value = null; } ] ) [] config.nixcloud.email.domains);
-      };
-    };
+            X509v3 Subject Alternative Name:                
+                DNS:mail.dune2.de, DNS:mail.lastlog.de, DNS:mail.nixcloud.io
+
+Therefore each of the 3 domains must point to the same IPv4/IPv6 address for which the `nixcloud.reverse-proxy` together with LEGO (ACME client) generates a valid ACME certificate or if that fails a selfSigned certificate.
 
 ## IMAP setup (thunderbird)
 
