@@ -47,7 +47,7 @@ let
 
   replace = [ "." ];
   replaceWith = [ "-" ];
-  filterIdentifier = x: mkUniqueUserGroup "cert-" (replaceChars replace replaceWith x);
+  filterIdentifier = x: mkUniqueUserGroup "cert" (replaceChars replace replaceWith x);
 
   nixcloudTLSDomainType = mkOptionType {
     name = "nixcloud.TLS.certs.<name>.domain";
@@ -280,7 +280,7 @@ in
     };
   };
   config = let
-    acmeSupplied = fold (identifier: con: if (config.nixcloud.TLS.certs.${identifier}.mode) == "ACME" then con ++ [
+    acmeSupplied = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
         allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
@@ -317,9 +317,9 @@ in
         before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
       }))
-    ] else con) [] (attrNames config.nixcloud.TLS.certs);
+    ]) [] (filter (x: (config.nixcloud.TLS.certs.${x}.mode == "ACME")) (attrNames config.nixcloud.TLS.certs));
 
-    acmeSuppliedPreliminary = fold (identifier: con: if (config.nixcloud.TLS.certs.${identifier}.mode) == "ACME" then con ++ [
+    acmeSuppliedPreliminary = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
         allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
@@ -369,7 +369,7 @@ in
         before = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
       }))
-    ] else con) [] (attrNames config.nixcloud.TLS.certs);
+    ]) [] (filter (x: (config.nixcloud.TLS.certs.${x}.mode == "ACME")) (attrNames config.nixcloud.TLS.certs));
 
     userSuppliedTargets = fold (identifier: con: if isAttrs config.nixcloud.TLS.certs.${identifier}.mode then con ++ [
       (nameValuePair "nixcloud.TLS-userSupplied-${identifier}" (let
@@ -380,7 +380,7 @@ in
         description = "nixcloud.TLS: create userSupplied certificate for ${identifier}";
 
         script = ''
-          rm -Rf ${stateDir}/${identifier}/userSupplied # should not be needed
+          rm -Rf ${stateDir}/${identifier}/userSupplied
           TMPDIR=$(mktemp -d userSupplied-${identifier}.XXXXXXXXXX --tmpdir)
           mkdir $TMPDIR/userSupplied
 
@@ -408,7 +408,7 @@ in
       }))
     ] else con) [] (attrNames config.nixcloud.TLS.certs);
 
-    selfsignedTargets = fold (identifier: con: if ((config.nixcloud.TLS.certs.${identifier}.mode) == "selfsigned") then con ++ [
+    selfsignedTargets = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-selfsigned-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
         workDir = "/tmp";
@@ -448,7 +448,7 @@ in
         before = [ "nixcloud.TLS-selfsigned-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-selfsigned-certificates.target" ];
       }))
-    ] else con) [] (attrNames config.nixcloud.TLS.certs);
+    ]) [] (filter (x: (config.nixcloud.TLS.certs.${x}.mode == "selfsigned")) (attrNames config.nixcloud.TLS.certs));
   in {
     users.groups = fold (identifier: con: con // {
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
@@ -459,6 +459,21 @@ in
     };
 
     systemd.services = listToAttrs (selfsignedTargets ++ userSuppliedTargets ++ acmeSupplied ++ acmeSuppliedPreliminary);
+
+    systemd.timers = fold (identifier: con: con // {
+      "nixcloud.TLS-acmeSupplied-${identifier}" =
+      {
+        description = "Renew ACME Certificate for ${identifier}";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "daily";
+          Unit = "nixcloud.TLS-acmeSupplied-${identifier}.service";
+          Persistent = "yes";
+          AccuracySec = "5m";
+          RandomizedDelaySec = "1h";
+        };
+      };
+    }) {} (filter (x: (config.nixcloud.TLS.certs.${x}.mode == "ACME")) (attrNames config.nixcloud.TLS.certs));
 
     systemd.targets."nixcloud.TLS-acmeSuppliedPreliminary-certificates" = {
       description = "If reached, all preliminary ACME certificates, are in place";
