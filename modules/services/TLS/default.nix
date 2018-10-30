@@ -283,8 +283,9 @@ in
     acmeSupplied = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
-        allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
+        allDomains = concatMapStringsSep " " (x: "--domains=\"${x}\"") (unique ( [ c.domain ] ++ c.extraDomains));
         hash = hashIdentifierACMEOptions identifier;
+        path = "${stateDir}/${identifier}/acmeSupplied/${hash}";
       in {
         description = "nixcloud.TLS: create acmeSupplied certificate for ${identifier}";
         preStart = ''
@@ -292,10 +293,20 @@ in
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
           chown nixcloud-lego-user:${filterIdentifier identifier} ${stateDir}/${identifier} -R
         '';
+        # https://github.com/xenolf/lego/issues/693
         script = ''
           cd ${stateDir}/${identifier}/acmeSupplied
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${c.email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} run
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email=${c.email} --exclude=dns-01 --exclude=tls-alpn-01 --webroot=/run/nixcloud/lego/${identifier}/challenges --path=${stateDir}/${identifier}/acmeSupplied/${hash} --accept-tos --server=${c.acmeApiEndpoint} renew --days 15
+          echo "lego certificate renewal check"
+          set +e
+          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
+          status=$?
+          echo "return code was $status"
+          set -e
+
+          if [ "$status" != "0" ]; then
+              echo "initial lego certificate query"
+              ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
+          fi
         '';
         postStart = ''
           chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
