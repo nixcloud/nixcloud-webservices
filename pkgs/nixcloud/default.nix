@@ -1,6 +1,8 @@
 { pkgs, ... }:
 {
-  lego = pkgs.callPackage ./lego/default.nix {};
+  # one can add extra packags here like:
+  #lego = pkgs.callPackage ./lego/default.nix {};
+  # one can use them with pkgs.nixcloud.lego instead of pkgs.lego for instance
   container = pkgs.stdenv.mkDerivation rec {
     name = "nixcloud-container-${version}";
     version = "0.0.1";

@@ -298,14 +298,14 @@ in
           cd ${stateDir}/${identifier}/acmeSupplied
           echo "lego certificate renewal check"
           set +e
-          ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
+          ${pkgs.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
           status=$?
           echo "return code was $status"
           set -e
 
           if [ "$status" != "0" ]; then
               echo "initial lego certificate query"
-              ${pkgs.nixcloud.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
+              ${pkgs.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
           fi
         '';
         postStart = ''
@@ -461,6 +461,15 @@ in
       }))
     ]) [] (filter (x: (config.nixcloud.TLS.certs.${x}.mode == "selfsigned")) (attrNames config.nixcloud.TLS.certs));
   in {
+
+    assertions = let
+      allExtraDomains = fold (el: c: c ++ config.nixcloud.TLS.certs.${el}.extraDomains) [] (attrNames config.nixcloud.TLS.certs);
+    in [
+      { assertion = (length allExtraDomains == length (unique allExtraDomains));
+        message = "nixcloud.TLS: Detected duplicate use of a domain in at least two different nixcloud.TLS.certs.<identifier>.extraDomains lists!";
+      }
+    ];
+
     users.groups = fold (identifier: con: con // {
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
     }) {} (attrNames config.nixcloud.TLS.certs);
