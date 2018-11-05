@@ -64,22 +64,26 @@ class EmailTest(unittest.TestCase):
         return newmails[0]
 
     def test_send_to_same_server(self):
+        print ("test_send_to_same_server ~~~~")
         self.send_email('alice', 'bob', 'Hello Bob from Alice!')
         text = self.wait_for_one_email('bob')
         self.assertEqual(text, 'Hello Bob from Alice!')
 
     def test_send_to_different_server(self):
+        print ("test_send_to_different_server ~~~~")
         self.send_email('foo', 'bob', 'Hello Bob from Foo!')
         text = self.wait_for_one_email('bob')
         self.assertEqual(text, 'Hello Bob from Foo!')
 
     def test_send_to_catchall(self):
+        print ("test_send_to_catchall ~~~~")
         self.send_email('bar', 'spameater', 'Eat this!',
                         to_addr='spam@catchall.example')
         text = self.wait_for_one_email('spameater')
         self.assertEqual(text, 'Eat this!')
 
     def test_check_quota(self):
+        print ("test_check_quota ~~~~")
         msg = ("Hello, how's your quota? " * 10).strip()
         self.send_email('alice', 'bar', msg)
         text = self.wait_for_one_email('bar')
@@ -91,6 +95,7 @@ class EmailTest(unittest.TestCase):
         self.assertRegex(text, RE_DSN_FAILED)
 
     def test_aliases(self):
+        print ("test_aliases ~~~~")
         msg = 'Hi different Alice!'
         self.send_email('spameater', 'alice', msg,
                         to_addr='anotheralice@example.net')
@@ -98,6 +103,7 @@ class EmailTest(unittest.TestCase):
         self.assertEqual(text, msg)
 
     def test_softbounce_nonexisting_address(self):
+        print ("test_softbounce_nonexisting_address ~~~~")
         msg = 'Is there anyone?'
         self.send_email('alice', None, msg, to_addr='xxx@example.com')
         text = self.wait_for_one_email('alice')
@@ -106,6 +112,7 @@ class EmailTest(unittest.TestCase):
                       text)
 
     def test_spam_filter(self):
+        print ("test_spam_filter ~~~~")
         with self.assertRaises(smtplib.SMTPDataError) as cm:
             msg = 'XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X'
             self.send_email('bob', 'spameater', msg,
