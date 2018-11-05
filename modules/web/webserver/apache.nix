@@ -375,6 +375,7 @@ with lib;
 
       path =
         [ config.webserver.apache.package.out pkgs.coreutils pkgs.gnugrep ]
+        ++ config.webserver.systemPackages
         ++ # Needed for PHP's mail() function.  !!! Probably the
             # ssmtp module should export the path to sendmail in
             # some way.
