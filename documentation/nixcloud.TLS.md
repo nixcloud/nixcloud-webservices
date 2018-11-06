@@ -185,12 +185,22 @@ These commands might come in handy:
     systemctl status nixcloud.TLS-selfsigned-certificates.target
     systemctl status nixcloud.TLS
 
+# Developing/Testing
+
+When you change the `nixcloud.TLS` abstraction you can run tests manually by:
+
+    cd tests
+    nix-build -A TLS
+
+Keep in mind, when you run `nixos-rebuild switch` this test is also executed implicitly.
+
 # Thanks
 
 Thanks to:
 
 * http://github.com/eliasp
 * https://github.com/uwap
+* http://github.com/aszlig
 * http://github.com/nixcloud
 
 Special thanks for inspiration:

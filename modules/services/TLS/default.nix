@@ -239,7 +239,7 @@ let
             if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.crt" else
             if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/fullchain.pem" else
             "/undefined1_"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userupplied/fullchain.pem" else
+          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userSupplied/fullchain.pem" else
             "/undefined2_";
         description = ''
           Internally set option (read only) which points to the
@@ -543,6 +543,8 @@ in
         ++ [ "nixcloud.TLS-userSupplied-certificates.target" ]
         ++ [ "nixcloud.TLS-selfsigned-certificates.target" ];
     };
+
+    nixcloud.tests.wanted = [ ./test.nix ];
 
     meta = {
       maintainers = with lib.maintainers; [ qknight ];
