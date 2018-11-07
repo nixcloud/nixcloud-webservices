@@ -253,7 +253,8 @@ in {
       }
       { assertion = rule.socketActivation -> rule.direction == "incoming";
         message = "If 'socketActivation' is enabled the rule direction has to"
-                + " be 'incoming', but it is '${rule.direction}' instead.";
+                + " be 'incoming', but it is '${toString rule.direction}'"
+                + " instead.";
       }
     ];
 
