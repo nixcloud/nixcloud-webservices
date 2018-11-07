@@ -50,18 +50,18 @@ let
   filterIdentifier = x: mkUniqueUserGroup "cert" (replaceChars replace replaceWith x);
 
   nixcloudTLSDomainType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.domain";
+    name = "nixcloud.TLS.certs.<identifier>.domain";
     check = x: (isString x && x != "")
       || isNull x;
     merge = mergeEqualOption;
   };
   nixcloudTLSEmailType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.email";
+    name = "nixcloud.TLS.certs.<identifier>.email";
     check = x: (isString x && x != "");
     merge = mergeEqualOption;
   };
   nixcloudTLSModeType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.mode";
+    name = "nixcloud.TLS.certs.<identifier>.mode";
     merge = mergeEqualOption;
     check = x: ((isString x && x == "ACME")
         || (isString x && x == "selfsigned")
@@ -72,28 +72,28 @@ let
   m = loc: defs: unique (fold (el: c: el.value ++ c) [] defs);
 
   nixcloudUsersType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.users";
+    name = "nixcloud.TLS.certs.<identifier>.users";
     check = c;
     merge = m;
   };
   acmeApiEndpointType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.acmeApiEndpoint";
+    name = "nixcloud.TLS.certs.<identifier>.acmeApiEndpoint";
     check = x: (isString x && x != "");
     merge = mergeEqualOption;
   };
 
   nixcloudExtraDomainsType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.extraDomains";
+    name = "nixcloud.TLS.certs.<identifier>.extraDomains";
     check = c;
     merge = m;
   };
   nixcloudReloadType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.reload";
+    name = "nixcloud.TLS.certs.<identifier>.reload";
     check = c;
     merge = m;
   };
   nixcloudRestartType = mkOptionType {
-    name = "nixcloud.TLS.certs.<name>.restart";
+    name = "nixcloud.TLS.certs.<identifier>.restart";
     check = c;
     merge = m;
   };
@@ -262,7 +262,7 @@ in
     };
     certs = mkOption {
       default = {};
-      type = types.attrsOf (types.submodule ({ name, pkgs, lib, ... } @ lowlevel: {
+      type = types.attrsOf (types.submodule ({ pkgs, lib, config, options } @ lowlevel: {
         imports = [ certOpts ];
         config = {
           email = lib.mkDefault (if (toplevel.options.nixcloud.TLS.email.isDefined) then toplevel.config.nixcloud.TLS.email else "info@${lowlevel.config.domain}");
