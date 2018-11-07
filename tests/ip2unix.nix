@@ -31,9 +31,12 @@
       description = "Test Webserver With Socket Activation";
       serviceConfig.ExecStart = nclib.ip2unix {
         program = mkTestWebserver "barfoo";
-        rules = [
-          { socketActivation = true; fdName = "http"; port = 80; }
-        ];
+        rules = lib.singleton {
+          direction = "incoming";
+          socketActivation = true;
+          fdName = "http";
+          port = 80;
+        };
       };
     };
 
