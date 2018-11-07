@@ -225,6 +225,7 @@ let
             "/undefined1"
           else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userSupplied/key.pem" else
             "/undefined2";
+        defaultText = "${stateDir}/\${identifier}/.../key.pem";
         description = ''
           Internally set option (read only) which points to the
           <filename>key.pem</filename> file, depending on the
@@ -241,6 +242,7 @@ let
             "/undefined1_"
           else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userSupplied/fullchain.pem" else
             "/undefined2_";
+        defaultText = "${stateDir}/\${identifier}/.../fullchain.pem";
         description = ''
           Internally set option (read only) which points to the
           <filename>fullchain.pem</filename> file, depending on the
@@ -460,7 +462,7 @@ in
         wantedBy = [ "nixcloud.TLS-selfsigned-certificates.target" ];
       }))
     ]) [] (filter (x: (config.nixcloud.TLS.certs.${x}.mode == "selfsigned")) (attrNames config.nixcloud.TLS.certs));
-  in {
+  in lib.mkIf (config.nixcloud.TLS.certs != {}) {
 
     assertions = let
       allExtraDomains = fold (el: c: c ++ config.nixcloud.TLS.certs.${el}.extraDomains) [] (attrNames config.nixcloud.TLS.certs);
