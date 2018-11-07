@@ -139,6 +139,15 @@ in {
       inherit (toplevel.options.users.groups) example description;
     };
 
+    tools = lib.mkOption {
+      default = {};
+      type = lib.types.attrs;
+      description = ''
+        Attribute set of functions or derivations available to the
+        current web service.
+      '';
+    };
+
     systemd = (lib.mapAttrs' (name: decl: {
       inherit name;
       value = lib.mkOption {
