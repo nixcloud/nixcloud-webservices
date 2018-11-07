@@ -39,12 +39,16 @@ nixcloud-webservices which are tested against different NixOS releases:
 # nix-channel --update
 ```
 
+You can find nixcloud-webservices specific options in the [18.09 manual](https://hydra.nixcloud.io/job/nixcloud-webservices/release-18.09/manual/latest/download/1).
+
 ## For NixOS Unstable
 
 ```sh-session
 # nix-channel --add https://hydra.nixcloud.io/channel/custom/nixcloud-webservices/nixos-unstable/nixcloud-webservices
 # nix-channel --update
 ```
+
+You can find nixcloud-webservices specific options in the [unstable manual](https://hydra.nixcloud.io/job/nixcloud-webservices/release-unstable/manual/latest/download/1).
 
 ## Adding nixcloud-webservices to your configuration.nix
 
@@ -60,8 +64,6 @@ to go, for example:
   # ... other options ...
 }
 ```
-
-You can find nixcloud-webservices specific options in the [latest manual](https://hydra.nixcloud.io/job/nixcloud-webservices/release-18.03/manual/latest/download/1).
 
 # Get the source
 
