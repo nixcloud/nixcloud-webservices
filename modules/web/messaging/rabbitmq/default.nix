@@ -28,9 +28,14 @@ let
     mkEnvVars = lib.mapAttrsToList mkEnvVar;
     mkEnvConf = attrs: lib.concatStringsSep "\n" (mkEnvVars attrs) + "\n";
   in pkgs.writeText "rabbitmq-env.sh" (mkEnvConf {
-    CONFIG_FILE = pkgs.writeText "rabbitmq.conf" ''
+    CONFIG_FILE = let
+      rabbit37 = lib.versionAtLeast package.version "3.7.0";
+      oldConfig = pkgs.writeText "rabbitmq.config" ''
+        [{rabbit, [{loopback_users, []}]}].
+      '';
+    in if rabbit37 then pkgs.writeText "rabbitmq.conf" ''
       loopback_users = none
-    '';
+    '' else lib.removeSuffix ".config" oldConfig;
     LOG_BASE = "${dataDir}/log";
     MNESIA_BASE = "${dataDir}/mnesia";
     ENABLED_PLUGINS_FILE = pkgs.writeText "rabbitmq-enabled-plugins" "";
