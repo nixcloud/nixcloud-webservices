@@ -3,8 +3,8 @@
 with pkgs.lib;
 
 let
-  commonConfig = "${<nixpkgs>}/nixos/tests/common/letsencrypt/common.nix";
-  snakeoil-certs = import "${<nixpkgs>}/nixos/tests/common/letsencrypt/snakeoil-certs.nix";
+  commonConfig = <nixpkgs/nixos/tests/common/letsencrypt/common.nix>;
+  snakeoil-certs = import (<nixpkgs/nixos/tests/common/letsencrypt/snakeoil-certs.nix>);
 in rec {
   name = "nixcloud.TLS";
 
