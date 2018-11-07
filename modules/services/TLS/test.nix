@@ -9,7 +9,7 @@ in rec {
   name = "nixcloud.TLS";
 
   nodes = rec {
-    letsencrypt =  "${<nixpkgs>}/nixos/tests/common/letsencrypt";
+    letsencrypt =  <nixpkgs/nixos/tests/common/letsencrypt>;
 
     webserver = { config, pkgs, nodes, ... }: {
       imports = [ commonConfig ];
@@ -261,14 +261,12 @@ in rec {
     $letsencrypt->waitForUnit("default.target");
     $webserver->waitForUnit("default.target");
     $client->waitForUnit("default.target");
-
     $letsencrypt->waitForUnit("boulder.service");
-    $webserver->waitForUnit("nixcloud.TLS-certificates.target");
 
     # if the nixcloud.reverse-proxy doesn't make it, we don't need to go on
     $webserver->waitForUnit("nixcloud.reverse-proxy.service");
-
     #$webserver->succeed("journalctl -xe  >&2");
+
     # test if selfsigned certificates are working
     $client->succeed('${pkgs.curl}/bin/curl -k https://selfsigned.de | grep -qF "Nothing here yet?"');
     # test if acmeSuppliedPreliminary set valid fallback certificates
@@ -290,16 +288,12 @@ in rec {
 
     # checking permissions (selfsigned)
     $webserver->succeed("systemctl start nixcloud.permCheckSelfsigned");
-
     # checking permissions (usersupplied)
     $webserver->succeed("systemctl start nixcloud.permCheckUsersupplied");
-
     # checking permissions (Preliminary ACME)
     $webserver->succeed("systemctl start nixcloud.permCheckACMEPreliminary");
-
     # checking permissions (ACME)
     $webserver->succeed("systemctl start nixcloud.permCheckACMEsupplied");
-
     # checking if user can also see certs without valid permissions
     $webserver->fail("systemctl start nixcloud.permCheckMustFail");
   '';
