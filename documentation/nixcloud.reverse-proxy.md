@@ -12,12 +12,6 @@ The suffixes are set for `security.acme.certs.<name>` but the domains might be t
 
 See also [../README.md](../README.md).
 
-# Options search (API documentation)
-
-Most documentation should be generated from the source code of the reverse-proxy module, see: 
-
-  * https://nixdoc.io/nixcloud-webservices/index.html
-
 # Usage
 
 To enable the reverse-proxy simply put this into your configuration.nix:
