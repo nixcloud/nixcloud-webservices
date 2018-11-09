@@ -281,6 +281,7 @@ in
       '';
     };
   };
+
   config = let
     acmeSupplied = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
@@ -313,6 +314,7 @@ in
         postStart = ''
           chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
+          systemctl --no-block reload nixcloud.reverse-proxy.service
           ${lib.concatStringsSep "\n" (map (el: "  systemctl --no-block restart ${el}") c.restart)}
           ${lib.concatStringsSep "\n" (map (el: "  systemctl --no-block reload ${el}") c.reload)}
         '';
@@ -465,10 +467,35 @@ in
   in lib.mkIf (config.nixcloud.TLS.certs != {}) {
 
     assertions = let
-      allExtraDomains = fold (el: c: c ++ config.nixcloud.TLS.certs.${el}.extraDomains) [] (attrNames config.nixcloud.TLS.certs);
+      nixcloudTLSonlyACMETypedLists = filterAttrs (n: v: v.mode == "ACME") config.nixcloud.TLS.certs;
+      nixcloudTLSonlyACMETypedUniqueListsAllExtraDomains = unique (fold (el: c: nixcloudTLSonlyACMETypedLists.${el}.extraDomains ++ c) [] (attrNames nixcloudTLSonlyACMETypedLists));
+      # if duplicate entries exist, it returns a set of { "domain" : [ "identifier1" "identifier1" ]; }
+      # findDupsED returns [ "identifier1" "identifier2" ] or [];
+      findDupsED = domain: fold (el: c: c ++ (if (any (x: x == domain) nixcloudTLSonlyACMETypedLists.${el}.extraDomains) then [ "${el}" ] else [] )) [] (attrNames nixcloudTLSonlyACMETypedLists);
+      #extraDomainEntries = { "debug.com" = []; };
+      extraDomainEntries = fold (el: c: c // { "${el}" = (findDupsED el); } ) {} nixcloudTLSonlyACMETypedUniqueListsAllExtraDomains;
+      # remove all elements where there is only one child (no collision)
+      #duplicatedExtraDomainEntries = { "domain" = [ "identifier1" "identifier2" ]; "domain2" = [ "identifier1" "identifier2" ]; };
+      duplicatedExtraDomainEntries = filterAttrs (n: v: length v > 1) extraDomainEntries;
+      duplicatedExtraDomainEntriesLine = domain: identifiers: "  * ${domain} = found in identifier(s) [${fold (el: c: " \"${el}\"" + c) "" identifiers} ]";
+      duplicatedExtraDomainEntriesErrorString = "The domains in question: " + fold (el: c: "\n" + duplicatedExtraDomainEntriesLine el duplicatedExtraDomainEntries.${el} + c) "" (attrNames duplicatedExtraDomainEntries) +
+        "\nRemove the duplicate entries so we can create a valid nixcloud.reverse-proxy configuration for lego (ACME) common challenges directory!";
+      # for ACME typed identifiers: two different identifiers, with the same domain set, must result in an error
+      nixcloudTLSonlyACMETypedUniqueListsAllDomains = unique (fold (el: c: [ nixcloudTLSonlyACMETypedLists.${el}.domain ] ++ c) [] (attrNames nixcloudTLSonlyACMETypedLists));
+      # findDupsED returns [ "identifier1" "identifier2" ] or [];
+      findDupsD = domain: fold (el: c: c ++ (if (domain == nixcloudTLSonlyACMETypedLists.${el}.domain) then [ "${el}" ] else [] )) [] (attrNames nixcloudTLSonlyACMETypedLists);
+      domainEntries = fold (el: c: c // { "${el}" = (findDupsD el); } ) {} nixcloudTLSonlyACMETypedUniqueListsAllDomains;
+      #duplicatedDomainEntries = { "domain" = [ "identifier1" "identifier2" ]; "domain2" = [ "identifier1" "identifier2" ]; };
+      duplicatedDomainEntries = filterAttrs (n: v: length v > 1) domainEntries;
+      duplicatedDomainEntriesLine = domain: identifiers: "  * ${domain} = found in identifier(s) [${fold (el: c: " \"${el}\"" + c) "" identifiers} ]";
+      duplicatedDomainEntriesErrorString = "The domain in question: " + fold (el: c: "\n" + duplicatedDomainEntriesLine el duplicatedDomainEntries.${el} + c) "" (attrNames duplicatedDomainEntries) +
+        "\nRemove the duplicate domain entry so we can create a valid nixcloud.reverse-proxy configuration for lego (ACME) common challenges directory!";
     in [
-      { assertion = (length allExtraDomains == length (unique allExtraDomains));
-        message = "nixcloud.TLS: Detected duplicate use of a domain in at least two different nixcloud.TLS.certs.<identifier>.extraDomains lists!";
+      { assertion = duplicatedDomainEntries == {};
+        message = "nixcloud.TLS: Two different identifier's domain(s) (both ACME typed), in nixcloud.TLS.certs.<identifier>.domain, contain the same domain.\n${duplicatedDomainEntriesErrorString}";
+      }
+      { assertion = duplicatedExtraDomainEntries == {};
+        message = "nixcloud.TLS: Two different identifier's extraDomains (both ACME typed), in nixcloud.TLS.certs.<identifier>.extraDomains, contain the same domains while these lists must contain unique elements only.\n${duplicatedExtraDomainEntriesErrorString}";
       }
     ];
 

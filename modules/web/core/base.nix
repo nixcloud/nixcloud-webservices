@@ -258,6 +258,12 @@ in {
           } // removeAttrs ucfg [ "name" "group" "createHome" ]);
         }) config.users;
 
+        # BUG @aszlig: we need to synthesize a default nixcloud.TLS.certs handle for proxyOptions, see mattermost test which fails because of example.com
+        # nix-build tests/ -A webservices.mattermost
+        # start nixcloud.TLS with it's default ACME
+        nixcloud.TLS.certs.${lib.traceValSeq config.proxyOptions.TLS} = {};
+        #servics.openssh.enable = builtins.trace "foobar" true;
+
         users.groups = lib.mapAttrs' (name: gcfg: {
           name = mkUniqueGroup name;
           value = lib.mkOverride 200 ({
