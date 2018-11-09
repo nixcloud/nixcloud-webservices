@@ -4,19 +4,8 @@ let
   inherit (lib) mkOption types;
   identifier = name;
 
-  # FIXME: Copied from default.nix, make DRY!
-  stateDir = "/var/lib/nixcloud/TLS";
-
-  # FIXME: Copied and modified from default.nix, make DRY!
-  #
-  # to prevent accidentally exceeding the ACME's rate limit (API) we hash the
-  # options in a way that the order of the 'inputs' as domains, extraDomains
-  # and API endpoint don't affect the generated certificate
-  hashIdentifierACMEOptions = identifier: let
-    server = config.acmeApiEndpoint;
-    h = lib.fold (el: c: c // { ${el} = ""; }) {} ([ config.domain ] ++ config.extraDomains ++ [ server ]);
-  in
-    builtins.hashString "sha256" (builtins.toJSON h);
+  inherit (import ./common.nix { inherit lib; })
+    stateDir hashACMEConfig;
 
   nixcloudTLSDomainType = lib.mkOptionType {
     name = "nixcloud.TLS.certs.<identifier>.domain";
@@ -192,7 +181,7 @@ in {
       readOnly = true;
       default =
         if lib.isString config.mode then
-          if config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions  identifier}/certificates/${config.domain}.key" else
+          if config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashACMEConfig config}/certificates/${config.domain}.key" else
           if config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/key.pem" else
           "/undefined1"
         else if lib.isAttrs config.mode then "${stateDir}/${identifier}/userSupplied/key.pem" else
@@ -209,7 +198,7 @@ in {
       readOnly = true;
       default =
         if lib.isString config.mode then
-          if config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.domain}.crt" else
+          if config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashACMEConfig config}/certificates/${config.domain}.crt" else
           if config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/fullchain.pem" else
           "/undefined1_"
         else if lib.isAttrs config.mode then "${stateDir}/${identifier}/userSupplied/fullchain.pem" else

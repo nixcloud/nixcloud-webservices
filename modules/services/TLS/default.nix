@@ -4,7 +4,9 @@ with lib;
 
 let
   cfg = config.nixcloud.TLS;
-  stateDir = "/var/lib/nixcloud/TLS";
+
+  inherit (import ./common.nix { inherit lib; })
+    stateDir hashACMEConfig;
 
   selfSignedCertScript = identifier: subjectAltName: workDir: pkgs.writeScriptBin "selfSignedCertScript.sh" ''
     mkdir /tmp/selfsigned
@@ -25,16 +27,6 @@ let
     ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${subjectAltName}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
     echo "Done creating a self signed certificate"
   '';
-
-  # to prevent accidentally exceeding the ACME's rate limit (API) we hash the options in a way
-  # that the order of the 'inputs' as domains, extraDomains and API endpoint don't affect the
-  # generated certificate
-  hashIdentifierACMEOptions = identifier: let 
-    c = config.nixcloud.TLS.certs.${identifier};
-    server = c.acmeApiEndpoint;
-    h = fold (el: c: c // { ${el} = ""; }) {} ([ c.domain ] ++ c.extraDomains ++ [ server ]);
-  in
-    builtins.hashString "sha256" (builtins.toJSON h);
 
   # Create a unique name for a user, creating a hashed version of it
   # whenever the length exceeds 31 characters. The reason for that is that
@@ -85,7 +77,7 @@ in
                         else "info@${c.domain}";
         email = if c.email == null then fallbackEmail else c.email;
         allDomains = concatMapStringsSep " " (x: "--domains=\"${x}\"") (unique ( [ c.domain ] ++ c.extraDomains));
-        hash = hashIdentifierACMEOptions identifier;
+        hash = hashACMEConfig c;
         path = "${stateDir}/${identifier}/acmeSupplied/${hash}";
       in {
         description = "nixcloud.TLS: create acmeSupplied certificate for ${identifier}";
@@ -136,7 +128,7 @@ in
       (nameValuePair "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
         allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
-        hash = hashIdentifierACMEOptions identifier;
+        hash = hashACMEConfig c;
         workDir = "/tmp";
         targetPath = "${stateDir}/${identifier}/acmeSupplied/${hash}/certificates/";
         tls_certificate_path = "${targetPath}/${identifier}.crt";
