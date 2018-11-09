@@ -124,15 +124,34 @@ in
 
     # a complete list of domains using ACME simple list of ACME domains
     # since a domain might be a 'extraDomain' and the challanges folder is located via the identifier
-    ACMEImpliedDomains = let
-      allIdentifiers = attrNames config.nixcloud.TLS.certs;
-    in
-      unique ((map (i: config.nixcloud.TLS.certs.${i}.domain) allIdentifiers) ++ fold (i: c: c ++ config.nixcloud.TLS.certs.${i}.extraDomains) [] allIdentifiers);
-    ACMEImpliedDomainsSet = (builtins.listToAttrs (let
-      children = identifier: extraDomains: fold (domain: c: c ++ [ { name = "${domain}"; value = "/run/nixcloud/lego/${identifier}/challenges"; } ]) [] extraDomains;
-    in
-      fold (identifier: c: c ++ (children identifier config.nixcloud.TLS.certs.${identifier}.extraDomains) 
-        ++ [ { name = config.nixcloud.TLS.certs.${identifier}.domain; value = "/run/nixcloud/lego/${identifier}/challenges"; } ]) [] (attrNames config.nixcloud.TLS.certs)));
+    filterACME = filterAttrs (n: v: v.mode == "ACME");
+    ACMEImpliedDomains =
+      let
+        allIdentifiers = attrNames (filterACME config.nixcloud.TLS.certs);
+      in
+        unique ((map (i: config.nixcloud.TLS.certs.${i}.domain) allIdentifiers) ++ fold (i: c: c ++ config.nixcloud.TLS.certs.${i}.extraDomains) [] allIdentifiers);
+
+
+
+
+
+
+    # nixcloudTLSHandles
+    #ProxyOptionsImpliedDomainsSet ...
+    ACMEImpliedDomainsSet = (builtins.listToAttrs (
+      let
+        children = identifier: extraDomains: fold (domain: c: c ++ [ { name = "${domain}"; value = "/run/nixcloud/lego/${identifier}/challenges"; } ]) [] extraDomains;
+      in
+        fold (identifier: c: c ++ (children identifier config.nixcloud.TLS.certs.${identifier}.extraDomains)
+          ++ [ { name = config.nixcloud.TLS.certs.${identifier}.domain; value = "/run/nixcloud/lego/${identifier}/challenges"; } ]) [] (attrNames (filterACME config.nixcloud.TLS.certs))));
+
+
+
+
+
+
+
+
 
     allHttpDomains = unique (ACMEImpliedDomains ++ allHttpNCDomains);
 
@@ -275,7 +294,7 @@ in
       concatMapStringsSep "\n" (x: x) (createHttpServerRecords allProxyOptions) +
       (concatMapStringsSep "\n" (createHttpsServerRecord allProxyOptions) allNCWDomains);
 
-    # 3. map over these and create server (http/https) records per domain        
+    # 3. map over these and create server (http/https) records per domain
     createHttpServerRecords = allProxyOptions: let
       createHttpServerRecord =  domain: let
         filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
@@ -284,7 +303,7 @@ in
         server {
           listen ${toString cfg.httpPort};
           listen [::]:${toString cfg.httpPort};
-          
+
           server_name ${domain};  
           ${optionalString (ACMEImpliedDomainsSet ? "${domain}")
           ''
@@ -327,6 +346,16 @@ in
     configFile = generateNginxConfigFile allProxyOptions allNCWDomains;
 
   in mkIf (cfg.enable) {
+    assertions = let
+      getDomains = identifier: [ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains;
+      # erroneousProxyOptions is a list of proxyOptions -> [ proxyOptions1 proxyOptions2 ... ] which have a erroneous configuration
+      erroneousProxyOptions = filter (x: any (a: a != x.domain ) (getDomains x.TLS)) allProxyOptions;
+      erroneousProxyOptionsString = fold (el: c: c + " * proxyOption = { domain=\"${el.domain}\"; path=\"${el.path}\"; port=\"${toString el.port}\"; TLS=\"${el.TLS}\"; };\n") "" erroneousProxyOptions;
+    in [
+      { assertion = erroneousProxyOptions == [];
+        message = "Found erroneous 'proxyOption' record(s) with a proxyOptions.TLS identifier pointing to a nixcloud.TLS.certs.<identifier> where nixcloud.TLS.certs.<identifier>.domain is different to proxyOptions.domain:\n${erroneousProxyOptionsString}";
+      }
+    ];
     networking = {
       extraHosts = if cfg.extendEtcHosts then (concatMapStringsSep "\n" (x: "127.0.0.1 ${x}") allNCWDomains + "\n" + concatMapStringsSep "\n" (x: "::1 ${x}") allNCWDomains) else ""; 
       firewall = {
@@ -338,7 +367,7 @@ in
     };
     systemd.services."nixcloud.reverse-proxy" = {
       description   = "Connects several webservers together and manages TLS and makes hosting easy!";
-      
+
       wantedBy = [ "multi-user.target" ];
       after    = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
       wants    = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
@@ -360,6 +389,7 @@ in
       };
     };
 
+
     users.extraUsers = (singleton
       { name = "${user}";
         group = "${group}";
@@ -368,16 +398,6 @@ in
     users.extraGroups = (singleton
       { name = "${user}";
       });
-
-    # start nixcloud.TLS with it's default ACME
-    # if you want to have selfsigned, or usersupplied just create a
-    #    nixcloud.TLS.certs."identifier".mode = 'selfsigned';
-    # in configuration.nix
-    nixcloud.TLS.certs = (fold (el: con: con // {
-      "${el}" = {
-        reload = [ "nixcloud.reverse-proxy.service" ];
-      };
-    }) {} (attrNames nixcloudTLSHandles));
 
     nixcloud.tests.wanted = [ ./test.nix ];
   };

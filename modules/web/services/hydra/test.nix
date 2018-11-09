@@ -66,7 +66,6 @@ in {
     nixcloud.webservices.hydra = {
       foo.enable = true;
       foo.initialAdminPassword = "test";
-      foo.proxyOptions.TLS = "none";
       foo.proxyOptions.domain = "example.com";
       foo.proxyOptions.http.mode = "on";
       foo.proxyOptions.https.mode = "off";

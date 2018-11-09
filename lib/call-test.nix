@@ -94,7 +94,7 @@ let
     nix.binaryCaches = lib.mkOverride 90 [];
     nixcloud.tests.enable = false;
     # Do not ever send out requests to letsencrypt.org.
-    nixcloud.TLS.certs = lib.mkOverride 90 {};
+    nixcloud.TLS.testMode = lib.mkOverride 90 true;
   };
 
   testArgsWithCommon = removeAttrs testArgs [ "machine" ] // {

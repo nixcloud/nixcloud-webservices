@@ -38,6 +38,7 @@
     in lib.setAttrByPath outer (lib.mkMerge cfgList);
 
     tests = passSubOption [ "nixcloud" "tests" "wanted" ] [ "tests" "wanted" ];
+    tls = passSubOption [ "nixcloud" "TLS" "certs" ] [ "TLS" "certs" ];
 
     # Special case: We don't want to pass the options to the top-level
     # unmodified because we want to remove all the web service-specific
@@ -50,5 +51,5 @@
       in lib.mapAttrs (lib.const removeInstance) combined;
     in lib.mkMerge (nclib.mapWSConfigToList modifyConfig);
 
-  in lib.mkMerge [ toplevel tests dirs ];
+  in lib.mkMerge [ toplevel tests tls dirs ];
 }

@@ -3,12 +3,14 @@
 
   machine.nixcloud.reverse-proxy.enable = true;
   machine.nixcloud.reverse-proxy.extendEtcHosts = true;
-  machine.nixcloud.webservices.mattermost = {
-    foo.enable = true;
-    foo.proxyOptions.domain = "example.com";
-    foo.proxyOptions.http.mode = "on";
-    foo.proxyOptions.https.mode = "off";
-    foo.proxyOptions.port = 8080;
+  machine.nixcloud.webservices.mattermost.foo = {
+    enable = true;
+    proxyOptions = {
+    domain = "example.com";
+      http.mode = "on";
+      https.mode = "off";
+      port = 8080;
+    };
   };
 
   testScript = let

@@ -23,14 +23,12 @@ in {
 
     nixcloud.webservices.custom-foobar = {
       foo.enable = true;
-      foo.proxyOptions.TLS = "none";
       foo.proxyOptions.domain = "example.com";
       foo.proxyOptions.http.mode = "on";
       foo.proxyOptions.https.mode = "off";
       foo.proxyOptions.port = 8080;
 
       bar.enable = true;
-      bar.proxyOptions.TLS = "none";
       bar.proxyOptions.domain = "example.org";
       bar.proxyOptions.http.mode = "on";
       bar.proxyOptions.https.mode = "off";

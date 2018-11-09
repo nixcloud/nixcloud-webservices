@@ -150,6 +150,18 @@ in {
       '';
     };
 
+    # This option is weakly-typed because we can't simply mkMerge down a
+    # submodule type to the top-level module, so instead we don't define the
+    # type for the attribute values and let the module system type-check it at
+    # the top-level instead.
+    TLS.certs = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = ''
+        Certificate options passed to <option>nixcloud.TLS.certs</options>.
+      '';
+    };
+
     systemd = (lib.mapAttrs' (name: decl: {
       inherit name;
       value = lib.mkOption {
@@ -205,6 +217,8 @@ in {
             -d -m g:${lib.escapeShellArg group}:rwx .
         '';
       };
+
+      TLS.certs.${config.proxyOptions.TLS} = {};
 
       directories = let
         instance.before = [

@@ -48,7 +48,6 @@ let
 
     nixcloud.webservices.${wsName}.dev = {
       enable = true;
-      proxyOptions.TLS = "none";
       proxyOptions.domain = "localhost";
       proxyOptions.http.mode = "on";
       proxyOptions.https.mode = "off";
