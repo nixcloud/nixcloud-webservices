@@ -1,4 +1,5 @@
-{ config, pkgs, lib, ... } @ toplevel:
+{ config, options, pkgs, lib, ... }:
+
 with lib;
 
 let
@@ -49,208 +50,6 @@ let
   replaceWith = [ "-" ];
   filterIdentifier = x: mkUniqueUserGroup "cert" (replaceChars replace replaceWith x);
 
-  nixcloudTLSDomainType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.domain";
-    check = x: (isString x && x != "")
-      || isNull x;
-    merge = mergeEqualOption;
-  };
-  nixcloudTLSEmailType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.email";
-    check = x: (isString x && x != "");
-    merge = mergeEqualOption;
-  };
-  nixcloudTLSModeType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.mode";
-    merge = mergeEqualOption;
-    check = x: ((isString x && x == "ACME")
-        || (isString x && x == "selfsigned")
-        || ((isAttrs x || isFunction x) && x ? tls_certificate_key && x ? tls_certificate));
-  };
-
-  c = x: isList x && fold (el: c: if (isString el) then c else false) true x;
-  m = loc: defs: unique (fold (el: c: el.value ++ c) [] defs);
-
-  nixcloudUsersType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.users";
-    check = c;
-    merge = m;
-  };
-  acmeApiEndpointType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.acmeApiEndpoint";
-    check = x: (isString x && x != "");
-    merge = mergeEqualOption;
-  };
-
-  nixcloudExtraDomainsType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.extraDomains";
-    check = c;
-    merge = m;
-  };
-  nixcloudReloadType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.reload";
-    check = c;
-    merge = m;
-  };
-  nixcloudRestartType = mkOptionType {
-    name = "nixcloud.TLS.certs.<identifier>.restart";
-    check = c;
-    merge = m;
-  };
-
-  certOpts = { name, ... } @ toplevel: let identifier = name; in {
-    options = {
-      domain = mkOption {
-        type = nixcloudTLSDomainType;
-        default = identifier;
-        description = ''
-          Domain to fetch certificate for (defaults to the entry name)
-        '';
-      };
-      acmeApiEndpoint = mkOption {
-        default = "https://acme-v02.api.letsencrypt.org/directory";
-        example = "https://acme-staging-v02.api.letsencrypt.org/directory";
-        type = acmeApiEndpointType;
-        description = ''
-          ACME with let's encrypt has a production and a testing endpoint. This option can be set per identifier.
-
-          See https://letsencrypt.org/docs/staging-environment/
-        ''; #'
-      };
-      extraDomains = mkOption {
-        type = nixcloudExtraDomainsType;
-        default = [];
-        example = literalExample ''
-          [ "example.org" "mydomain.org" ]
-        '';
-        apply = x: unique x;
-        description = ''
-          A list of extra domain names, which are included in the one
-          certificate to be issued.
-        '';
-      };
-      reload = mkOption {
-        type = nixcloudReloadType;
-        apply = x: lib.subtractLists toplevel.config.restart (unique x);
-        default = [];
-        example = [ "postfix.service" ];
-        description = ''
-          A list of systemd services which are <emphasis>reloaded</emphasis>
-          after certificates are re-issued. A service is only
-          <emphasis>reloaded</emphasis> once, even when mentioned several
-          times in this list. It is not reloaded if it is also listed in the
-          <option>restart</option> list, then it is only restarted. For most
-          services it is sufficient to <option>reload</option> them rather to <option>restart</option> them.
-        '';
-      };
-      restart = mkOption {
-        type = nixcloudRestartType;
-        default = [];
-        apply = x: unique x;
-        example = [ "postfix.service" ];
-        description = ''
-          A list of systemd services which are <emphasis>restarted</emphasis>
-          after certificates are re-issued. A service is only
-          <emphasis>restarted</emphasis> once, even when mentioned serveral
-          times in this list.
-        '';
-      };
-      email = mkOption {
-        type = nixcloudTLSEmailType;
-        description = ''
-          Optional contact email address used for ACME requests or self-signed certificates. 
-          Since ACME requires this option to be set our default is: "info@''${domain}".
-        '';
-      };
-      users = mkOption {
-        type = nixcloudUsersType;
-        default = [];
-        example = [ "murmur" "radicale" ];
-        description = ''
-          By default the certificates can only be read by the 'root' user and 'root' group. Using the 'users' option, one can make a certificate available to one or several other users. This is especially interesting for users listed in https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/misc/ids.nix, can be added so they have access to read the certificates.
-
-          Internally we create a group per "identifier" and add all the specified users to this group.
-        '';
-      };
-      mode = mkOption {
-        type = nixcloudTLSModeType;
-        default = "ACME";
-        description = ''
-          Use this option to set the <emphasis>TLS mode</emphasis> to be used:
-
-          <variablelist>
-            <varlistentry>
-              <term><literal>ACME</literal></term>
-              <listitem><para>
-                uses let's encrypt to automatically download and install TLS
-                certificates (default)
-              </para></listitem>
-            </varlistentry>
-            <varlistentry>
-              <term><literal>selfsigned</literal></term>
-              <listitem><para>
-                will create self-signed certificates
-              </para></listitem>
-            </varlistentry>
-            <varlistentry>
-              <term><programlisting>
-                { tls_certificate_key = /flux/to/cert.pem;
-                  tls_certificate = /flux/to/key.pem;
-                }
-              </programlisting></term>
-              <listitem><para>
-                user-supplied certificates
-              </para></listitem>
-            </varlistentry>
-          </variablelist>
-
-          <note><para>
-            Certificates are copied into
-            <filename class="directory">${stateDir}</filename> and
-            are referenced from there since we might introduce differentiated
-            user/group permissions on certificates and that won't work with the
-            certificate is located in
-            <filename class="directory">/root</filename> or some other place
-            not managed by <option>nixcloud.TLS</option>.
-          </para></note>
-        ''; #'
-      };
-      tls_certificate_key = mkOption {
-        type = types.path;
-        readOnly = true;
-        default =
-          if isString toplevel.config.mode then
-            if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.key" else
-            if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/key.pem" else
-            "/undefined1"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userSupplied/key.pem" else
-            "/undefined2";
-        defaultText = "${stateDir}/\${identifier}/.../key.pem";
-        description = ''
-          Internally set option (read only) which points to the
-          <filename>key.pem</filename> file, depending on the
-          <option>nixcloud.TLS.certs.&lt;name&gt;.mode</option> setting.
-        '';
-      };
-      tls_certificate = mkOption {
-        type = types.path;
-        readOnly = true;
-        default =
-          if isString toplevel.config.mode then
-            if toplevel.config.mode == "ACME" then "${stateDir}/${identifier}/acmeSupplied/${hashIdentifierACMEOptions identifier}/certificates/${config.nixcloud.TLS.certs.${identifier}.domain}.crt" else
-            if toplevel.config.mode == "selfsigned" then "${stateDir}/${identifier}/selfsigned/fullchain.pem" else
-            "/undefined1_"
-          else if isAttrs toplevel.config.mode then "${stateDir}/${identifier}/userSupplied/fullchain.pem" else
-            "/undefined2_";
-        defaultText = "${stateDir}/\${identifier}/.../fullchain.pem";
-        description = ''
-          Internally set option (read only) which points to the
-          <filename>fullchain.pem</filename> file, depending on the
-          <option>nixcloud.TLS.certs.&lt;name&gt;.mode</option> setting.
-        '';
-      };
-    };
-  };
 in
 
 {
@@ -264,12 +63,7 @@ in
     };
     certs = mkOption {
       default = {};
-      type = types.attrsOf (types.submodule ({ pkgs, lib, config, options } @ lowlevel: {
-        imports = [ certOpts ];
-        config = {
-          email = lib.mkDefault (if (toplevel.options.nixcloud.TLS.email.isDefined) then toplevel.config.nixcloud.TLS.email else "info@${lowlevel.config.domain}");
-        };
-      }));
+      type = types.attrsOf (types.submodule (import ./cert-options.nix));
       description = ''
         Attribute set of certificates to be used by various NixOS services.
       '';
@@ -286,6 +80,10 @@ in
     acmeSupplied = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-acmeSupplied-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
+        fallbackEmail = if options.nixcloud.TLS.email.isDefined
+                        then config.nixcloud.TLS.email
+                        else "info@${c.domain}";
+        email = if c.email == null then fallbackEmail else c.email;
         allDomains = concatMapStringsSep " " (x: "--domains=\"${x}\"") (unique ( [ c.domain ] ++ c.extraDomains));
         hash = hashIdentifierACMEOptions identifier;
         path = "${stateDir}/${identifier}/acmeSupplied/${hash}";
@@ -301,14 +99,14 @@ in
           cd ${stateDir}/${identifier}/acmeSupplied
           echo "lego certificate renewal check"
           set +e
-          ${pkgs.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
+          ${pkgs.lego}/bin/lego ${allDomains} --email="${email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
           status=$?
           echo "return code was $status"
           set -e
 
           if [ "$status" != "0" ]; then
               echo "initial lego certificate query"
-              ${pkgs.lego}/bin/lego ${allDomains} --email="${c.email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
+              ${pkgs.lego}/bin/lego ${allDomains} --email="${email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
           fi
         '';
         postStart = ''
