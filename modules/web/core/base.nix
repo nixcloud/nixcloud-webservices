@@ -150,6 +150,18 @@ in {
       '';
     };
 
+    # This option is weakly-typed because we can't simply mkMerge down a
+    # submodule type to the top-level module, so instead we don't define the
+    # type for the attribute values and let the module system type-check it at
+    # the top-level instead.
+    TLS.certs = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = ''
+        Certificate options passed to <option>nixcloud.TLS.certs</options>.
+      '';
+    };
+
     systemd = (lib.mapAttrs' (name: decl: {
       inherit name;
       value = lib.mkOption {
@@ -206,6 +218,8 @@ in {
         '';
       };
 
+      TLS.certs.${config.proxyOptions.TLS} = {};
+
       directories = let
         instance.before = [
           "webserver-init.service" "instance-init.target"
@@ -257,12 +271,6 @@ in {
                          else ucfg.createHome;
           } // removeAttrs ucfg [ "name" "group" "createHome" ]);
         }) config.users;
-
-        # BUG @aszlig: we need to synthesize a default nixcloud.TLS.certs handle for proxyOptions, see mattermost test which fails because of example.com
-        # nix-build tests/ -A webservices.mattermost
-        # start nixcloud.TLS with it's default ACME
-        nixcloud.TLS.certs.${lib.traceValSeq config.proxyOptions.TLS} = {};
-        #servics.openssh.enable = builtins.trace "foobar" true;
 
         users.groups = lib.mapAttrs' (name: gcfg: {
           name = mkUniqueGroup name;
