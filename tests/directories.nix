@@ -44,6 +44,11 @@
   machine.nixcloud.webservices.custom.foo = {
     enable = true;
 
+    proxyOptions = {
+      domain ="foo.de";
+      port = 8888;
+    };
+
     directories."/relative/to/statedir" = {
       owner = "alice";
       group = "bobs";
