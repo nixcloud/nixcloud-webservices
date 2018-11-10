@@ -55,7 +55,12 @@ in
     };
     certs = mkOption {
       default = {};
-      type = types.attrsOf (types.submodule (import ./cert-options.nix));
+      type = types.attrsOf (types.submodule {
+        imports = [ ./cert-options.nix ];
+        config = lib.mkIf cfg.testMode {
+          mode = lib.mkOverride 90 "selfsigned";
+        };
+      });
       description = ''
         Attribute set of certificates to be used by various NixOS services.
       '';
@@ -64,6 +69,15 @@ in
           email = "foo@example.com";
           reload = [ "postfix.service" "myservice.service" ];
         };
+      '';
+    };
+    testMode = mkOption {
+      type = types.bool;
+      default = false;
+      internal = true;
+      description = ''
+        Used by the test runner to make sure all certificates are only
+        self-signed and no requests are going out via ACME.
       '';
     };
   };
