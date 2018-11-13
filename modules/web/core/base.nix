@@ -158,7 +158,7 @@ in {
       type = lib.types.attrs;
       default = {};
       description = ''
-        Certificate options passed to <option>nixcloud.TLS.certs</options>.
+        Certificate options passed to <option>nixcloud.TLS.certs</option>.
       '';
     };
 
