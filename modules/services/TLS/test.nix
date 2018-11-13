@@ -133,6 +133,7 @@ in rec {
             mode = "ACME";
             acmeApiEndpoint = "https://doesnotexistandweknowit";
             users = [ "nixcloud-permCheck" ];
+            extraDomains = [ "acmeSuppliedPreliminary.com" "mail.acmeSuppliedPreliminary.com" ];
           };
           "validacmecert.com" = {
             mode = "ACME";

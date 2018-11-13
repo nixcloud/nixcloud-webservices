@@ -349,7 +349,7 @@ in
     assertions = let
       getDomains = identifier: [ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains;
       # erroneousProxyOptions is a list of proxyOptions -> [ proxyOptions1 proxyOptions2 ... ] which have a erroneous configuration
-      erroneousProxyOptions = filter (x: any (a: a != x.domain ) (getDomains x.TLS)) allProxyOptions;
+      erroneousProxyOptions = filter (x: !any (a: a == x.domain ) (getDomains x.TLS)) allProxyOptions;
       erroneousProxyOptionsString = fold (el: c: c + " * proxyOption = { domain=\"${el.domain}\"; path=\"${el.path}\"; port=\"${toString el.port}\"; TLS=\"${el.TLS}\"; };\n") "" erroneousProxyOptions;
     in [
       { assertion = erroneousProxyOptions == [];
