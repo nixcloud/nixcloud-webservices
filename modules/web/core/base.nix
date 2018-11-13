@@ -1,4 +1,4 @@
-{ config, mkUnique, mkUniqueUser, mkUniqueGroup, wsName, name
+{ config, options, mkUnique, mkUniqueUser, mkUniqueGroup, wsName, name
 , pkgs, lib, toplevel
 , ...
 }@webservice:
@@ -218,8 +218,6 @@ in {
         '';
       };
 
-      TLS.certs.${config.proxyOptions.TLS} = {};
-
       directories = let
         instance.before = [
           "webserver-init.service" "instance-init.target"
@@ -306,6 +304,13 @@ in {
           inherit (config.systemd) mounts automounts packages;
         };
       };
+    })
+    # XXX: proxyOptions is a submodule and while it does have a default
+    #      definition for the root option, some inner options do *not* have
+    #      default values, so a simple options.proxyOptions.TLS.isDefined
+    #      doesn't work here.
+    (lib.mkIf (config.enable && options.proxyOptions.definitions != [{}]) {
+      TLS.certs.${config.proxyOptions.TLS} = {};
     })
   ];
 }
