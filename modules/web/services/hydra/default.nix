@@ -223,8 +223,6 @@ in {
           chown ${lib.escapeShellArg userGroup} ${escRoots}
           chmod 2775 ${escRoots}
         '';
-
-        unitConfig.ConditionPathExists = "!${gcRootsDir}";
       };
 
       systemd.services.hydra-server = {
