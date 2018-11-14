@@ -290,7 +290,7 @@ See [nixcloud.reverse-proxy.md](nixcloud.reverse-proxy.md) if you need to connec
 
 This section helps you to configure which TLS certificates are used. If you have `nixcloud.email.enableTLS = true;` (which is the default) then `nixcloud.TLS` is used (with ACME as a default).
 
-Say you want to use selfsigned certificates for testing purposes:
+Say you want to use a selfsigned certificate instead, then:
 
 Assuming your `fqdn` is set as in the example to "mail.lastlog.de" then you can simply add this to configuration.nix
 
@@ -302,14 +302,16 @@ Assuming your `fqdn` is set as in the example to "mail.lastlog.de" then you can 
 
 If you already have your own certificates and you want to use them instead of ACME or selfsigned ones, then read the documentation [nixcloud.TLS.md](nixcloud.TLS.md) for more information.
 
-### SNI, nixlcoud.TLS internals on nixcloud.email
+### nixcloud.email and SNI
 
-Since nixcloud.TLS does SNI, your DNS setup has to be correct to make this work. We use the Subject Alternative Name:
+**nixcloud.email** supports SNI. SNI helps to use TLS from one IPv4/IPv6 address but still host several different domains as *dune2.de*, *lastlog.de* and *mail.nixcloud.io*. 
+
+The TLS certificate, served by *nixcloud.TLS* and used by *postfix* and *dovecot2* uses *Subject Alternative Name*:
 
             X509v3 Subject Alternative Name:                
                 DNS:mail.dune2.de, DNS:mail.lastlog.de, DNS:mail.nixcloud.io
 
-Therefore each of the 3 domains must point to the same IPv4/IPv6 address for which the `nixcloud.reverse-proxy` together with LEGO (ACME client) generates a valid ACME certificate or if that fails a selfSigned certificate.
+Our default is to use the `mail.`-prefix for all domains the mailserver handles. Therefore each of the 3 domains must point to the same IPv4/IPv6 address where the `nixcloud.reverse-proxy` listens and then hands over ACME challanges to *lego*, our ACME client used in *nixcloud.TLS*.
 
 In general you don't have to write any **nixcloud.TLS** configuration as **nixcloud.email** takes care of that for you. Just make sure that the DNS records are all correct and see the logs of the lego process which fetches the certificates using ACME.
 
