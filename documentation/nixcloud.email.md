@@ -57,10 +57,6 @@ Thanks to the support of https://nlnet.nl!
 
 # Configuration
 
-See also [../README.md](../README.md).
-
-See https://nixdoc.io/nixcloud-webservices#nixcloud
-
 ## Basic example
 
     let
@@ -209,7 +205,6 @@ Rspamd will be enabled and configured automatically. If you don't want rspamd yo
 
     nixcloud.email.enableRspamd = false;
 
-
 ## Greylisting
 
 Greylisting prevents spam by first declining your mails requiring other mail servers to resend their emails after about 10 minutes. Most spammers don't do this and therefor greylisting helps protect you against spam.
@@ -230,16 +225,58 @@ Settings are:
     User Name: js@lastlog.de
     Secure Connection: True
 
-We already provide a minimal sieve setup for rspamd:
+### Spam sieve filter
+
+We already provide a minimal sieve setup for rspamd, see: 
+
+https://github.com/nixcloud/nixcloud-webservices/blob/3f9b07aecf4cb3ef088e19b9a62868c2bdb02b94/modules/services/email/nixcloud-email.nix#L454
+
+Note: Link might be outdated soon, but the concept will be the same in newer releases.
+
+Note: You can't edit this particular script from the Thuderbird plugin, but instead create additional hooks.
+
+### Example user sieve filter
 
     require ["fileinto", "reject", "envelope", "mailbox", "reject"];
 
-    if header :contains "X-Spam" "YES" {
-      fileinto :create "Spam";
+    if header :contains "List-ID" "NixOS/nixpkgs" {
+      fileinto :create "nixpkgs"; 
       stop;
     }
 
-But it can be extended easily!
+    elsif header :contains "List-ID" "owncloud.github.com" {
+      fileinto :create "owncloud"; 
+      stop;
+    }
+
+    elsif header :contains "From" "info@frogsgorgeous.org" {
+      reject "not interested";
+      stop;
+    }
+
+    elsif header :contains "From" "abuse@actaculinaria.com" {
+      reject "not interested";
+      stop;
+    }
+
+    elsif header :contains "Sender" "root@www1.maemo.org" {
+      reject "i don't have interest in futher emails from you. please unsubscribe";
+      stop;
+    }
+
+    elsif header :contains "X-Hydra-Instance" "https://hydra.nixos.org" {
+      fileinto :create "hydra-nixos"; 
+      stop;
+    }
+
+    elsif header :contains "List-ID" "hillhackers.lists.hillhacks.in" {
+      fileinto :create "hillhackers"; 
+      stop;
+    }
+    
+Note: You don't need to handle spam in your own sieve filter as it is done in the abstraction already.
+
+Sieve is great, start using it!
 
 ## ACME Let's Encrypt
 
@@ -274,7 +311,7 @@ Since nixcloud.TLS does SNI, your DNS setup has to be correct to make this work.
 
 Therefore each of the 3 domains must point to the same IPv4/IPv6 address for which the `nixcloud.reverse-proxy` together with LEGO (ACME client) generates a valid ACME certificate or if that fails a selfSigned certificate.
 
-In general you don't have to write any nixcloud.TLS configuration as nixcloud.email takes care of that for you. Just make sure that the DNS records are all correct and see the logs of the lego process which fetches the certificates using ACME.
+In general you don't have to write any **nixcloud.TLS** configuration as **nixcloud.email** takes care of that for you. Just make sure that the DNS records are all correct and see the logs of the lego process which fetches the certificates using ACME.
 
 ## IMAP setup (thunderbird)
 
