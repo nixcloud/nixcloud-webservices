@@ -11,6 +11,7 @@ let
 
   postfixCfg = config.services.postfix;
   rspamdCfg = config.services.rspamd;
+  dovecot2Cfg = config.services.dovecot2;
 
   sniString = x:
     let
@@ -42,6 +43,30 @@ let
   # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
   rcWebMailFQDNs = map (fqdn: (lib.optionalString (cfg.webmail.autoMailDomain && ((builtins.match "^mail\..+" fqdn) == null)) "mail.") + fqdn) (lib.unique([ cfg.fqdn ] ++ cfg.domains));
 
+  stateDir = "/var/lib/dovecot";
+
+  mkBinScripts = args: pkgs.stdenv.mkDerivation ({
+    buildInputs = with pkgs; [ makeWrapper bash ];
+    buildCommand = ''
+      mkdir -p $out/bin
+      cp $src/* $out/bin/
+      chmod a+x $out/bin/*
+      patchShebangs $out/bin
+
+      for file in $out/bin/*; do
+        wrapProgram $file \
+          --set PATH "${pkgs.coreutils}/bin:${pkgs.rspamd}/bin"
+      done
+    '';
+  } // args);
+  filterBin = mkBinScripts {
+    name = "nixcloud-dovecot-filter-bin";
+    src = ./dovecot/filter_bin;
+  };
+  pipeBin = mkBinScripts {
+    name = "nixcloud-dovecot-pipe-bin";
+    src = ./dovecot/pipe_bin;
+  };
 in {
   imports = [
     (import ./virtual-mail-users.nix ({virtualMailDir = cfg.virtualMailDir;} // args))
@@ -340,17 +365,68 @@ in {
     })
 
     (lib.mkIf cfg.enableRspamd {
+      assertions = [{
+        assertion = lib.versionAtLeast pkgs.rspamd.version "1.7.3";
+        message = ''
+          The NixCloud Rspamd support requires at least version 1.7.3 (found ${pkgs.rspamd.version}).
+          Hint: version 1.7.3 is found in NixOS 18.09
+        '';
+      }];
+
       services.rspamd = {
         enable = true;
+        locals."milter_headers.conf".text = ''
+          use = ["x-spamd-result", "x-spam-status"];
+        '';
+        locals."groups.conf".text = ''
+          group "bayes_user" {
+              symbol {
+                  BAYES_SPAM_USER {
+                      weight = 4.0;
+                      description = "Message probably spam, probability: ";
+                  }
+              }
+              symbol {
+                  BAYES_HAM_USER {
+                      weight = -3.0;
+                      description = "Message probably ham, probability: ";
+                  }
+              }
+          }
+
+          group "upstream" {
+            symbol {
+              UPSTREAM_SCORE = {
+                weight = 1.0;
+                description = "Loaded upstream score";
+              }
+            }
+          }
+        '';
+        locals."settings.conf".text = ''
+          milter {
+            id = "milter";
+            apply {
+              groups_disabled = ["bayes_user", "upstream"];
+            }
+          }
+          delivery {
+            id = "delivery";
+            apply {
+              groups_enabled = ["bayes_user", "upstream"];
+            }
+          }
+        '';
+        locals."statistic.conf".source = "${./rspamd}/statistic.conf";
+        localLuaRules = "${./rspamd}/rspamd.local.lua";
         extraConfig = ''
-          extended_spam_headers = yes;
+          settings {
+            .include(try=true,priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/settings.conf"
+            .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/settings.conf"
+          }
         '';
 
         workers.rspamd_proxy = {
-          type = let
-            inherit (config.system.nixos) release;
-            isUnstable = lib.versionAtLeast release "19.03";
-          in if isUnstable then "rspamd_proxy" else "proxy";
           bindSockets = [{
             socket = "/run/rspamd/rspamd-milter.sock";
             mode = "0664";
@@ -363,6 +439,7 @@ in {
             upstream "local" {
               default = yes; # Self-scan upstreams are always default
               self_scan = yes; # Enable self-scan
+              settings = "milter";
             }
           '';
         };
@@ -389,6 +466,15 @@ in {
         milter_protocol = "6";
         milter_mail_macros = "i {mail_addr} {client_addr} {client_name} {auth_type} {auth_authen} {auth_author} {mail_addr} {mail_host} {mail_mailer}";
       };
+      systemd.services.dovecot2.preStart = ''
+        rm -rf '${stateDir}/imap_sieve'
+        mkdir '${stateDir}/imap_sieve'
+        cp -p "${./dovecot}/imap_sieve"/*.sieve '${stateDir}/imap_sieve/'
+        for k in "${stateDir}/imap_sieve"/*.sieve ; do
+          ${pkgs.dovecot_pigeonhole}/bin/sievec  "$k"
+        done
+        chown -R '${dovecot2Cfg.mailUser}:${dovecot2Cfg.mailGroup}' '${stateDir}/imap_sieve'
+      '';
     })
 
     {
@@ -529,20 +615,8 @@ in {
         protocols = [ "sieve" ];
 
         sieveScripts = {
-          before = pkgs.writeText "before.sieve" ''
-            require ["fileinto", "reject", "envelope", "mailbox", "reject"];
-
-            # spamassassin
-            if header :contains "X-Spam-Flag" "YES" {
-              fileinto :create "Spam";
-              stop;
-            }
-            # rspamd
-            if header :contains "X-Spam" "YES" {
-              fileinto :create "Spam";
-              stop;
-            }
-          '';
+          before = lib.mkIf cfg.enableRspamd "${./dovecot}/sieve/rspamd.sieve";
+          after = "${./dovecot}/sieve/file-spam.sieve";
         };
 
         mailboxes = [
@@ -606,9 +680,30 @@ in {
             mail_plugins = $mail_plugins sieve
           }
 
+          protocol imap {
+            mail_plugins = $mail_plugins imap_sieve
+          }
+
           plugin sieve {
             sieve = ${cfg.virtualMailDir}/%d/users/%n/sieve.active
             sieve_dir = ${cfg.virtualMailDir}/%d/users/%n/sieve
+            ${lib.optionalString cfg.enableRspamd ''
+              sieve_plugins = sieve_imapsieve sieve_extprograms
+              sieve_pipe_bin_dir = ${pipeBin}/bin
+              sieve_filter_bin_dir = ${filterBin}/bin
+              sieve_global_extensions = +vnd.dovecot.pipe +vnd.dovecot.filter +vnd.dovecot.environment
+
+              # From elsewhere to Spam folder
+              imapsieve_mailbox1_name = Spam
+              imapsieve_mailbox1_causes = COPY
+              imapsieve_mailbox1_before = file:${stateDir}/imap_sieve/report-spam.sieve
+
+              # From Spam folder to elsewhere
+              imapsieve_mailbox2_name = *
+              imapsieve_mailbox2_from = Spam
+              imapsieve_mailbox2_causes = COPY
+              imapsieve_mailbox2_before = file:${stateDir}/imap_sieve/report-ham.sieve
+            ''}
           }
 
           service managesieve-login {
