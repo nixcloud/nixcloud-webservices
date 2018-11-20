@@ -11,9 +11,6 @@ let
 
   postfixCfg = config.services.postfix;
   rspamdCfg = config.services.rspamd;
-  rspamdSocket = if rspamdCfg.socketActivation
-    then "rspamd-rspamd_proxy-1.socket"
-    else "rspamd.service";
 
   sniString = x: 
     let
@@ -270,7 +267,6 @@ in {
     (lib.mkIf cfg.enableRspamd {
       services.rspamd = {
         enable = true;
-        socketActivation = false;
         extraConfig = ''
           extended_spam_headers = yes;
         '';
@@ -304,8 +300,8 @@ in {
 
       };
       systemd.services.postfix = {
-        after = [ rspamdSocket ];
-        requires = [ rspamdSocket ];
+        after = [ "rspamd.service" ];
+        requires = [ "rspamd.service" ];
       };
       users.users.${postfixCfg.user}.extraGroups = [ rspamdCfg.group ];
       services.postfix.config = {
