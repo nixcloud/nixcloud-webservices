@@ -254,7 +254,7 @@ in {
       users.users.postfix.extraGroups = [ "opendkim" ];
       services.opendkim = {
         enable = true;
-        selector = config.nixcloud.email.fqdn; #"mail
+        selector = "mail";
         keyPath = "/var/lib/dkim/keys/";
         domains = "csl:${lib.concatStringsSep "," cfg.domains}";
         configFile = pkgs.writeText "opendkim.conf" ''
