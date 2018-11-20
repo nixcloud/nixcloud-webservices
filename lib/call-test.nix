@@ -1,7 +1,14 @@
 { system, pkgs, nixpkgs ? pkgs.path, ... }@args: test:
 
 let
-  testLib = import "${toString nixpkgs}/nixos/lib/testing.nix" { inherit system; };
+  testLib = let
+    mainExpr = import "${toString nixpkgs}/nixos/lib/testing.nix";
+    funArgs = builtins.functionArgs mainExpr;
+    attrs = { inherit system; } // lib.optionalAttrs (funArgs ? pkgs) {
+      inherit pkgs;
+    };
+  in mainExpr attrs;
+
   inherit (pkgs) lib;
 
   getRelativePathStr = path: let
