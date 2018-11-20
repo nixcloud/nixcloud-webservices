@@ -272,7 +272,10 @@ in {
         '';
 
         workers.rspamd_proxy = {
-          type = "proxy";
+          type = let
+            inherit (config.system.nixos) release;
+            isUnstable = lib.versionAtLeast release "19.03";
+          in if isUnstable then "rspamd_proxy" else "proxy";
           bindSockets = [{
             socket = "/run/rspamd/rspamd-milter.sock";
             mode = "0664";
