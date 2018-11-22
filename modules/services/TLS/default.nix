@@ -132,7 +132,7 @@ in
           RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
         };
         requires = [ "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}.service" "nixcloud.reverse-proxy.service" ];
-        after = [ "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}.service" "nixcloud.reverse-proxy.service" ];
+        after = [ "network-online.target" "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}.service" "nixcloud.reverse-proxy.service" ];
         before = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-acmeSupplied-certificates.target" ];
       }))
