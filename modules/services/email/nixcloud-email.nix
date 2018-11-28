@@ -12,7 +12,7 @@ let
   postfixCfg = config.services.postfix;
   rspamdCfg = config.services.rspamd;
 
-  sniString = x: 
+  sniString = x:
     let
       sslCert = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate;
       sslKey  = config.nixcloud.TLS.certs."${cfg.fqdn}".tls_certificate_key;
@@ -534,6 +534,11 @@ in {
           }
 
           service managesieve-login {
+            ${lib.optionalString (cfg.enableTLS) ''
+            inet_listener sieve {
+              ssl = yes
+            }
+            ''}
           }
           service managesieve {
           }
