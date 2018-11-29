@@ -43,6 +43,8 @@ let
       InviteSalt = "bjlSR4QqkXFBr7TP4oDzlfZmcNuH9YoS";
       # SECURITY/FIXME: hardcoded
       PasswordResetSalt = "vZ4DcKyVVRlKHHJpexcuXzojkE5PZ5eL";
+      FeedbackName = "${config.EmailSettings.FeedbackName}";
+      FeedbackEmail = "${config.EmailSettings.FeedbackEmail}";
     };
   };
 
@@ -95,6 +97,21 @@ in {
           Email notifications are used to inform offline users of chat activity.
         '';
       };
+      FeedbackEmail = mkOption {
+        type = types.str;
+        default = "";
+        description = ''
+          Address displayed on email account used when sending notification emails from Mattermost system.
+        '';
+      };
+      FeedbackName = mkOption {
+        type = types.str;
+        default = "";
+        description = ''
+          Address displayed on email account used when sending notification emails from Mattermost system.
+        '';
+      };
+
       ConnectionSecurity = mkOption {
         type = types.str;
         default = "STARTTLS";
