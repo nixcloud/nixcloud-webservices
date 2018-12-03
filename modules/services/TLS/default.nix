@@ -301,6 +301,10 @@ in
       { assertion = duplicatedExtraDomainEntries == {};
         message = "nixcloud.TLS: Two different identifier's extraDomains (both ACME typed), in nixcloud.TLS.certs.<identifier>.extraDomains, contain the same domains while these lists must contain unique elements only.\n${duplicatedExtraDomainEntriesErrorString}";
       }
+      # assertion only relevant if nixos 18.03 was used before
+      { assertion = lib.versionAtLeast (getVersion pkgs.lego) "1.0.0";
+        message = "lego version '${getVersion pkgs.lego}' too old, you need to update to 18.09 (or nixpkgs unstable)";
+      }
     ];
 
     users.groups = fold (identifier: con: con // {
