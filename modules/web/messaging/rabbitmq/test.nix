@@ -1,6 +1,8 @@
 let
   rabbitMQWebService = { config, pkgs, ... }: let
-    inherit (pkgs.python3Packages) buildPythonApplication pika;
+    # FIXME: Use python3Packages here as soon as pika 0.13.0 hits the nixos-
+    #        unstable channel, because it fixes support with Python 3.7.
+    inherit (pkgs.python36Packages) buildPythonApplication pika;
     inherit (config.tools) useRabbitMQ;
     mkPyTest = name: src: buildPythonApplication {
       name = "test-rabbitmq-${name}";
