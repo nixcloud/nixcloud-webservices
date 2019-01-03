@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, ... } @ args:
 
 let
   inherit (lib) types mkOption mkRenamedOptionModule;
@@ -25,7 +25,7 @@ let
 
 in {
   imports = [
-    ./virtual-mail-users.nix
+    (import ./virtual-mail-users.nix ({virtualMailDir = cfg.virtualMailDir;} // args))
     (mkRenamedOptionModule [ "nixcloud" "email" "enableSpamassassin" ] [ "nixcloud" "email" "enableRspamd" ])
     (mkRenamedOptionModule [ "nixcloud" "email" "hostname" ] [ "nixcloud" "email" "fqdn" ])
   ];
@@ -219,6 +219,12 @@ in {
         [ { pattern = "/^X-Spam(.*)/"; action = "IGNORE"; direction = "incoming"; } ]
       '';
     };
+
+    virtualMailDir = mkOption {
+      description = "Path used to store the virtual mail boxes of users";
+      default = "/var/lib/virtualMail";
+      example = "/home/mail";
+    };
   };
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -252,7 +258,7 @@ in {
       services.opendkim = {
         enable = true;
         selector = "mail";
-        keyPath = "/var/lib/dkim/keys/";
+        keyPath = lib.mkDefault "/var/lib/dkim/keys/";
         domains = "csl:${lib.concatStringsSep "," cfg.domains}";
         configFile = pkgs.writeText "opendkim.conf" ''
           UMask 0002
@@ -441,7 +447,7 @@ in {
         enableLmtp = true;
         enablePAM = false;
         enableQuota = true;
-        mailLocation = "maildir:/var/lib/virtualMail/%d/users/%n/mail";
+        mailLocation = "maildir:${cfg.virtualMailDir}/%d/users/%n/mail";
 
         mailUser = "virtualMail";
         mailGroup = "virtualMail";
@@ -496,7 +502,7 @@ in {
           ''
           +
           ''
-          mail_home = /var/lib/virtualMail/%d/users/%n/
+          mail_home = ${cfg.virtualMailDir}/%d/users/%n/
 
           passdb {
             driver = passwd-file
@@ -529,8 +535,8 @@ in {
           }
 
           plugin sieve {
-            sieve = /var/lib/virtualMail/%d/users/%n/sieve.active
-            sieve_dir = /var/lib/virtualMail/%d/users/%n/sieve
+            sieve = ${cfg.virtualMailDir}/%d/users/%n/sieve.active
+            sieve_dir = ${cfg.virtualMailDir}/%d/users/%n/sieve
           }
 
           service managesieve-login {

@@ -1,7 +1,8 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs,
+  virtualMailDir ? "/var/lib/virtualMail", ... }:
 
 with lib;
-let 
+let
   userOptions = import ./virtual-mail-submodule.nix;
   virtualMailEnv = pkgs.buildEnv {
     name = "virtualMail-env";
@@ -9,7 +10,7 @@ let
     postBuild = let
       quotaRule = q: if q == "" then "" else "userdb_quota_rule=*";
       bytes = q: if q == "" then "" else "bytes=${q}";
-      passwdLine = { name, domain, password, quota, ... }: { domain = "${domain}"; line = name + ":" + password + "::::::${quotaRule quota}:${bytes quota}"; }; 
+      passwdLine = { name, domain, password, quota, ... }: { domain = "${domain}"; line = name + ":" + password + "::::::${quotaRule quota}:${bytes quota}"; };
       lines = map passwdLine config.services.mailUsers.users;
       domains = catAttrs "domain" lines;
       values = domain: catAttrs "line" (filter (x: x.domain == domain) lines);
@@ -45,7 +46,7 @@ in {
                              + "\n\n# Extra Aliases\n" + config.services.mailUsers.extraAliases;
     users.groups.virtualMail = { members = [ "dovecot2" ];};
     users.users.virtualMail = {
-      home = "/var/lib/virtualMail";
+      home = virtualMailDir;
       createHome = true;
     };
   };
