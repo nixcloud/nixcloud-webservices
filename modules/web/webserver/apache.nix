@@ -147,7 +147,7 @@ with lib;
       permissions.defaultDirectoryMode = "0750";
       permissions.others.noAccess = true;
       owner = mkUniqueUser config.webserver.user;
-      group = mkUniqueUser config.webserver.group;
+      group = mkUniqueGroup config.webserver.group;
       instance.before = [ "webserver-init.service" "instance-init.target" ];
     });
 
