@@ -7,11 +7,47 @@ let
     $config = array(
       'db_dsnw' => 'sqlite:///${config.stateDir}/roundcube/sqlite.db?mode=0600',
       'log_dir' => '${config.stateDir}/log',
+      'enable_spellcheck' => ${if config.config.enable_spellcheck then "True" else "False"},
     );
+    ${config.extraConfig}
   '';
 in
 {
-  options = {};
+  options = {
+    config = {
+      enable_spellcheck = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Enable spellchecking when composing mails
+          WARNING: Due to possible privacy implications when using an online spellchecking
+          service this function is disabled by default.
+        '';
+      };
+      spellcheck_engine = mkOption {
+        type = types.nullOr (types.enum ["googie" "pspell" "enchant" "atd"]);
+        default = null;
+        description = ''
+          The spellcheck engine to be used.
+          WARNING: Some engines might use online services, which has privacy implications.
+        '';
+      };
+    };
+    extraConfig = mkOption {
+      type = types.lines;
+      default = "";
+      example = ''
+        $config['log_date_format'] = 'd-M-Y H:i:s O';
+        $config['imap_timeout']    = 30;
+      '';
+      description = ''
+        Any additional lines to be appended to Roundcube's
+        configuration file.
+        See the reference documentation:
+        <link xlink:href='https://github.com/roundcube/roundcubemail/wiki/Configuration'/>.
+      '';
+    };
+  };
 
   config = let
     version = "1.3.8";
