@@ -75,6 +75,14 @@ Thanks to the support of https://nlnet.nl!
           { name = "foo1"; domain = "dune2.de"; password = "{PLAIN}asdfasdfasdfasdf"; }
         ];
       };
+      
+    # If using the firewall
+    # networking.firewall.allowedTCPPorts = [ 
+    #   25 # enable smtp for other servers
+    #   143 # Enable using imap
+    #   587 # Enable smtp for users
+    # ]
+  ];
 
 ## DNS entries
 
