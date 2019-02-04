@@ -281,6 +281,10 @@ in {
       };
     })
 
+    (lib.mkIf cfg.webmail.enable {
+      nixcloud.webservices.roundcube = lib.fold (el: c: c // {"${el}" = mkWebMailWebService el;}) {} (rcWebMailFQDNs);
+    })
+
     (lib.mkIf cfg.enableDKIM {
       users.users.postfix.extraGroups = [ "opendkim" ];
       services.opendkim = {
