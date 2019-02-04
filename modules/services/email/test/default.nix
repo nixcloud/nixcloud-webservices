@@ -89,6 +89,7 @@ let
       # FIXME: Disabled for now because we really don't want to wait >300
       #        seconds for the test to run.
       enableGreylisting = false;
+      webmail.enable = true;
       users = let
         isLocalUser = lib.const (attrs: lib.elem attrs.domain domains);
         localUsers = lib.filterAttrs isLocalUser testAccounts;
@@ -124,6 +125,12 @@ in {
 
         ns.fakedns. IN    A ${config._test-support.v4addr}
         ns.fakedns. IN AAAA ${config._test-support.v6addr}
+
+        mail.example.org. IN    A ${nodes.mail1.config._test-support.v4addr}
+        mail.example.org. IN AAAA ${nodes.mail1.config._test-support.v6addr}
+
+        mail.example.com. IN    A ${nodes.mail2.config._test-support.v4addr}
+        mail.example.com. IN AAAA ${nodes.mail2.config._test-support.v6addr}
 
         mx.example.org. IN    A ${nodes.mail1.config._test-support.v4addr}
         mx.example.org. IN AAAA ${nodes.mail1.config._test-support.v6addr}
@@ -176,12 +183,20 @@ in {
     '');
   };
 
-  testScript = ''
+  testScript = let
+    rcSearchFor = "<title>Roundcube</title>";
+  in ''
     startAll;
     $dns->waitForUnit('bind.service');
     $mail1->waitForUnit('multi-user.target');
     $mail2->waitForUnit('multi-user.target');
     $client->waitForUnit('multi-user.target');
     $client->succeed('run-tests >&2');
+    # wait for reverse-proxy
+    $mail1->waitForOpenPort(80);
+    $mail2->waitForOpenPort(80);
+    $mail1->waitForOpenPort(8993);
+    $mail2->waitForOpenPort(8993);
+    $mail1->succeed('curl -L https://mail.example.org/ | grep -qF "${rcSearchFor}"');
   '';
 }
