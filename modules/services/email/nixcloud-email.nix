@@ -32,7 +32,7 @@ let
     };
   };
   # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
-  rcWebMailFQDNs = map (fqdn: (lib.optionalString (cfg.webmail.autoMailDomain) "mail.") + fqdn) (lib.unique([ cfg.fqdn ] ++ cfg.domains));
+  rcWebMailFQDNs = map (fqdn: (lib.optionalString (cfg.webmail.autoMailDomain && ((builtins.match "^mail\..+" fqdn) == null)) "mail.") + fqdn) (lib.unique([ cfg.fqdn ] ++ cfg.domains));
 
 in {
   imports = [
