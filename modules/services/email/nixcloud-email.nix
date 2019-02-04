@@ -23,6 +23,17 @@ let
       }
   '';
 
+  # generate attrSet for a single webmail webservice
+  mkWebMailWebService = fqdn: {
+    enable = true;
+    proxyOptions = {
+      domain = "${fqdn}";
+      port = 8993;
+    };
+  };
+  # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
+  rcWebMailFQDNs = map (fqdn: (lib.optionalString (cfg.webmail.autoMailDomain) "mail.") + fqdn) (lib.unique([ cfg.fqdn ] ++ cfg.domains));
+
 in {
   imports = [
     (import ./virtual-mail-users.nix ({virtualMailDir = cfg.virtualMailDir;} // args))
