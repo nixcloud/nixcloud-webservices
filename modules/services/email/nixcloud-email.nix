@@ -157,6 +157,23 @@ in {
         Whether to enforce the Sender Policy Framework.
       '';
     };
+    webmail = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Provide a webmail interface for `nixcloud.email`-enabled domains
+        '';
+      };
+      autoMailDomain = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Assumes webmail should be made available under `mail.<domain>`.
+          Uses `domain` as defined if set to `false`.
+        '';
+      };
+    };
     users = mkOption {
       type = types.listOf (types.submodule {
         imports = [ ./virtual-mail-submodule.nix ];
