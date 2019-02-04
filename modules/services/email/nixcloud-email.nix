@@ -363,6 +363,9 @@ in {
           587  # dovecot (submission)
           993  # imaps (dovecot)
           4190 # sieve
+        ] ++ lib.optionals cfg.webmail.enable [
+          80  # HTTP
+          443 # HTTPS
         ];
       };
 
