@@ -24,11 +24,11 @@ let
   '';
 
   # generate attrSet for a single webmail webservice
-  mkWebMailWebService = fqdn: {
+  mkWebMailWebService = fqdn: port: {
     enable = true;
     proxyOptions = {
       domain = "${fqdn}";
-      port = 8993;
+      port = port;
     };
   };
   # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
@@ -282,7 +282,11 @@ in {
     })
 
     (lib.mkIf cfg.webmail.enable {
-      nixcloud.webservices.roundcube = lib.fold (el: c: c // {"${el}" = mkWebMailWebService el;}) {} (rcWebMailFQDNs);
+      nixcloud.webservices.roundcube = let
+	# makes portMap contain an attrSet where the key is the FQDN and the value a port for the
+	# corresponding webservice, e.g. `{ "domain.a" = 8993; "domain.b" = 8994; "domain.c" = 8995; }`
+	portMap = lib.listToAttrs (lib.imap0 (i: v: {name = v; value = 8993+i;}) rcWebMailFQDNs);
+      in lib.fold (el: c: c // {"${el}" = mkWebMailWebService el portMap."${el}";}) {} (rcWebMailFQDNs);
     })
 
     (lib.mkIf cfg.enableDKIM {
