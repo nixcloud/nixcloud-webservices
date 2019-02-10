@@ -24,11 +24,12 @@ let
   '';
 
   # generate attrSet for a single webmail webservice
-  mkWebMailWebService = fqdn: port: {
+  mkWebMailWebService = primaryFQDN: extraFQDN: port: {
     enable = true;
     proxyOptions = {
-      domain = "${fqdn}";
+      domain = "${extraFQDN}";
       port = port;
+      TLS = "${primaryFQDN}";
     };
   };
   # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
@@ -267,7 +268,7 @@ in {
 
       nixcloud.TLS.certs."${cfg.fqdn}" = {
         domain = "${cfg.fqdn}";
-        extraDomains = map (x: "mail.${x}") cfg.domains;
+        extraDomains = lib.unique((map (x: "mail.${x}") cfg.domains) ++ rcWebMailFQDNs);
         reload = [ "postfix.service" "dovecot2.service" ];
       };
 
@@ -286,7 +287,7 @@ in {
 	# makes portMap contain an attrSet where the key is the FQDN and the value a port for the
 	# corresponding webservice, e.g. `{ "domain.a" = 8993; "domain.b" = 8994; "domain.c" = 8995; }`
 	portMap = lib.listToAttrs (lib.imap0 (i: v: {name = v; value = 8993+i;}) rcWebMailFQDNs);
-      in lib.fold (el: c: c // {"${el}" = mkWebMailWebService el portMap."${el}";}) {} (rcWebMailFQDNs);
+      in lib.fold (el: c: c // {"${el}" = mkWebMailWebService cfg.fqdn el portMap."${el}";}) {} (rcWebMailFQDNs);
     })
 
     (lib.mkIf cfg.enableDKIM {
