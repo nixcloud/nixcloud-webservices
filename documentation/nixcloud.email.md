@@ -35,12 +35,12 @@
 * [x] meaningful mail server defaults for communication with gmail.com & similar
 * [x] Mail relay abstraction
 * [x] `nixcloud.email` scores 10/10 at https://www.mail-tester.com
+* [x] Webmail support using Roundcube by default!
 
 See [implementation](../modules/services/email)
 
 Upcoming features:
 
-* Webmail support (Roundcube)
 * Refactor `nixcloud.email.relay` into `nixcloud.email-relay`
 * Advanced monitoring using https://github.com/nixcloud/nixcloud.monitoring
 * Adding group aliases
