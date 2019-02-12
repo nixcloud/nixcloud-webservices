@@ -23,6 +23,18 @@ let
       }
   '';
 
+  # generate attrSet for a single webmail webservice
+  mkWebMailWebService = primaryFQDN: extraFQDN: port: {
+    enable = true;
+    proxyOptions = {
+      domain = "${extraFQDN}";
+      port = port;
+      TLS = "${primaryFQDN}";
+    };
+  };
+  # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
+  rcWebMailFQDNs = map (fqdn: (lib.optionalString (cfg.webmail.autoMailDomain && ((builtins.match "^mail\..+" fqdn) == null)) "mail.") + fqdn) (lib.unique([ cfg.fqdn ] ++ cfg.domains));
+
 in {
   imports = [
     (import ./virtual-mail-users.nix ({virtualMailDir = cfg.virtualMailDir;} // args))
@@ -146,6 +158,23 @@ in {
         Whether to enforce the Sender Policy Framework.
       '';
     };
+    webmail = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Provide a webmail interface for `nixcloud.email`-enabled domains
+        '';
+      };
+      autoMailDomain = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Assumes webmail should be made available under `mail.<domain>`.
+          Uses `domain` as defined if set to `false`.
+        '';
+      };
+    };
     users = mkOption {
       type = types.listOf (types.submodule {
         imports = [ ./virtual-mail-submodule.nix ];
@@ -239,7 +268,7 @@ in {
 
       nixcloud.TLS.certs."${cfg.fqdn}" = {
         domain = "${cfg.fqdn}";
-        extraDomains = map (x: "mail.${x}") cfg.domains;
+        extraDomains = lib.unique((map (x: "mail.${x}") cfg.domains) ++ rcWebMailFQDNs);
         reload = [ "postfix.service" "dovecot2.service" ];
       };
 
@@ -251,6 +280,14 @@ in {
           dovecot2 = 2048;
         };
       };
+    })
+
+    (lib.mkIf cfg.webmail.enable {
+      nixcloud.webservices.roundcube = let
+	# makes portMap contain an attrSet where the key is the FQDN and the value a port for the
+	# corresponding webservice, e.g. `{ "domain.a" = 8993; "domain.b" = 8994; "domain.c" = 8995; }`
+	portMap = lib.listToAttrs (lib.imap0 (i: v: {name = v; value = 8993+i;}) rcWebMailFQDNs);
+      in lib.fold (el: c: c // {"${el}" = mkWebMailWebService cfg.fqdn el portMap."${el}";}) {} (rcWebMailFQDNs);
     })
 
     (lib.mkIf cfg.enableDKIM {
@@ -331,6 +368,9 @@ in {
           587  # dovecot (submission)
           993  # imaps (dovecot)
           4190 # sieve
+        ] ++ lib.optionals cfg.webmail.enable [
+          80  # HTTP
+          443 # HTTPS
         ];
       };
 
