@@ -79,6 +79,7 @@ Thanks to the support of https://nlnet.nl!
 ## DNS entries
 
 In order to use `nixcloud.email` you need to setup your DNS server for your domain. Here is the example configuration for `mail.lastlog.de` mailserver.
+Use the command `dnsRecords` to output a list of DNS entries which have to be configured manually - based on your configuration.
 
 ### Reverse DNS entries
 

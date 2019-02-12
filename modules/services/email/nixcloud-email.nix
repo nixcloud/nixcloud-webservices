@@ -22,6 +22,13 @@ let
         ssl_key = <${sslKey}
       }
   '';
+  dnsRecordsScript = let
+    dnsRecordsFile = pkgs.writeText "dnsRecords.zone" ''
+       ${cfg.dnsRecords}
+    '';
+  in pkgs.writeScriptBin "dnsRecords" ''
+     cat ${dnsRecordsFile}
+  '';
 
   # generate attrSet for a single webmail webservice
   mkWebMailWebService = primaryFQDN: extraFQDN: port: {
@@ -80,6 +87,13 @@ in {
       default = config.networking.hostName;
       description = ''
         The FQDN (fully qualified domain name) of your mailserver.
+      '';
+    };
+    dnsRecords = mkOption {
+      type = types.separatedString "";
+      default = "";
+      description = ''
+        A DNS records file for the configured domains.
       '';
     };
     enableRspamd = mkOption {
@@ -282,7 +296,25 @@ in {
       };
     })
 
+    ({
+      nixcloud.email.dnsRecords = lib.concatMapStringsSep "" (domain: ''
+        ${domain}. IN     A ${cfg.ipAddress}
+        ${domain}. IN  AAAA ${cfg.ip6Address}
+        @          IN    MX ${domain}.
+        mail       IN CNAME ${domain}.
+        imap       IN CNAME ${domain}.
+        pop3       IN CNAME ${domain}.
+        smtp       IN CNAME ${domain}.
+        ${domain}. IN   TXT "v=spf1 a:${domain} -all"
+      '') (lib.unique([cfg.fqdn] ++ cfg.domains));
+      environment.systemPackages = [ dnsRecordsScript ];
+    })
+
     (lib.mkIf cfg.webmail.enable {
+      nixcloud.email.dnsRecords = lib.concatMapStringsSep "" (domain: ''
+        ${domain}. IN    A ${cfg.ipAddress}
+        ${domain}. IN AAAA ${cfg.ip6Address}
+      '') rcWebMailFQDNs;
       nixcloud.webservices.roundcube = let
 	# makes portMap contain an attrSet where the key is the FQDN and the value a port for the
 	# corresponding webservice, e.g. `{ "domain.a" = 8993; "domain.b" = 8994; "domain.c" = 8995; }`
