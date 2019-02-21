@@ -105,14 +105,14 @@ in
           cd ${stateDir}/${identifier}/acmeSupplied
           echo "lego certificate renewal check"
           set +e
-          ${pkgs.lego}/bin/lego ${allDomains} --email="${email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
+          ${pkgs.lego}/bin/lego ${allDomains} --email="${email}" --http --http.webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" renew --days=15
           status=$?
           echo "return code was $status"
           set -e
 
           if [ "$status" != "0" ]; then
               echo "initial lego certificate query"
-              ${pkgs.lego}/bin/lego ${allDomains} --email="${email}" --exclude="dns-01" --exclude="tls-alpn-01" --webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
+              ${pkgs.lego}/bin/lego ${allDomains} --email="${email}" --http --http.webroot="/run/nixcloud/lego/${identifier}/challenges" --path="${path}" --accept-tos --server="${c.acmeApiEndpoint}" run
           fi
         '';
         postStart = ''
