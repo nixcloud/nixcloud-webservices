@@ -15,55 +15,6 @@ It features the development stack we use at [https://nixcloud.io](https://nixclo
 
 Continuous integration at <https://hydra.nixcloud.io/project/nixcloud-webservices>
 
-# Using nixcloud-webservices
-
-Depending on which NixOS version you're on you can get different channels of
-nixcloud-webservices which are tested against different NixOS releases:
-
-## For NixOS 18.03
-
-18.03 is obsolete:
-
-```sh-session
-# nix-channel --remove nixcloud-webservices
-```
-
-* update to 18.09, see instruction below
-* also update the `system.stateVersion = "18.09";` when you are at it 
-
-## For NixOS 18.09
-
-```sh-session
-# nix-channel --add https://hydra.nixcloud.io/channel/custom/nixcloud-webservices/release-18.09/nixcloud-webservices
-# nix-channel --update
-```
-
-You can find nixcloud-webservices specific options in the [release-18.09 manual](https://hydra.nixcloud.io/job/nixcloud-webservices/release-18.09/manual/latest/download/1).
-
-## For NixOS Unstable
-
-```sh-session
-# nix-channel --add https://hydra.nixcloud.io/channel/custom/nixcloud-webservices/nixos-unstable/nixcloud-webservices
-# nix-channel --update
-```
-
-You can find nixcloud-webservices specific options in the [nixos-unstable manual](https://hydra.nixcloud.io/job/nixcloud-webservices/nixos-unstable/manual/latest/download/1).
-
-## Adding nixcloud-webservices to your configuration.nix
-
-Simply append `<nixcloud-webservices>` to your `imports` list and you're ready
-to go, for example:
-
-```nix
-{
-  imports = [
-    ./hardware-configuration.nix
-    <nixcloud-webservices>
-  ];
-  # ... other options ...
-}
-```
-
 # Get the source
 
 Alternatively if you want to hack on nixcloud-webservices, you can also Git
@@ -72,6 +23,8 @@ clone it with:
 ```sh-session
 $ git clone https://github.com/nixcloud/nixcloud-webservices
 ```
+
+Note: We no longer support pre-compiled binaries so you have to use the 'Get the source' workflow instead of using 'nix-channel'
 
 # Importing
 
