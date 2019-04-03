@@ -50,13 +50,13 @@ in
   };
 
   config = let
-    version = "1.3.8";
+    version = "1.3.9";
     roundcubeRoot = pkgs.stdenv.mkDerivation rec {
       name= "roundcube-${version}";
 
       src = pkgs.fetchurl {
         url = "https://github.com/roundcube/roundcubemail/releases/download/${version}/roundcubemail-${version}-complete.tar.gz";
-        sha256 = "018djad7ygfl9c9f2l2j42qkg31ml3hs2f01f0dk361zckwk77n4";
+        sha256 = "726db4ffb33a7154dd432cbb99810ab9d02512c7f1987a6119e9ac7f595521ad";
       };
 
       buildPhase = ''
