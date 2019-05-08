@@ -121,6 +121,14 @@ In a nutshell, you need to do three things:
 2. In the service, reference the `tls_certificate` and `tls_certificate_key` from the global `config`
 3. Inject systemd service dependencies 
 
+### nixcloud.TLS.certs."example.org" extraDomains
+
+Say your webpage runs on www.example.org instead of example.org and then you need to extend your certificate using `extraDomains` like this:
+
+    nixcloud.TLS.certs."example.org" = {
+      extraDomains = [ "www.example.org" ];
+    };
+
 ### nixcloud.TLS configuration
 
     nixcloud.TLS.certs = {
