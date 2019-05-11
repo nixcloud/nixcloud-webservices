@@ -26,6 +26,10 @@ $ git clone https://github.com/nixcloud/nixcloud-webservices
 
 Note: We no longer support pre-compiled binaries so you have to use the 'Get the source' workflow instead of using 'nix-channel'
 
+# CI hydra build
+
+https://headcounter.org/hydra/project/nixcloud-webservices
+
 # Importing
 
 ## Option A: Importing modules in your local system
