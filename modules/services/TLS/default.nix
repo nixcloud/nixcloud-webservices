@@ -17,9 +17,9 @@ let
     # Create self-signed key
     workdir=/tmp
     echo "Create a self signed CA 1/2"
-    ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:x -out $workdir/server.pass.key 2048
+    ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:xxxx -out $workdir/server.pass.key 2048
     echo "Create a self signed CA 2/2"
-    ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:x -in $workdir/server.pass.key -out $workdir/server.key
+    ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:xxxx -in $workdir/server.pass.key -out $workdir/server.key
     echo "Create a CSR"
     ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr -subj "/C=DE/ST=Burrow/L=Linux/O=OrgName/OU=nixcloud IT Department"
 
