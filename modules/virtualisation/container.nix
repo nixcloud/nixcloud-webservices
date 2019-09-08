@@ -13,7 +13,7 @@ with lib;
           description = "Enable nixcloud LXC based container support";
         };
         internetInterface = mkOption {
-          type = types.string;
+          type = types.str;
           default = "enp0s3";
           example = "enp4s0";
           description = ''
@@ -54,13 +54,13 @@ with lib;
                 description = "Enable/disable IPv6 support for nixcloud.container";
               };
               ipv6InternetInterfaceAddress = mkOption {
-                type = types.string;
+                type = types.str;
                 example = "2001:db8:3c4d:15::1";
                 default = "";
                 description = "The IPv6 address which is assigned to the DHCPD6 interface and must be contained in the `ipv6Prefix` as DHCPD6 wouldn't work otherwise.";
               };
               ipv6Prefix = mkOption {
-                type = types.string;
+                type = types.str;
                 default = "";
                 example = "2001:db8:3c4d:15::";
                 description = "See https://www.google.de/search?q=ipv6+prefix";
@@ -72,7 +72,7 @@ with lib;
                 description = "See https://www.google.de/search?q=ipv6+prefix";
               };
               ipv6NameServers = mkOption {
-                type = types.listOf (types.string);
+                type = types.listOf (types.str);
                 default = [];
                 example = [ "2a01:4f8:0:1::add:1010" "2a01:4f8:0:1::add:9999" "2a01:4f8:0:1::add:9898" ];
                 description = "A list of IPv6 nameservers which are used in the LXC guests to resolve DNS requets via IPv6";

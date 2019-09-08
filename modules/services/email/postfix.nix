@@ -583,7 +583,7 @@ in
 
       dnsBlacklists = mkOption {
         default = [];
-        type = with types; listOf string;
+        type = with types; listOf str;
         description = "dns blacklist servers to use with smtpd_client_restrictions";
       };
 
