@@ -100,6 +100,12 @@ let
     smtpd_tls_key_file = cfg.sslKey;
 
     smtpd_use_tls = true;
+    smtpd_tls_mandatory_protocols = "!SSLv2, !SSLv3";
+    smtpd_tls_protocols = "!SSLv2, !SSLv3";
+    smtpd_tls_mandatory_ciphers = "high";
+    smtpd_tls_ciphers = "high";
+    tls_high_cipherlist="EDH+CAMELLIA:EDH+aRSA:EECDH+aRSA+AESGCM:EECDH+aRSA+SHA256:EECDH:+CAMELLIA128:+AES128:+SSLv3:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!DSS:!RC4:!SEED:!IDEA:!ECDSA:kEDH:CAMELLIA128-SHA:AES128-SHA";
+    smtpd_tls_eecdh_grade="ultra";
   };
 
   masterCfOptions = { options, config, name, ... }: {
