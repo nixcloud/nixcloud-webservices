@@ -300,7 +300,7 @@ in
       '';
     };
     TLS = mkOption {
-      type = types.string;
+      type = types.str;
       apply = x: assert (x != "ACME") || abort "Your proxyOptions.TLS or extraMappings.TLS definition was \"ACME\" but the changed implementation for proxyOptions expects now a nixcloud.TLS.certs identifier instead. \nEither\n * remove the TLS definition completely and use the default which is probably what you want or\n * select properly defined nixcloud.TLS identifier instead"; x;
       description = ''
         Points to an identifier <replaceable>myconfig</replaceable>, which is
