@@ -296,15 +296,17 @@ in
 
     # 3. map over these and create server (http/https) records per domain
     createHttpServerRecords = allProxyOptions: let
-      createHttpServerRecord =  domain: let
+      createHttpServerRecord = domain: let
         filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
+        server_names = toString (unique ([ domain ] ++ fold (el: c: c ++ el.extraDomains) [] filteredProxyOptions));
       in
       ''
         server {
           listen ${toString cfg.httpPort};
           listen [::]:${toString cfg.httpPort};
 
-          server_name ${domain};  
+          server_name ${server_names};
+
           ${optionalString (ACMEImpliedDomainsSet ? "${domain}")
           ''
             # ACME requires this in the http record (will not work over https)
@@ -326,13 +328,14 @@ in
     let
       filteredProxyOptions = filter (e: e.domain == "${domain}") allProxyOptions;
       needsHttps = any (el: el.https.mode != "off" || checkLocationMode el.websockets "https" || checkLocationMode el.extraLocations "https") filteredProxyOptions;
+      server_names = toString (unique ([ domain ] ++ fold (el: c: c ++ el.extraDomains) [] filteredProxyOptions));
     in optionalString (filteredProxyOptions != [] && needsHttps) ''
       server {
         ssl on;
         listen ${toString cfg.httpsPort} ssl;
         listen [::]:${toString cfg.httpsPort} ssl;
 
-        server_name ${domain};
+        server_name ${server_names};
 
         ssl_certificate ${config.nixcloud.TLS.certs.${nixcloudTLSHandles.${domain}}.tls_certificate};
         ssl_certificate_key ${config.nixcloud.TLS.certs.${nixcloudTLSHandles.${domain}}.tls_certificate_key};

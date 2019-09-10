@@ -226,6 +226,14 @@ in
         The domain for which you want the reverse proxy mapping. If you URL looks like this `https://example.com/wiki` then set domain to "example.com"
       '';
     };
+    extraDomains = mkOption {
+      type = types.listOf (types.str);
+      example =  [ "www.example.com" ];
+      default = [];
+      description = ''
+        A list of extra domains which basically point to the same http/https record destination as the `proxyOptions.domain` itself. Say `proxyOptions.domain` points to 'example.com' then `proxyOptions.extraDomains` could point to 'www.example.com'.
+      '';
+    };
     path = mkOption {
       type = types.str;
       default = "/";
