@@ -137,7 +137,6 @@ in rec {
           };
           "validacmecert.com" = {
             mode = "ACME";
-            # FIXME aszlig: our default is the v02 endpoint but boulder in nixpkgs can't do that at the moment
             acmeApiEndpoint = "https://acme-v02.api.letsencrypt.org/directory";
             users = [ "nixcloud-permCheck" ];
           };
@@ -262,7 +261,9 @@ in rec {
     $letsencrypt->waitForUnit("default.target");
     $webserver->waitForUnit("default.target");
     $client->waitForUnit("default.target");
-    $letsencrypt->waitForUnit("boulder.service");
+
+
+    $letsencrypt->waitForUnit("multi-user.target");
 
     # if the nixcloud.reverse-proxy doesn't make it, we don't need to go on
     $webserver->waitForUnit("nixcloud.reverse-proxy.service");
