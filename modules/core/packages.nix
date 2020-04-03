@@ -11,6 +11,13 @@ with pkgs;
       #  src = /etc/nixos/pkgs/lxc;
       #  patches = [  ];
       #});
+      rspamd = let
+          version = super.rspamd.version;
+        in if (lib.versionAtLeast version "1.7.3") && (lib.versionOlder version "1.8.1")
+          then super.rspamd.overrideAttrs (oldAttrs: rec {
+            patches = ["${./rspamd}/rspamd-${version}-local-rules.patch"];
+          })
+          else super.rspamd;
     })
   ];
 }

@@ -198,5 +198,10 @@ in {
     $mail1->waitForOpenPort(8993);
     $mail2->waitForOpenPort(8993);
     $mail1->succeed('curl -L https://mail.example.org/ | grep -qF "${rcSearchFor}"');
+    # Check spam learning
+    $mail2->waitUntilSucceeds("journalctl -u dovecot2 | grep learn-spam.sh >&2");
+    $mail2->succeed('journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as spam" >&2');
+    $mail2->waitUntilSucceeds("journalctl -u dovecot2 | grep learn-ham.sh >&2");
+    $mail2->succeed('journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as ham" >&2');
   '';
 }
