@@ -183,9 +183,7 @@ in {
     '');
   };
 
-  testScript = let
-    rcSearchFor = "<title>Roundcube</title>";
-  in ''
+  testScript = ''
     startAll;
     $dns->waitForUnit('bind.service');
     $mail1->waitForUnit('multi-user.target');
@@ -197,7 +195,7 @@ in {
     $mail2->waitForOpenPort(80);
     $mail1->waitForOpenPort(8993);
     $mail2->waitForOpenPort(8993);
-    $mail1->succeed('curl -L https://mail.example.org/ | grep -qF "${rcSearchFor}"');
+    $mail1->succeed('curl -L http://mail.example.org/ | grep -qF "<title>Roundcube"');
     # Check spam learning
     $mail2->waitUntilSucceeds("journalctl -u dovecot2 | grep learn-spam.sh >&2");
     $mail2->succeed('journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as spam" >&2');

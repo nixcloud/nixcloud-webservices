@@ -37,7 +37,9 @@ let
     proxyOptions = {
       domain = "${extraFQDN}";
       port = port;
-      TLS = "${primaryFQDN}";
+      TLS = lib.mkIf cfg.enableTLS "${primaryFQDN}";
+      http.mode = if cfg.enableTLS then "redirect_to_https" else "on";
+      https.mode = if cfg.enableTLS then "on" else "off";
     };
   };
   # unique set of primary FQDN and additional domains in nixcloud.email, prefixed with `mail.` depending on `autoMailDomain`
@@ -297,8 +299,6 @@ in {
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
     (lib.mkIf cfg.enableTLS {
-      nixcloud.reverse-proxy.enable = true;
-
       systemd.services.postfix.after = [ "nixcloud.TLS-certificates.target" ];
       systemd.services.postfix.wants = [ "nixcloud.TLS-certificates.target" ];
 
@@ -491,6 +491,8 @@ in {
           443 # HTTPS
         ];
       };
+
+      nixcloud.reverse-proxy.enable = cfg.enableTLS || cfg.webmail.enable;
 
       services.mailUsers.users = cfg.users;
 
