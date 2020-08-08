@@ -61,9 +61,7 @@ in {
 
     webserver.userOptions = lib.mkOption {
       default = {};
-      type = let
-        submodules = toplevel.options.users.users.type.getSubModules;
-      in lib.types.submodule (map (m: m.submodule) submodules);
+      type = lib.types.submodule toplevel.options.users.users.type.functor.wrapped.getSubModules;
       description = ''
         Additional options for the user, see <option>users.users</option> for
         possible values.
@@ -78,9 +76,7 @@ in {
 
     webserver.groupOptions = lib.mkOption {
       default = {};
-      type = let
-        submodules = toplevel.options.users.groups.type.getSubModules;
-      in lib.types.submodule (map (m: m.submodule) submodules);
+      type = lib.types.submodule toplevel.options.users.groups.type.functor.wrapped.getSubModules;
       description = ''
         Additional options for the group, see <option>users.groups</option> for
         possible values.
@@ -114,15 +110,15 @@ in {
         }
       ];
 
+      users.${config.webserver.user} = lib.mkMerge [
+        (lib.mkForce { inherit (config.webserver) name group; })
+        (lib.modules.mkAliasAndWrapDefsWithPriority lib.id config.webserver.userOptions)
+      ];
 
-
-
-      users.${config.webserver.user} = {
-        inherit (config.webserver) group;
-      } // removeAttrs config.webserver.userOptions [ "name" "group" ];
-
-      groups.${config.webserver.group} =
-        removeAttrs config.webserver.groupOptions [ "name" ];
+      groups.${config.webserver.group} = lib.mkMerge [
+        (lib.mkForce { inherit (config.webserver) name; })
+        (lib.modules.mkAliasAndWrapDefsWithPriority lib.id config.webserver.groupOptions)
+      ];
     })
     (lib.mkIf (config.enable && needsWebServerInit) {
       systemd.services.webserver-init = {

@@ -15,9 +15,7 @@ let
     optionNames = lib.attrNames (lib.filterAttrs (lib.const isUnit) reEval);
   in lib.genAttrs optionNames (name: toplevel.options.systemd.${name});
 
-  getSubModules = opt: let
-    subModules = opt.type.getSubModules;
-  in map (m: m.submodule) subModules;
+  getSubModules = opt: opt.type.functor.wrapped.functor.payload.modules;
 
   availableInstanceDependencies = [
     "after" "before" "bindsTo" "conflicts" "partOf" "requiredBy" "requires"
