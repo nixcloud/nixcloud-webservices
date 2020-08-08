@@ -227,10 +227,11 @@ in
     
     services.httpd = {
       enable = true;
-      listen = [{
-        port = 60000;
-        ip = "*";
-      }];
+      virtualHosts = {
+        "example.com" = {
+          listen = [{port = 60000; ip = "*";}];
+        };
+      };
       adminAddr="example@example.com";
     };
 
