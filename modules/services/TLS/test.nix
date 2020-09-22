@@ -3,13 +3,13 @@
 with pkgs.lib;
 
 let
-  commonConfig = <nixpkgs/nixos/tests/common/letsencrypt/common.nix>;
-  snakeoil-certs = import (<nixpkgs/nixos/tests/common/letsencrypt/snakeoil-certs.nix>);
+  commonConfig = <nixpkgs/nixos/tests/common/acme/client>;
+  snakeoil-certs = import (<nixpkgs/nixos/tests/common/acme/server/snakeoil-certs.nix>);
 in rec {
   name = "nixcloud.TLS";
 
   nodes = rec {
-    letsencrypt =  <nixpkgs/nixos/tests/common/letsencrypt>;
+    acme =  <nixpkgs/nixos/tests/common/acme/server>;
 
     webserver = { config, pkgs, nodes, ... }: {
       imports = [ commonConfig ];
@@ -258,12 +258,12 @@ in rec {
   };
 
   testScript = ''
-    $letsencrypt->waitForUnit("default.target");
+    $acme->waitForUnit("default.target");
     $webserver->waitForUnit("default.target");
     $client->waitForUnit("default.target");
 
 
-    $letsencrypt->waitForUnit("multi-user.target");
+    $acme->waitForUnit("multi-user.target");
 
     # if the nixcloud.reverse-proxy doesn't make it, we don't need to go on
     $webserver->waitForUnit("nixcloud.reverse-proxy.service");
