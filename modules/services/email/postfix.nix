@@ -666,10 +666,7 @@ in
     {
 
       environment = {
-        etc = singleton
-          { source = "/var/lib/postfix/conf";
-            target = "postfix";
-          };
+        etc = { postfix.source = "/var/lib/postfix/conf"; };
 
         # This makes comfortable for root to run 'postqueue' for example.
         systemPackages = [ pkgs.postfix ];
@@ -685,22 +682,17 @@ in
         setgid = true;
       };
 
-      users.extraUsers = optional (user == "postfix")
-        { name = "postfix";
-          description = "Postfix mail server user";
+      users.extraUsers = optionalAttrs (user == "postfix") { postfix =
+        { description = "Postfix mail server user";
           uid = config.ids.uids.postfix;
           group = group;
-        };
+        };};
 
       users.extraGroups =
-        optional (group == "postfix")
-        { name = group;
-          gid = config.ids.gids.postfix;
-        }
-        ++ optional (setgidGroup == "postdrop")
-        { name = setgidGroup;
-          gid = config.ids.gids.postdrop;
-        };
+        optionalAttrs (group == "postfix")
+        { "${group}".gid = config.ids.gids.postfix; }
+        // optionalAttrs (setgidGroup == "postdrop")
+        { "${setgidGroup}".gid = config.ids.gids.postdrop; };
 
       systemd.services.postfix =
         { description = "Postfix mail server";
