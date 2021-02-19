@@ -8,23 +8,21 @@ let
   inherit (import ./common.nix { inherit lib; })
     stateDir hashACMEConfig;
 
-  selfSignedCertScript = identifier: subjectAltName: workDir: pkgs.writeScriptBin "selfSignedCertScript.sh" ''
-    mkdir /tmp/selfsigned
+  selfSignedCertScript = identifier: subjectAltName: pkgs.writeScriptBin "selfSignedCertScript.sh" ''
+    mkdir $RUNTIME_DIRECTORY/selfsigned
     # RANDFILE needs to be defined, otherwise `openssl` attempts to write to `~/.rnd`
     # which will fail when everything else is write-protected
     export RANDFILE=/tmp/rnd
 
-    # Create self-signed key
-    workdir=/tmp
     echo "Create a self signed CA 1/2"
-    ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:xxxx -out $workdir/server.pass.key 2048
+    ${pkgs.openssl.bin}/bin/openssl genrsa -des3 -passout pass:xxxx -out $RUNTIME_DIRECTORY/server.pass.key 2048
     echo "Create a self signed CA 2/2"
-    ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:xxxx -in $workdir/server.pass.key -out $workdir/server.key
+    ${pkgs.openssl.bin}/bin/openssl rsa -passin pass:xxxx -in $RUNTIME_DIRECTORY/server.pass.key -out $RUNTIME_DIRECTORY/server.key
     echo "Create a CSR"
-    ${pkgs.openssl.bin}/bin/openssl req -new -key $workdir/server.key -out $workdir/server.csr -subj "/C=DE/ST=Burrow/L=Linux/O=OrgName/OU=nixcloud IT Department"
+    ${pkgs.openssl.bin}/bin/openssl req -new -key $RUNTIME_DIRECTORY/server.key -out $RUNTIME_DIRECTORY/server.csr -subj "/C=DE/ST=Burrow/L=Linux/O=OrgName/OU=nixcloud IT Department"
 
     echo "Sign the CSR"
-    ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${subjectAltName}") -days 1 -in $workdir/server.csr -signkey $workdir/server.key -out $workdir/server.crt
+    ${pkgs.openssl.bin}/bin/openssl x509 -req -extfile <(printf "subjectAltName=${subjectAltName}") -days 1 -in $RUNTIME_DIRECTORY/server.csr -signkey $RUNTIME_DIRECTORY/server.key -out $RUNTIME_DIRECTORY/server.crt
     echo "Done creating a self signed certificate"
   '';
 
@@ -143,7 +141,6 @@ in
         c = config.nixcloud.TLS.certs.${identifier};
         allDomains = concatMapStringsSep " " (x: "--domains=${x}") ( [ c.domain ] ++ c.extraDomains);
         hash = hashACMEConfig c;
-        workDir = "/tmp";
         targetPath = "${stateDir}/${identifier}/acmeSupplied/${hash}/certificates/";
         tls_certificate_path = "${targetPath}/${identifier}.crt";
         tls_certificate_key_path = "${targetPath}/${identifier}.key";
@@ -158,7 +155,7 @@ in
           let
             subjectAltName = concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains);
           in ''
-            ${selfSignedCertScript identifier subjectAltName workDir}/bin/selfSignedCertScript.sh
+            ${selfSignedCertScript identifier subjectAltName}/bin/selfSignedCertScript.sh
           '';
         postStart = ''
           # ideally, the whole service shouldn't have to run in case the key and certificate are already in place, but:
@@ -170,8 +167,8 @@ in
           [[ ! -e "${tls_certificate_key_path}" || ! -e "${tls_certificate_path}" ]] \
             && echo "Only one of key/cert found, removing remaining one" \
             && rm -f "${tls_certificate_key_path}" "${tls_certificate_path}"
-          cp -n ${workDir}/server.key ${toString tls_certificate_key_path}
-          cp -n ${workDir}/server.crt ${toString tls_certificate_path}
+          cp -n $RUNTIME_DIRECTORY/server.key ${toString tls_certificate_key_path}
+          cp -n $RUNTIME_DIRECTORY/server.crt ${toString tls_certificate_path}
           chown root:${filterIdentifier identifier} ${stateDir}/${identifier} -R
           chmod 0750 ${stateDir}/${identifier}/acmeSupplied -R
         '';
@@ -184,6 +181,7 @@ in
           Type = "oneshot";
           RuntimeDirectory = "nixcloud/lego/${identifier}/challenges";
           PrivateTmp = true;
+          #RuntimeDirectory = "nixcloud.TLS-acmeSuppliedPreliminary-${identifier}";
         };
         before = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
         wantedBy = [ "nixcloud.TLS-reverse-proxy-certificates.target" ];
@@ -230,7 +228,6 @@ in
     selfsignedTargets = fold (identifier: con: con ++ [
       (nameValuePair "nixcloud.TLS-selfsigned-${identifier}" (let
         c = config.nixcloud.TLS.certs.${identifier};
-        workDir = "/tmp";
         targetPath = "${stateDir}/${identifier}/selfsigned/";
         tls_certificate_path = "${targetPath}/fullchain.pem";
         tls_certificate_key_path = "${targetPath}/key.pem";
@@ -245,9 +242,9 @@ in
         script = let
           subjectAltName = concatMapStringsSep "," (x: "DNS:${x}") ([ config.nixcloud.TLS.certs.${identifier}.domain ] ++ config.nixcloud.TLS.certs.${identifier}.extraDomains);
         in ''
-          ${selfSignedCertScript identifier subjectAltName workDir}/bin/selfSignedCertScript.sh
-          cp -n ${workDir}/server.key ${toString tls_certificate_key_path}
-          cp -n ${workDir}/server.crt ${toString tls_certificate_path}
+          ${selfSignedCertScript identifier subjectAltName}/bin/selfSignedCertScript.sh
+          cp -n $RUNTIME_DIRECTORY/server.key ${toString tls_certificate_key_path}
+          cp -n $RUNTIME_DIRECTORY/server.crt ${toString tls_certificate_path}
         '';
         postStart = ''
           chown root:${filterIdentifier identifier} ${targetPath} -R
@@ -259,6 +256,7 @@ in
           ProtectSystem="strict";
           PermissionsStartOnly = true;
           PrivateTmp = true;
+          RuntimeDirectory = "nixcloud.TLS-selfsigned-${identifier}";
         };
         unitConfig = {
           # Do not create self-signed key when key already exists
