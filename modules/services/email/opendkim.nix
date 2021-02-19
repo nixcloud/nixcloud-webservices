@@ -88,16 +88,14 @@ in {
 
   config = mkIf cfg.enable {
 
-    users.extraUsers = optionalAttrs (cfg.user == "opendkim") (singleton
-      { name = "opendkim";
-        group = cfg.group;
+    users.extraUsers = optionalAttrs (cfg.user == "opendkim") { opendkim =
+      { group = cfg.group;
         uid = config.ids.uids.opendkim;
-      });
+      };};
 
-    users.extraGroups = optionalAttrs (cfg.group == "opendkim") (singleton
-      { name = "opendkim";
-        gid = config.ids.gids.opendkim;
-      });
+    users.extraGroups = optionalAttrs (cfg.group == "opendkim") { opendkim =
+      { gid = config.ids.gids.opendkim;
+      };};
 
     environment.systemPackages = [ pkgs.opendkim ];
 

@@ -393,14 +393,9 @@ in
     };
 
 
-    users.extraUsers = (singleton
-      { name = "${user}";
-        group = "${group}";
-      });
+    users.extraUsers."${user}".group = "${group}";
 
-    users.extraGroups = (singleton
-      { name = "${user}";
-      });
+    users.extraGroups."${user}" = {};
 
     nixcloud.tests.wanted = [ ./test.nix ];
   };
