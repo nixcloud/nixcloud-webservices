@@ -675,6 +675,7 @@ in
       services.pfix-srsd.enable = config.services.postfix.useSrs;
 
       services.mail.sendmailSetuidWrapper = mkIf config.services.postfix.setSendmail {
+        owner = "nobody";
         program = "sendmail";
         source = "${pkgs.postfix}/bin/sendmail";
         group = setgidGroup;
