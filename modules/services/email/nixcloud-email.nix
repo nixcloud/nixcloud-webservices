@@ -621,27 +621,27 @@ in {
           after = "${./dovecot}/sieve/file-spam.sieve";
         };
 
-        mailboxes = [
-          { name = "Trash";
+        mailboxes = {
+          Trash = {
             auto = "create";
             specialUse = "Trash";
-          }
+          };
 
-          { name = "Drafts";
+          Drafts = {
             auto = "create";
             specialUse = "Drafts";
-          }
+          };
 
-          { name = "Sent";
+          Sent = {
             auto = "create";
             specialUse = "Sent";
-          }
+          };
 
-          { name = "Spam";
+          Spam = {
             auto = "create";
             specialUse = "Junk";
-          }
-        ];
+          };
+        };
 
         extraConfig = lib.optionalString (cfg.enableTLS) ''
           # https://github.com/nixcloud/nixcloud-webservices/issues/21

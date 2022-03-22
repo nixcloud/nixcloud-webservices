@@ -393,7 +393,10 @@ in
     };
 
 
-    users.extraUsers."${user}".group = "${group}";
+    users.extraUsers."${user}" = {
+      group = "${group}";
+      isSystemUser = true;
+    };
 
     users.extraGroups."${user}" = {};
 

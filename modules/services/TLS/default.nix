@@ -305,12 +305,18 @@ in
       }
     ];
 
-    users.groups = fold (identifier: con: con // {
+    users.groups = (fold (identifier: con: con // {
       "${filterIdentifier identifier}" = let c = config.nixcloud.TLS.certs.${identifier}; in { members = c.users; };
-    }) {} (attrNames config.nixcloud.TLS.certs);
+    }) {} (attrNames config.nixcloud.TLS.certs))
+    // optionalAttrs (acmeSupplied != []) {
+      nixcloud-lego-user = {};
+    };
 
     users.users = optionalAttrs (acmeSupplied != []) {
-      nixcloud-lego-user = {};
+      nixcloud-lego-user = {
+        isSystemUser = true;
+        group = "nixcloud-lego-user";
+      };
     };
 
     systemd.services = listToAttrs (selfsignedTargets ++ userSuppliedTargets ++ acmeSupplied ++ acmeSuppliedPreliminary);
