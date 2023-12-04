@@ -47,8 +47,8 @@
 
   meta = {
     description = "Declarative apache backend implementation for hacking";
-    maintainers = with lib.maintainers; [ qknight ];
-    license = lib.licenses.bsd2;
     homepage = https://github.com/nixcloud/nixcloud-webservices;
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ qknight ];
   };
 }

@@ -2,6 +2,21 @@
 
 {
   options.meta = {
+    description = lib.mkOption {
+      type = lib.types.str;
+      description = "One line introduction what the service offers";
+      example = "Open Source Webmail Software";
+    };
+    homepage = lib.mkOption {
+      type = lib.types.unspecified ;
+      description = "The primary homepage the project uses";
+      example = "https://nixcloud.io";
+    };
+    maintainers = lib.mkOption {
+      type = lib.types.unspecified ;
+      description = "The maintainer for this service";
+      example = with lib.maintainers; [ qknight ];
+    };
     license = lib.mkOption {
       type = lib.types.attrs;
       readOnly = true;

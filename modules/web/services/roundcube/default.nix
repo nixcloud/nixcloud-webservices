@@ -91,8 +91,8 @@ in
 
   meta = {
     description = "Open Source Webmail Software";
-    maintainers = with maintainers; [ eliasp ];
+    homepage = "https://roundcube.net/";
     license = licenses.gpl3;
-    platforms = platforms.all;
+    maintainers = with lib.maintainers; [ qknight ];
   };
 }

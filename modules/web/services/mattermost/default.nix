@@ -170,7 +170,6 @@ in {
     homepage = "https://mattermost.com/";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ qknight ];
-    meta.platforms = lib.platforms.linux;
   };
 
   config = lib.mkIf config.enable {
