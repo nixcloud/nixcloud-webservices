@@ -21,7 +21,7 @@ let
     value = lib.mapAttrs' (lib.const (dbcfg: {
       inherit (dbcfg) name;
       value = {
-        user = cfg._module.args.mkUniqueUser dbcfg.user;
+        user = dbcfg.user; # FIXME apply mkUniqueUser maybe?
         command = let
           inherit (dbcfg) type;
           errMsg = "Unable to determine database shell access command"
