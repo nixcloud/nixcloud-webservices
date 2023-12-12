@@ -16,11 +16,11 @@
   testScript = let
     searchFor = "<title>Mattermost</title>";
   in ''
-    $machine->waitForUnit('multi-user.target');
+    machine.wait_for_unit('multi-user.target')
     # wait for reverse-proxy
-    $machine->waitForOpenPort(80);
+    machine.wait_for_open_port(80)
     # wait for the mattermost ELF (GO) binary
-    $machine->waitForOpenPort(8080);
-    $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');
+    machine.wait_for_open_port(8080)
+    machine.succeed('curl -L http://example.com/ | grep -qF "${searchFor}"')
   '';
 }

@@ -78,27 +78,28 @@ in {
   };
 
   testScript = ''
-    $machine->waitForUnit('rabbitmq-test-foo-rabbitmq.service');
+    machine.wait_for_unit("rabbitmq-test-foo-rabbitmq.service")
 
-    subtest "check whether stop/start works", sub {
-      $machine->succeed('systemctl stop rabbitmq-test-foo-rabbitmq.service');
-      $machine->succeed('systemctl start rabbitmq-test-foo-rabbitmq.service');
-      $machine->waitForUnit('rabbitmq-test-foo-rabbitmq.service');
+    with subtest("check whether stop/start works"):
+      machine.succeed(
+        "systemctl stop rabbitmq-test-foo-rabbitmq.service",
+        "systemctl start rabbitmq-test-foo-rabbitmq.service"
+      )
+      machine.wait_for_unit("rabbitmq-test-foo-rabbitmq.service")
+
+    with subtest("sending and receiving message"):
+      machine.succeed(
+        "systemctl start --no-block rabbitmq-test-foo-test-recv >&2",
+        "while [ ! -e /tmp/recv-ready ]; do sleep 0.1; done",
+        "rabbitmq-test-foo-rabbitmqctl list_queues | grep -q hello",
+        "systemctl start rabbitmq-test-foo-test-send >&2"
+      )
+
+      machine.wait_for_unit("rabbitmq-test-foo-test-recv.service")
+      machine.succeed("test '$(< /tmp/received)' = world")
     };
 
-    subtest "sending and receiving message", sub {
-      $machine->succeed(
-        'systemctl start --no-block rabbitmq-test-foo-test-recv >&2',
-        'while [ ! -e /tmp/recv-ready ]; do sleep 0.1; done',
-        'rabbitmq-test-foo-rabbitmqctl list_queues | grep -q hello',
-        'systemctl start rabbitmq-test-foo-test-send >&2',
-      );
-      $machine->waitForUnit('rabbitmq-test-foo-test-recv.service');
-      $machine->succeed('test "$(< /tmp/received)" = world');
-    };
-
-    subtest "make sure EPMD is not listening", sub {
-      $machine->fail('nc -z 127.0.0.1 4369');
-    };
+    with subtest("make sure EPMD is not listening"):
+      machine.fail("nc -z 127.0.0.1 4369")
   '';
 }

@@ -245,59 +245,59 @@ in
   };
 
   testScript = ''
-    $machine->waitForUnit('multi-user.target');
-    $machine->waitForOpenPort(80);
-    $machine->waitForOpenPort(443);
+    machine.wait_for_unit("multi-user.target")
+    machine.wait_for_open_port(80)
+    machine.wait_for_open_port(443)
     # 8383 is actually not a webserve, we only use it to generate a reverse-proxy mapping to test the reverse-proxy
-    #$machine->waitForOpenPort(8383);
+    #machine.wait_for_open_port(8383)
     # 8484 is actually not a webserve, we only use it to generate a reverse-proxy mapping to test the reverse-proxy
-    #$machine->waitForOpenPort(8484);
-    $machine->waitForOpenPort(60000);
-    
+    #machine.wait_for_open_port(8484)
+    machine.wait_for_open_port(60000)
+
     # make sure both are answered by apache
-    $machine->succeed('curl http://example.com/wiki | grep "<span>Apache" >&2');
-    $machine->succeed('curl -k https://example.com/wiki | grep "<span>Apache" >&2');
+    machine.succeed("curl http://example.com/wiki | grep '<span>Apache' >&2")
+    machine.succeed("curl -k https://example.com/wiki | grep '<span>Apache' >&2")
 
     #check if extraLocations work
-    $machine->succeed('curl http://ext.ra/location | grep "<span>Apache" >&2');
-    $machine->fail('curl -k https://ext.ra/location | grep "<span>Apache" >&2');
-    $machine->succeed('curl -k https://ext.ra/location/test | grep "<span>Apache" >&2');
-    $machine->succeed('curl http://ext.ra/location/extra/test | grep "<span>Apache" >&2');
-    $machine->succeed('curl -k https://ext.ra/location/extra/test | grep "<span>Apache" >&2');
-    $machine->fail('curl https://ext.ra/location/fail | grep "<span>Apache" >&2');
-    $machine->fail('curl -k https://ext.ra/location/fail | grep "<span>Apache" >&2');
-    
+    machine.succeed("curl http://ext.ra/location | grep '<span>Apache' >&2")
+    machine.fail("curl -k https://ext.ra/location | grep '<span>Apache' >&2")
+    machine.succeed("curl -k https://ext.ra/location/test | grep '<span>Apache' >&2")
+    machine.succeed("curl http://ext.ra/location/extra/test | grep '<span>Apache' >&2")
+    machine.succeed("curl -k https://ext.ra/location/extra/test | grep '<span>Apache' >&2")
+    machine.fail("curl https://ext.ra/location/fail | grep '<span>Apache' >&2")
+    machine.fail("curl -k https://ext.ra/location/fail | grep '<span>Apache' >&2")
+
     # make sure for both there is no entry in example.com/blog
-    $machine->succeed('curl http://example.com/blog | grep 404 >&2');
-    $machine->succeed('curl -k https://example.com/blog | grep 404 >&2');
-    
+    machine.succeed("curl http://example.com/blog | grep 404 >&2")
+    machine.succeed("curl -k https://example.com/blog | grep 404 >&2")
+
     # make sure http redirects to https and https works for flubb.com
     # BUG: this test also uses the same port and this should bail out on nix evaluation...
-    $machine->succeed('curl http://flubb.com/blog | grep -i "301 Moved Permanently" >&2');
-    $machine->succeed('curl -k https://flubb.com/blog | grep "<span>Apache" >&2');
-    
-    # test basicauth
-    $machine->succeed('curl http://example.com/basicauth --user "foo:bar1" | grep "<span>Apache" >&2');
-    $machine->succeed('curl http://example.com/basicauth | grep "401 Auth" >&2');
-    $machine->succeed('curl -k https://example.com/basicauth --user "foo:bar2" | grep "<span>Apache" >&2');
-    $machine->succeed('curl -k https://example.com/basicauth | grep "401 Auth" >&2');
-    
-    # ipv4/ipv6 tests
-    $machine->succeed('cat /etc/hosts >&2');
+    machine.succeed("curl http://flubb.com/blog | grep -i '301 Moved Permanently' >&2")
+    machine.succeed("curl -k https://flubb.com/blog | grep '<span>Apache' >&2")
 
-    $machine->succeed('curl -4 http://example.com/wiki | grep "<span>Apache" >&2');
-    $machine->succeed('curl -4 -k https://example.com/wiki | grep "<span>Apache" >&2');
-    $machine->succeed('curl -6 http://example.com/wiki | grep "<span>Apache" >&2');
-    $machine->succeed('curl -6 -k https://example.com/wiki | grep "<span>Apache" >&2');
-    
+    # test basicauth
+    machine.succeed("curl http://example.com/basicauth --user 'foo:bar1' | grep '<span>Apache' >&2")
+    machine.succeed("curl http://example.com/basicauth | grep '401 Auth' >&2")
+    machine.succeed("curl -k https://example.com/basicauth --user 'foo:bar2' | grep '<span>Apache' >&2")
+    machine.succeed("curl -k https://example.com/basicauth | grep '401 Auth' >&2")
+
+    # ipv4/ipv6 tests
+    machine.succeed("cat /etc/hosts >&2")
+
+    machine.succeed("curl -4 http://example.com/wiki | grep '<span>Apache' >&2")
+    machine.succeed("curl -4 -k https://example.com/wiki | grep '<span>Apache' >&2")
+    machine.succeed("curl -6 http://example.com/wiki | grep '<span>Apache' >&2")
+    machine.succeed("curl -6 -k https://example.com/wiki | grep '<span>Apache' >&2")
+
     # test HSTS
-    $machine->succeed('curl -k -s -D- http://flags.io | grep Strict >&2');
-    $machine->succeed('curl -k -s -D- https://flags.io | grep Strict >&2');
-    
+    machine.succeed("curl -k -s -D- http://flags.io | grep Strict >&2")
+    machine.succeed("curl -k -s -D- https://flags.io | grep Strict >&2")
+
     # test websockets
-    $machine->succeed('curl http://example.ws/myapp/ws >&2');
-    $machine->succeed('${ws-go-server}/bin/ws-go-server & >&2');
-    $machine->waitForOpenPort(8080);
-    $machine->succeed('${ws-go-client}/bin/ws-go-client >&2');
+    machine.succeed("curl http://example.ws/myapp/ws >&2")
+    machine.succeed("${ws-go-server}/bin/ws-go-server & >&2")
+    machine.wait_for_open_port(8080)
+    machine.succeed("${ws-go-client}/bin/ws-go-client >&2")
   '';
 }

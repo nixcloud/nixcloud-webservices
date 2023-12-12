@@ -11,7 +11,7 @@
     apache            = services/apache;
     nginx             = services/nginx;
     filesender        = services/filesender;
-    hydra             = services/hydra;
+    #hydra             = services/hydra; # FIXME needs to be enabled again later
     leaps             = services/leaps;
     mediawiki         = services/mediawiki;
     static-darkhttpd  = services/static-darkhttpd;

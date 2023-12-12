@@ -37,10 +37,10 @@ in {
   };
 
   testScript = ''
-    $machine->waitForUnit('multi-user.target');
-    $machine->waitForOpenPort(80);
-    $machine->succeed('curl http://example.com/ | grep -qF "hello world"');
-    $machine->succeed('curl http://example.org/ | grep -qF "hello world"');
+    machine.wait_for_unit("multi-user.target")
+    machine.wait_for_open_port(80)
+    machine.succeed("curl http://example.com/ | grep -qF 'hello world'")
+    machine.succeed("curl http://example.org/ | grep -qF 'hello world'")
   '';
 }
 

@@ -23,26 +23,15 @@
   };
 
   testScript = ''
-    $machine->waitForUnit('multi-user.target');
+    machine.wait_for_unit("multi-user.target")
 
-    subtest "shell works with explicit web service name", sub {
-      $machine->succeed(
-        'echo "\\dt" | nixcloud-dbshell mediawiki-foo mediawiki'.
-        ' | grep -q interwiki'
-      );
+    with subtest("shell works with explicit web service name"):
+      machine.succeed(
+         "echo '\\dt' | nixcloud-dbshell mediawiki-foo mediawiki | grep -q interwiki",
+         "echo SHOW TABLES | nixcloud-dbshell mediawiki-bar mediawiki | grep -q interwiki"
+      )
 
-      $machine->succeed(
-        'echo SHOW TABLES | nixcloud-dbshell mediawiki-bar mediawiki'.
-        ' | grep -q interwiki'
-      );
-    };
-
-    subtest "shell works without explicit web service name", sub {
-      $machine->succeed(
-        'cd /var/lib/nixcloud/webservices/mediawiki-bar/mysql'.
-        ' && echo SHOW TABLES | nixcloud-dbshell mediawiki'.
-        ' | grep -q interwiki'
-      );
-    };
+    with subtest("shell works without explicit web service name"):
+      machine.succeed("cd /var/lib/nixcloud/webservices/mediawiki-bar/mysql && echo SHOW TABLES | nixcloud-dbshell mediawiki | grep -q interwiki")
   '';
 }

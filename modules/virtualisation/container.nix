@@ -99,6 +99,8 @@ with lib;
       bridges.brNC-hostonly.interfaces = [];
       bridges.brNC-internet.interfaces = [];
 
+      useDHCP = false;
+
       interfaces.brNC-hostonly = {
         ipv4.addresses = [ { address = "10.101.0.1"; prefixLength = 16; } ];
         useDHCP = false;

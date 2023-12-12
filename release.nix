@@ -54,11 +54,11 @@ let
       XML
 
       xsltproc -o intermediate.xml \
-        "${pkgs.path}/nixos/doc/manual/options-to-docbook.xsl" \
+        "${pkgs.path}/nixos/lib/make-options-doc/options-to-docbook.xsl" \
         ${lib.escapeShellArg optionsFile}
 
       xsltproc -o options-db.xml \
-        "${pkgs.path}/nixos/doc/manual/postprocess-option-descriptions.xsl" \
+        "${pkgs.path}/nixos/lib/make-options-doc/postprocess-option-descriptions.xsl" \
         intermediate.xml
 
       xsltproc -o "$dest/index.html" -nonet -xinclude \

@@ -55,6 +55,7 @@ in {
   name = "mkunique";
   type = "unit";
 
+# FIXME implement test properly
   tests = {
     mkUniqueWithWSname = {
       expr = mkUnique "foo";

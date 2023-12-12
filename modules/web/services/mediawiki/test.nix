@@ -22,11 +22,11 @@
   testScript = let
     searchFor = "<title>Main Page - MediaWiki</title>";
   in ''
-    $machine->waitForUnit('multi-user.target');
-    $machine->waitForOpenPort(80);
-    $machine->waitForOpenPort(8080);
-    $machine->waitForOpenPort(8081);
-    $machine->succeed('curl -L http://example.com/ | grep -qF "${searchFor}"');
-    $machine->succeed('curl -L http://example.org/ | grep -qF "${searchFor}"');
+    machine.wait_for_unit('multi-user.target')
+    machine.wait_for_open_port(80)
+    machine.wait_for_open_port(8080)
+    machine.wait_for_open_port(8081)
+    machine.succeed('curl -L http://example.com/ | grep -qF "${searchFor}"')
+    machine.succeed('curl -L http://example.org/ | grep -qF "${searchFor}"')
   '';
 }

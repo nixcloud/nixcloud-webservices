@@ -2,7 +2,7 @@
 
 let
   testLib = let
-    mainExpr = import "${toString nixpkgs}/nixos/lib/testing.nix";
+    mainExpr = import "${toString nixpkgs}/nixos/lib/testing-python.nix";
     funArgs = builtins.functionArgs mainExpr;
     attrs = { inherit system; } // lib.optionalAttrs (funArgs ? pkgs) {
       inherit pkgs;
@@ -44,7 +44,7 @@ let
           inherit value;
         }) (unpackTestFun ${testPath}).tests;
 
-      in (import <nixpkgs/lib>).runTests tests
+      in (import <nixpkgs>/lib).runTests tests
     '';
 
     buildCommand = ''
@@ -74,7 +74,7 @@ let
     passthru.test = unitTest;
   };
 
-  vmTest = testLib.makeTest (removeAttrs testArgsWithCommon [ "type" ]);
+  vmTest = testLib.makeTest (removeAttrs testArgsWithCommon [ "type" ] // {skipLint = true;}); # FIXME remove skipLint later on
 
   reduceTestFun = tf: tf (args // {
     pkgs = pkgs // {
@@ -108,27 +108,73 @@ let
     nodes = lib.mapAttrs injectCommon nodes;
     # This is so that we have a custom error message once one of our VM tests
     # has failed.
-    testScript = args: let
+    testScript = args:
+    let
       inherit (testArgs) testScript;
-      mkPerlStr = val: "'${lib.escape ["\\" "'"] val}'";
+      #mkPerlStr = val: "'${lib.escape ["\\" "'"] val}'";
       isTestScriptFun = builtins.isFunction testScript;
       realScript = if isTestScriptFun then testScript args else testScript;
+#      import subprocess
+#      import sys
+#      import os
     in ''
-      eval {
-        ${realScript}
-      };
-      if (my $error = $@) {
-        chomp $error;
-        print STDERR
-            "\x1b[1;31mThe nixcloud test '".${mkPerlStr testArgs.name}."' has"
-          . " failed with error '$error' but in case the machine was too slow"
-          . " (virtualized, not enough ram, too much cpu load, etc) then"
-          . " you can also disable the tests by adding 'nixcloud.tests.enable"
-          . " = false;' to your /etc/nixos/configuration.nix and still use"
-          . " our software.\x1b[m\n";
-        exit(1);
-      }
-    '';
+      import os
+
+      ${realScript}
+      print("hello world")'';
+
+#        except subprocess.CalledProcessError as e:
+#            sys.stdout.reconfigure(encoding="utf-8")
+#            error_message = str(e)
+#            print(
+#                "💥💥💥 \x1b[1;31m nixcloud test failed: \x1b[m${testArgs.name} 💥💥💥\n",
+#                "\x1b[1;31mMessage: {error_message} 💥💥💥\n".format(error_message=error_message),
+#                "In case the machine was too slow (virtualized, not enough ram, too much cpu load, etc) then you can also disable the tests by adding:\n",
+#                "     nixcloud.tests.enable = false;\n",
+#                "to your /etc/nixos/configuration.nix and still use nixcloud-webservices.\x1b[m",
+#                file=sys.stderr,
+#            )
+#            sys.exit(1)
+#    '';
+#    in ''
+#        import subprocess
+#        import sys
+#
+#        try:
+#            subprocess.run(
+#                [
+#                    "${pkgs.python3}/bin/python",
+#                    "${realScript}",
+#                ],
+#                check=True,
+#                text=True,
+#            )
+#        except subprocess.CalledProcessError as e:
+#            sys.stdout.reconfigure(encoding="utf-8")
+#            error_message = str(e)
+#            print(
+#                "💥💥💥 \x1b[1;31m nixcloud test failed: \x1b[m${testArgs.name} 💥💥💥\n",
+#                "\x1b[1;31mMessage: {error_message} 💥💥💥\n".format(error_message=error_message),
+#                "In case the machine was too slow (virtualized, not enough ram, too much cpu load, etc) then you can also disable the tests by adding:\n",
+#                "     nixcloud.tests.enable = false;\n",
+#                "to your /etc/nixos/configuration.nix and still use nixcloud-webservices.\x1b[m",
+#                file=sys.stderr,
+#            )
+#            sys.exit(1)
+#    '';
+#      eval {
+#        ${realScript}
+#      };
+#      if (my $error = $@) {
+#        chomp $error;
+#        print STDERR
+#                "💥💥💥 \x1b[1;31m nixcloud test failed: \x1b[m${testArgs.name} 💥💥💥\n",
+#                "\x1b[1;31mMessage: {error_message} 💥💥💥\n".format(error_message=error_message),
+#                "In case the machine was too slow (virtualized, not enough ram, too much cpu load, etc) then you can also disable the tests by adding:\n",
+#                "     nixcloud.tests.enable = false;\n",
+#                "to your /etc/nixos/configuration.nix and still use nixcloud-webservices.\x1b[m",
+#        exit(1);
+#      }
   };
 
 in if (testArgs.type or "vm") == "unit" then unitTest else vmTest

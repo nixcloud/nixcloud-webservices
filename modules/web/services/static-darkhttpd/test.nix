@@ -18,11 +18,11 @@
   };
 
   testScript = ''
-    $machine->waitForUnit('multi-user.target');
-    $machine->waitForOpenPort(80);
-    $machine->succeed(
-      'curl -L http://example.com/ | grep -q "Nothing here yet"',
-      'curl -L http://example.org/ | grep -q "Nothing here yet"'
+    machine.wait_for_unit("multi-user.target")
+    machine.wait_for_open_port(80)
+    machine.succeed(
+      "curl -L http://example.com/ | grep -q 'Nothing here yet'",
+      "curl -L http://example.org/ | grep -q 'Nothing here yet'"
     );
   '';
 }

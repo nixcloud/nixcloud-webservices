@@ -72,10 +72,10 @@
     });
   };
 
-  testScript = ''
-    $machine->waitForUnit('test-webserver-direct.service');
-    $machine->waitForFile('/run/test-webserver-direct.socket');
-    $machine->succeed('test "$(sockurl -vvv http://1.2.3.4/)" = foobar');
-    $machine->succeed('test "$(sockurl -vvv http://4.3.2.1/)" = barfoo');
+testScript = ''
+    machine.wait_for_unit("test-webserver-direct.service")
+    machine.wait_for_file("/run/test-webserver-direct.socket")
+    machine.succeed("test '$(sockurl -vvv http://1.2.3.4/)' = foobar")
+    machine.succeed("test '$(sockurl -vvv http://4.3.2.1/)' = barfoo")
   '';
 }

@@ -184,22 +184,22 @@ in {
   };
 
   testScript = ''
-    startAll;
-    $dns->waitForUnit('bind.service');
-    $mail1->waitForUnit('multi-user.target');
-    $mail2->waitForUnit('multi-user.target');
-    $client->waitForUnit('multi-user.target');
-    $client->succeed('run-tests >&2');
+    start_all()
+    dns.wait_for_unit("bind.service")
+    mail1.wait_for_unit("multi-user.target")
+    mail2.wait_for_unit("multi-user.target")
+    client.wait_for_unit("multi-user.target")
+    client.succeed("run-tests >&2")
     # wait for reverse-proxy
-    $mail1->waitForOpenPort(80);
-    $mail2->waitForOpenPort(80);
-    $mail1->waitForOpenPort(8993);
-    $mail2->waitForOpenPort(8993);
-    $mail1->succeed('curl -L http://mail.example.org/ | grep -qF "<title>Roundcube"');
+    mail1.wait_for_open_port(80)
+    mail2.wait_for_open_port(80)
+    mail1.wait_for_open_port(8993)
+    mail2.wait_for_open_port(8993)
+    mail1.succeed("curl -L http://mail.example.org/ | grep -qF "<title>Roundcube"")
     # Check spam learning
-    $mail2->waitUntilSucceeds("journalctl -u dovecot2 | grep learn-spam.sh >&2");
-    $mail2->succeed('journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as spam" >&2');
-    $mail2->waitUntilSucceeds("journalctl -u dovecot2 | grep learn-ham.sh >&2");
-    $mail2->succeed('journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as ham" >&2');
+    mail2.wait_until_succeeds("journalctl -u dovecot2 | grep learn-spam.sh >&2")
+    mail2.succeed("journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as spam" >&2")
+    mail2.wait_until_succeeds("journalctl -u dovecot2 | grep learn-ham.sh >&2")
+    mail2.succeed("journalctl -u rspamd | grep "csession; rspamd_controller_learn_fin_task: </run/rspamd/worker-controller.sock> learned message as ham" >&2")
   '';
 }
