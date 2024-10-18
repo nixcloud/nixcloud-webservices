@@ -1,3 +1,10 @@
+
+![Unmaintained](https://img.shields.io/badge/status-unmaintained-red)
+
+# ⚠️ This project is currently unmaintained
+
+If there is interest / funding, we can continue with this. Please contact js@lastlog.de for more.
+
 # nixcloud-webservices
 
 This [nixpkgs](https://github.com/NixOS/nixpkgs) extension, called [nixcloud-webservices](https://github.com/nixcloud/nixcloud-webservices), focuses on ease of deployment of web-related technologies. 
